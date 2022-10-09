@@ -24,13 +24,13 @@ const (
 	// KeyTypeOct is the key type for octet sequences, such as HMAC.
 	KeyTypeOct JWKKTY = "oct"
 
-	// CurveEd25519 is the curve for EdDSA.
+	// CurveEd25519 is a curve for EdDSA.
 	CurveEd25519 JWKCRV = "Ed25519"
-	// CurveP256 is the curve for ECDSA.
+	// CurveP256 is a curve for ECDSA.
 	CurveP256 JWKCRV = "P-256"
-	// CurveP384 is the curve for ECDSA.
+	// CurveP384 is a curve for ECDSA.
 	CurveP384 JWKCRV = "P-384"
-	// CurveP521 is the curve for ECDSA.
+	// CurveP521 is a curve for ECDSA.
 	CurveP521 JWKCRV = "P-521"
 )
 
