@@ -192,9 +192,12 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 		jwk.N = bigIntToBase64RawURL(key.N)
 		jwk.KTY = KeyTypeRSA.String()
 	case []byte:
-		// TODO Consider private key option.
-		jwk.KTY = KeyTypeOct.String()
-		jwk.K = base64.RawURLEncoding.EncodeToString(key)
+		if options.EncodePrivate {
+			jwk.KTY = KeyTypeOct.String()
+			jwk.K = base64.RawURLEncoding.EncodeToString(key)
+		} else {
+			return JWKMarshal{}, fmt.Errorf("%w: oct keys cannot be marshaled for public key representation", ErrUnsupportedKeyType)
+		}
 	default:
 		return JWKMarshal{}, fmt.Errorf("%w: %T", ErrUnsupportedKeyType, key)
 	}
