@@ -44,14 +44,18 @@ func NewKey(key interface{}, keyID string) KeyWithMeta {
 	}
 }
 
-// otherPrimes is for RSA private keys.
+// OtherPrimes is for RSA private keys that have more than 2 primes.
 // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7
-type otherPrimes struct {
+type OtherPrimes struct {
 	CRTFactorExponent    string `json:"d,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.2
 	CRTFactorCoefficient string `json:"t,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.3
 	PrimeFactor          string `json:"r,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.1
 }
 
+// JWKMarshal is used to marshal or unmarshal a JSON Web Key.
+// https://www.rfc-editor.org/rfc/rfc7517
+// https://www.rfc-editor.org/rfc/rfc7518
+// https://www.rfc-editor.org/rfc/rfc8037
 type jwkMarshal struct {
 	CRV string        `json:"crv,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
 	D   string        `json:"d,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.1 and https://www.rfc-editor.org/rfc/rfc7518#section-6.2.2.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
@@ -62,7 +66,7 @@ type jwkMarshal struct {
 	KID string        `json:"kid,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.5
 	KTY string        `json:"kty,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.1
 	N   string        `json:"n,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.1.1
-	OTH []otherPrimes `json:"oth,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7
+	OTH []OtherPrimes `json:"oth,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7
 	P   string        `json:"p,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.2
 	Q   string        `json:"q,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.3
 	QI  string        `json:"qi,omitempty"`  // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.6
@@ -70,7 +74,8 @@ type jwkMarshal struct {
 	Y   string        `json:"y,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.3
 }
 
-type jwkSetMarshal struct {
+// JWKSetMarshal is used to marshal or unmarshal a JSON Web Key Set.
+type JWKSetMarshal struct {
 	Keys []jwkMarshal `json:"keys"`
 }
 
@@ -88,7 +93,7 @@ func NewMemory() JWKSet {
 
 // JSON creates the JSON representation of the JWKSet.
 func (j JWKSet) JSON(ctx context.Context) (json.RawMessage, error) {
-	jwks := jwkSetMarshal{}
+	jwks := JWKSetMarshal{}
 	encodePrivate := false
 
 	keys, err := j.Store.SnapshotKeys(ctx)
@@ -141,7 +146,7 @@ func (j JWKSet) JSON(ctx context.Context) (json.RawMessage, error) {
 				jwk.DQ = bigIntToBase64RawURL(key.Precomputed.Dq)
 				jwk.QI = bigIntToBase64RawURL(key.Precomputed.Qinv)
 				for i := 2; i < len(key.Primes); i++ {
-					jwk.OTH = append(jwk.OTH, otherPrimes{
+					jwk.OTH = append(jwk.OTH, OtherPrimes{
 						CRTFactorExponent:    bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Exp),
 						CRTFactorCoefficient: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Coeff),
 						PrimeFactor:          bigIntToBase64RawURL(key.Precomputed.CRTValues[i].R),
