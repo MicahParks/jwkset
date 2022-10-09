@@ -21,6 +21,9 @@ const (
 	KeyTypeRSA KeyType = "RSA"
 	// KeyTypeOct is the key type for octet sequences, such as HMAC.
 	KeyTypeOct KeyType = "oct"
+
+	// CurveEd25519 is the curve for EdDSA.
+	CurveEd25519 = "Ed25519"
 )
 
 // ErrUnsupportedKeyType is an error indicating a key type is not supported.
@@ -76,6 +79,13 @@ type JWKMarshal struct {
 	QI  string        `json:"qi,omitempty"`  // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.6
 	X   string        `json:"x,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.2 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
 	Y   string        `json:"y,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.3
+	// TODO Use ALG field.
+	// ALG string        `json:"alg,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.4 and https://www.rfc-editor.org/rfc/rfc7518#section-4.1
+	// TODO Use KEYOPS field.
+	// KEYOPTS []string `json:"key_ops,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.3
+	// TODO Use USE field.
+	// USE string        `json:"use,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.2
+	// TODO X.509 related fields.
 }
 
 // JWKSMarshal is used to marshal or unmarshal a JSON Web Key Set.
@@ -147,12 +157,14 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 		jwk.KTY = KeyTypeEC.String()
 	case ed25519.PrivateKey:
 		pub := key.Public().(ed25519.PublicKey)
+		jwk.CRV = CurveEd25519
 		jwk.X = base64.RawURLEncoding.EncodeToString(pub)
 		jwk.KTY = KeyTypeOKP.String()
 		if options.EncodePrivate {
 			jwk.D = base64.RawURLEncoding.EncodeToString(key)
 		}
 	case ed25519.PublicKey:
+		jwk.CRV = CurveEd25519
 		jwk.X = base64.RawURLEncoding.EncodeToString(key)
 		jwk.KTY = KeyTypeOKP.String()
 	case *rsa.PrivateKey:
@@ -179,6 +191,10 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 		jwk.E = bigIntToBase64RawURL(big.NewInt(int64(key.E)))
 		jwk.N = bigIntToBase64RawURL(key.N)
 		jwk.KTY = KeyTypeRSA.String()
+	case []byte:
+		// TODO Consider private key option.
+		jwk.KTY = KeyTypeOct.String()
+		jwk.K = base64.RawURLEncoding.EncodeToString(key)
 	default:
 		return JWKMarshal{}, fmt.Errorf("%w: %T", ErrUnsupportedKeyType, key)
 	}
