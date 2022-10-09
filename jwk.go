@@ -150,7 +150,7 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 		if options.EncodePrivate {
 			jwk.D = bigIntToBase64RawURL(key.D)
 		}
-	case ecdsa.PublicKey:
+	case ecdsa.PublicKey: // TODO Make this a pointer. Maybe support value with reassignment and fallthrough.
 		jwk.CRV = key.Curve.Params().Name
 		jwk.X = bigIntToBase64RawURL(key.X)
 		jwk.Y = bigIntToBase64RawURL(key.Y)
@@ -187,7 +187,7 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 				})
 			}
 		}
-	case rsa.PublicKey:
+	case rsa.PublicKey: // TODO Make this a pointer. Maybe support value with reassignment and fallthrough.
 		jwk.E = bigIntToBase64RawURL(big.NewInt(int64(key.E)))
 		jwk.N = bigIntToBase64RawURL(key.N)
 		jwk.KTY = KeyTypeRSA.String()
@@ -203,6 +203,25 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 	}
 	jwk.KID = meta.KeyID
 	return jwk, nil
+}
+
+type KeyUnmarhsalOptions struct {
+	DecodePrivate bool
+}
+
+func KeyUnmarshal(key JWKMarshal) (KeyWithMeta, error) {
+	switch key.KTY {
+	case KeyTypeEC.String():
+
+	case KeyTypeOKP.String():
+		// TODO
+	case KeyTypeRSA.String():
+		// TODO
+	case KeyTypeOct.String():
+		// TODO
+	default:
+		return KeyWithMeta{}, fmt.Errorf("%w: %s", ErrUnsupportedKeyType, key.KTY)
+	}
 }
 
 func bigIntToBase64RawURL(i *big.Int) string {
