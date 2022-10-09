@@ -16,13 +16,13 @@ import (
 
 const (
 	// KeyTypeEC is the key type for ECDSA.
-	KeyTypeEC KeyType = "EC"
+	KeyTypeEC JWKKTY = "EC"
 	// KeyTypeOKP is the key type for EdDSA.
-	KeyTypeOKP KeyType = "OKP"
+	KeyTypeOKP JWKKTY = "OKP"
 	// KeyTypeRSA is the key type for RSA.
-	KeyTypeRSA KeyType = "RSA"
+	KeyTypeRSA JWKKTY = "RSA"
 	// KeyTypeOct is the key type for octet sequences, such as HMAC.
-	KeyTypeOct KeyType = "oct"
+	KeyTypeOct JWKKTY = "oct"
 
 	// CurveEd25519 is the curve for EdDSA.
 	CurveEd25519 JWKCRV = "Ed25519"
@@ -41,7 +41,7 @@ var (
 	ErrUnsupportedKeyType = errors.New("unsupported key type")
 )
 
-// JWKCRV is a set of "JSON Web Key Elliptic JWKCRV" types from https://www.iana.org/assignments/jose/jose.xhtml as
+// JWKCRV is a set of "JSON Web Key Elliptic Curve" types from https://www.iana.org/assignments/jose/jose.xhtml as
 // mentioned in https://www.rfc-editor.org/rfc/rfc7518.html#section-6.2.1.1.
 type JWKCRV string
 
@@ -49,11 +49,11 @@ func (crv JWKCRV) String() string {
 	return string(crv)
 }
 
-// KeyType is a set of "JSON Web Key Types" from https://www.iana.org/assignments/jose/jose.xhtml as mentioned in
+// JWKKTY is a set of "JSON Web Key Types" from https://www.iana.org/assignments/jose/jose.xhtml as mentioned in
 // https://www.rfc-editor.org/rfc/rfc7517#section-4.1
-type KeyType string
+type JWKKTY string
 
-func (kty KeyType) String() string {
+func (kty JWKKTY) String() string {
 	return string(kty)
 }
 
@@ -74,9 +74,9 @@ func NewKey(key interface{}, keyID string) KeyWithMeta {
 // OtherPrimes is for RSA private keys that have more than 2 primes.
 // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7
 type OtherPrimes struct {
-	CRTFactorExponent    string `json:"d,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.2
-	CRTFactorCoefficient string `json:"t,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.3
-	PrimeFactor          string `json:"r,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.1
+	D string `json:"d,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.2
+	R string `json:"r,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.1
+	T string `json:"t,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.3
 }
 
 // JWKMarshal is used to marshal or unmarshal a JSON Web Key.
@@ -200,11 +200,11 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 			jwk.DP = bigIntToBase64RawURL(key.Precomputed.Dp)
 			jwk.DQ = bigIntToBase64RawURL(key.Precomputed.Dq)
 			jwk.QI = bigIntToBase64RawURL(key.Precomputed.Qinv)
-			for i := 2; i < len(key.Primes); i++ {
+			for i := 0; i+2 < len(key.Primes); i++ {
 				jwk.OTH = append(jwk.OTH, OtherPrimes{
-					CRTFactorExponent:    bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Exp),
-					CRTFactorCoefficient: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Coeff),
-					PrimeFactor:          bigIntToBase64RawURL(key.Precomputed.CRTValues[i].R),
+					D: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Exp),
+					T: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Coeff),
+					R: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].R),
 				})
 			}
 		}
@@ -226,17 +226,20 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 	return jwk, nil
 }
 
+// KeyUnmarshalOptions are used to specify options for unmarshalling a JSON Web Key.
 type KeyUnmarshalOptions struct {
 	AsymmetricPrivate bool
 	Symmetric         bool
 }
 
+// KeyUnmarshal transforms a JWKMarshal into a KeyWithMeta, which contains the correct Go type for the cryptographic
+// key.
 func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, error) {
 	meta := KeyWithMeta{}
-	switch KeyType(jwk.KTY) {
+	switch JWKKTY(jwk.KTY) {
 	case KeyTypeEC:
 		if jwk.X == "" || jwk.Y == "" || jwk.CRV == "" {
-			return KeyWithMeta{}, fmt.Errorf("%w: %s requires parameters x, y, and crv", ErrKeyUnmarshalParameter, KeyTypeEC)
+			return KeyWithMeta{}, fmt.Errorf(`%w: %s requires parameters "x", "y", and "crv"`, ErrKeyUnmarshalParameter, KeyTypeEC)
 		}
 		x, err := base64urlTrailingPadding(jwk.X)
 		if err != nil {
@@ -306,7 +309,90 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			meta.Key = ed25519.PublicKey(key)
 		}
 	case KeyTypeRSA:
-		// TODO
+		if jwk.N == "" || jwk.E == "" {
+			return KeyWithMeta{}, fmt.Errorf(`%w: %s requires parameters "n" and "e"`, ErrKeyUnmarshalParameter, KeyTypeRSA)
+		}
+		n, err := base64urlTrailingPadding(jwk.N)
+		if err != nil {
+			return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "n": %w`, KeyTypeRSA, err)
+		}
+		e, err := base64urlTrailingPadding(jwk.E)
+		if err != nil {
+			return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "e": %w`, KeyTypeRSA, err)
+		}
+		publicKey := rsa.PublicKey{
+			N: big.NewInt(0).SetBytes(n),
+			E: int(big.NewInt(0).SetBytes(e).Uint64()),
+		}
+		if options.AsymmetricPrivate {
+			if jwk.D == "" || jwk.P == "" || jwk.Q == "" || jwk.DP == "" || jwk.DQ == "" || jwk.QI == "" {
+				return KeyWithMeta{}, fmt.Errorf(`%w: %s requires parameters "d", "p", "q", "dp", "dq", and "qi"`, ErrKeyUnmarshalParameter, KeyTypeRSA)
+			}
+			d, err := base64urlTrailingPadding(jwk.D)
+			if err != nil {
+				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KeyTypeRSA, err)
+			}
+			p, err := base64urlTrailingPadding(jwk.P)
+			if err != nil {
+				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "p": %w`, KeyTypeRSA, err)
+			}
+			q, err := base64urlTrailingPadding(jwk.Q)
+			if err != nil {
+				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "q": %w`, KeyTypeRSA, err)
+			}
+			dp, err := base64urlTrailingPadding(jwk.DP)
+			if err != nil {
+				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "dp": %w`, KeyTypeRSA, err)
+			}
+			dq, err := base64urlTrailingPadding(jwk.DQ)
+			if err != nil {
+				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "dq": %w`, KeyTypeRSA, err)
+			}
+			qi, err := base64urlTrailingPadding(jwk.QI)
+			if err != nil {
+				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "qi": %w`, KeyTypeRSA, err)
+			}
+			var oth []rsa.CRTValue
+			for _, otherPrimes := range jwk.OTH {
+				if otherPrimes.R == "" || otherPrimes.D == "" || otherPrimes.T == "" {
+					return KeyWithMeta{}, fmt.Errorf(`%w: %s requires parameters "r", "d", and "t" for each "oth"`, ErrKeyUnmarshalParameter, KeyTypeRSA)
+				}
+				othD, err := base64urlTrailingPadding(otherPrimes.D)
+				if err != nil {
+					return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KeyTypeRSA, err)
+				}
+				othT, err := base64urlTrailingPadding(otherPrimes.T)
+				if err != nil {
+					return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "t": %w`, KeyTypeRSA, err)
+				}
+				othR, err := base64urlTrailingPadding(otherPrimes.R)
+				if err != nil {
+					return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "r": %w`, KeyTypeRSA, err)
+				}
+				oth = append(oth, rsa.CRTValue{
+					Exp:   big.NewInt(0).SetBytes(othD),
+					Coeff: big.NewInt(0).SetBytes(othT),
+					R:     big.NewInt(0).SetBytes(othR),
+				})
+			}
+			privateKey := &rsa.PrivateKey{
+				PublicKey: publicKey,
+				D:         big.NewInt(0).SetBytes(d),
+				Primes: []*big.Int{
+					big.NewInt(0).SetBytes(p),
+					big.NewInt(0).SetBytes(q),
+				},
+				Precomputed: rsa.PrecomputedValues{
+					Dp:        big.NewInt(0).SetBytes(dp),
+					Dq:        big.NewInt(0).SetBytes(dq),
+					Qinv:      big.NewInt(0).SetBytes(qi),
+					CRTValues: oth,
+				},
+			}
+			meta.Key = privateKey
+		} else if !options.AsymmetricPrivate {
+			meta.Key = publicKey
+		}
 	case KeyTypeOct:
 		if options.Symmetric {
 			if jwk.K == "" {

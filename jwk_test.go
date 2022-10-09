@@ -160,7 +160,7 @@ func compareJSON(t *testing.T, actual json.RawMessage) {
 
 		var expectedJSON json.RawMessage
 		var matchingAttributes []string
-		switch jwkset.KeyType(kty) {
+		switch jwkset.JWKKTY(kty) {
 		case jwkset.KeyTypeEC:
 			expectedJSON = json.RawMessage(ecExpected)
 			matchingAttributes = []string{"kty", "kid", "crv", "x", "y"}
