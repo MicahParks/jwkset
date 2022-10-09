@@ -47,27 +47,27 @@ func NewKey(key interface{}, keyID string) KeyWithMeta {
 // otherPrimes is for RSA private keys.
 // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7
 type otherPrimes struct {
-	CRTFactorExponent    string `json:"d,omitempty"`
-	CRTFactorCoefficient string `json:"t,omitempty"`
-	PrimeFactor          string `json:"r,omitempty"`
+	CRTFactorExponent    string `json:"d,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.2
+	CRTFactorCoefficient string `json:"t,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.3
+	PrimeFactor          string `json:"r,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.1
 }
 
 type jwkMarshal struct {
-	CRTCoefficient1 string        `json:"qi,omitempty"`
-	CRTExponent1    string        `json:"dp,omitempty"`
-	CRTExponent2    string        `json:"dq,omitempty"`
-	Curve           string        `json:"crv,omitempty"`
-	D               string        `json:"d,omitempty"`
-	Exponent        string        `json:"e,omitempty"`
-	K               string        `json:"k,omitempty"`
-	ID              string        `json:"kid,omitempty"`
-	Modulus         string        `json:"n,omitempty"`
-	OtherPrimes     []otherPrimes `json:"oth,omitempty"`
-	Prime1          string        `json:"p,omitempty"`
-	Prime2          string        `json:"q,omitempty"`
-	Type            string        `json:"kty,omitempty"`
-	X               string        `json:"x,omitempty"`
-	Y               string        `json:"y,omitempty"`
+	CRV string        `json:"crv,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
+	D   string        `json:"d,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.1 and https://www.rfc-editor.org/rfc/rfc7518#section-6.2.2.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
+	DP  string        `json:"dp,omitempty"`  // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.4
+	DQ  string        `json:"dq,omitempty"`  // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.5
+	E   string        `json:"e,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.1.2
+	K   string        `json:"k,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.4.1
+	KID string        `json:"kid,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.5
+	KTY string        `json:"kty,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.1
+	N   string        `json:"n,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.1.1
+	OTH []otherPrimes `json:"oth,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7
+	P   string        `json:"p,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.2
+	Q   string        `json:"q,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.3
+	QI  string        `json:"qi,omitempty"`  // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.6
+	X   string        `json:"x,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.2 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
+	Y   string        `json:"y,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.3
 }
 
 type jwkSetMarshal struct {
@@ -102,46 +102,46 @@ func (j JWKSet) JSON(ctx context.Context) (json.RawMessage, error) {
 		case *ecdsa.PrivateKey:
 			key := meta.Key.(*ecdsa.PrivateKey)
 			pub := key.PublicKey
-			jwk.Curve = pub.Curve.Params().Name
+			jwk.CRV = pub.Curve.Params().Name
 			jwk.X = bigIntToBase64RawURL(pub.X)
 			jwk.Y = bigIntToBase64RawURL(pub.Y)
-			jwk.Type = KeyTypeEC.String()
+			jwk.KTY = KeyTypeEC.String()
 			if encodePrivate {
 				jwk.D = bigIntToBase64RawURL(key.D)
 			}
 		case ecdsa.PublicKey:
 			key := meta.Key.(ecdsa.PublicKey)
-			jwk.Curve = key.Curve.Params().Name
+			jwk.CRV = key.Curve.Params().Name
 			jwk.X = bigIntToBase64RawURL(key.X)
 			jwk.Y = bigIntToBase64RawURL(key.Y)
-			jwk.Type = KeyTypeEC.String()
+			jwk.KTY = KeyTypeEC.String()
 		case ed25519.PrivateKey:
 			key := meta.Key.(ed25519.PrivateKey)
 			pub := key.Public().(ed25519.PublicKey)
 			jwk.X = base64.RawURLEncoding.EncodeToString(pub)
-			jwk.Type = KeyTypeOKP.String()
+			jwk.KTY = KeyTypeOKP.String()
 			if encodePrivate {
 				jwk.D = base64.RawURLEncoding.EncodeToString(key)
 			}
 		case ed25519.PublicKey:
 			key := meta.Key.(ed25519.PublicKey)
 			jwk.X = base64.RawURLEncoding.EncodeToString(key)
-			jwk.Type = KeyTypeOKP.String()
+			jwk.KTY = KeyTypeOKP.String()
 		case *rsa.PrivateKey:
 			key := meta.Key.(*rsa.PrivateKey)
 			pub := key.PublicKey
-			jwk.Exponent = bigIntToBase64RawURL(big.NewInt(int64(pub.E)))
-			jwk.Modulus = bigIntToBase64RawURL(pub.N)
-			jwk.Type = KeyTypeRSA.String()
+			jwk.E = bigIntToBase64RawURL(big.NewInt(int64(pub.E)))
+			jwk.N = bigIntToBase64RawURL(pub.N)
+			jwk.KTY = KeyTypeRSA.String()
 			if encodePrivate {
 				jwk.D = bigIntToBase64RawURL(key.D)
-				jwk.Prime1 = bigIntToBase64RawURL(key.Primes[0])
-				jwk.Prime2 = bigIntToBase64RawURL(key.Primes[1])
-				jwk.CRTExponent1 = bigIntToBase64RawURL(key.Precomputed.Dp)
-				jwk.CRTExponent2 = bigIntToBase64RawURL(key.Precomputed.Dq)
-				jwk.CRTCoefficient1 = bigIntToBase64RawURL(key.Precomputed.Qinv)
+				jwk.P = bigIntToBase64RawURL(key.Primes[0])
+				jwk.Q = bigIntToBase64RawURL(key.Primes[1])
+				jwk.DP = bigIntToBase64RawURL(key.Precomputed.Dp)
+				jwk.DQ = bigIntToBase64RawURL(key.Precomputed.Dq)
+				jwk.QI = bigIntToBase64RawURL(key.Precomputed.Qinv)
 				for i := 2; i < len(key.Primes); i++ {
-					jwk.OtherPrimes = append(jwk.OtherPrimes, otherPrimes{
+					jwk.OTH = append(jwk.OTH, otherPrimes{
 						CRTFactorExponent:    bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Exp),
 						CRTFactorCoefficient: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Coeff),
 						PrimeFactor:          bigIntToBase64RawURL(key.Precomputed.CRTValues[i].R),
@@ -150,14 +150,14 @@ func (j JWKSet) JSON(ctx context.Context) (json.RawMessage, error) {
 			}
 		case rsa.PublicKey:
 			key := meta.Key.(rsa.PublicKey)
-			jwk.Exponent = bigIntToBase64RawURL(big.NewInt(int64(key.E)))
-			jwk.Modulus = bigIntToBase64RawURL(key.N)
-			jwk.Type = KeyTypeRSA.String()
+			jwk.E = bigIntToBase64RawURL(big.NewInt(int64(key.E)))
+			jwk.N = bigIntToBase64RawURL(key.N)
+			jwk.KTY = KeyTypeRSA.String()
 		default:
 			// Skip key.
 			continue
 		}
-		jwk.ID = meta.KeyID
+		jwk.KID = meta.KeyID
 		jwks.Keys = append(jwks.Keys, jwk)
 	}
 
