@@ -14,22 +14,22 @@ import (
 
 const (
 	// KeyTypeEC is the key type for ECDSA.
-	KeyTypeEC JWKKTY = "EC"
+	KeyTypeEC KTY = "EC"
 	// KeyTypeOKP is the key type for EdDSA.
-	KeyTypeOKP JWKKTY = "OKP"
+	KeyTypeOKP KTY = "OKP"
 	// KeyTypeRSA is the key type for RSA.
-	KeyTypeRSA JWKKTY = "RSA"
+	KeyTypeRSA KTY = "RSA"
 	// KeyTypeOct is the key type for octet sequences, such as HMAC.
-	KeyTypeOct JWKKTY = "oct"
+	KeyTypeOct KTY = "oct"
 
 	// CurveEd25519 is a curve for EdDSA.
-	CurveEd25519 JWKCRV = "Ed25519"
+	CurveEd25519 CRV = "Ed25519"
 	// CurveP256 is a curve for ECDSA.
-	CurveP256 JWKCRV = "P-256"
+	CurveP256 CRV = "P-256"
 	// CurveP384 is a curve for ECDSA.
-	CurveP384 JWKCRV = "P-384"
+	CurveP384 CRV = "P-384"
 	// CurveP521 is a curve for ECDSA.
-	CurveP521 JWKCRV = "P-521"
+	CurveP521 CRV = "P-521"
 )
 
 var (
@@ -39,19 +39,19 @@ var (
 	ErrUnsupportedKeyType = errors.New("unsupported key type")
 )
 
-// JWKCRV is a set of "JSON Web Key Elliptic Curve" types from https://www.iana.org/assignments/jose/jose.xhtml as
+// CRV is a set of "JSON Web Key Elliptic Curve" types from https://www.iana.org/assignments/jose/jose.xhtml as
 // mentioned in https://www.rfc-editor.org/rfc/rfc7518.html#section-6.2.1.1.
-type JWKCRV string
+type CRV string
 
-func (crv JWKCRV) String() string {
+func (crv CRV) String() string {
 	return string(crv)
 }
 
-// JWKKTY is a set of "JSON Web Key Types" from https://www.iana.org/assignments/jose/jose.xhtml as mentioned in
+// KTY is a set of "JSON Web Key Types" from https://www.iana.org/assignments/jose/jose.xhtml as mentioned in
 // https://www.rfc-editor.org/rfc/rfc7517#section-4.1
-type JWKKTY string
+type KTY string
 
-func (kty JWKKTY) String() string {
+func (kty KTY) String() string {
 	return string(kty)
 }
 
@@ -181,7 +181,7 @@ type KeyUnmarshalOptions struct {
 // key.
 func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, error) {
 	meta := KeyWithMeta{}
-	switch JWKKTY(jwk.KTY) {
+	switch KTY(jwk.KTY) {
 	case KeyTypeEC:
 		if jwk.X == "" || jwk.Y == "" || jwk.CRV == "" {
 			return KeyWithMeta{}, fmt.Errorf(`%w: %s requires parameters "x", "y", and "crv"`, ErrKeyUnmarshalParameter, KeyTypeEC)
@@ -198,7 +198,7 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			X: big.NewInt(0).SetBytes(x),
 			Y: big.NewInt(0).SetBytes(y),
 		}
-		switch JWKCRV(jwk.CRV) {
+		switch CRV(jwk.CRV) {
 		case CurveP256:
 			publicKey.Curve = elliptic.P256()
 		case CurveP384:
@@ -225,7 +225,7 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			meta.Key = &publicKey
 		}
 	case KeyTypeOKP:
-		if JWKCRV(jwk.CRV) != CurveEd25519 {
+		if CRV(jwk.CRV) != CurveEd25519 {
 			return KeyWithMeta{}, fmt.Errorf("%w: %s key type should have %q curve", ErrUnsupportedKeyType, KeyTypeOKP, CurveEd25519)
 		}
 		if options.AsymmetricPrivate {
