@@ -290,6 +290,7 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			if err != nil {
 				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "q": %w`, KeyTypeRSA, err)
 			}
+
 			dp, err := base64urlTrailingPadding(jwk.DP)
 			if err != nil {
 				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "dp": %w`, KeyTypeRSA, err)
@@ -303,7 +304,11 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "qi": %w`, KeyTypeRSA, err)
 			}
 			var oth []rsa.CRTValue
+			var primes []*big.Int
 			if len(jwk.OTH) > 0 {
+				primes = make([]*big.Int, 2+len(jwk.OTH))
+				primes[0] = new(big.Int).SetBytes(p)
+				primes[1] = new(big.Int).SetBytes(q)
 				// TODO Does each extra multi-prime need to be added to the slice of primes on the private key?
 				oth = make([]rsa.CRTValue, len(jwk.OTH))
 				for i, otherPrimes := range jwk.OTH {
@@ -322,26 +327,33 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 					if err != nil {
 						return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "r": %w`, KeyTypeRSA, err)
 					}
+					primes[i+2] = new(big.Int).SetBytes(othR) // TODO This is incorrect
 					oth[i] = rsa.CRTValue{
 						Exp:   new(big.Int).SetBytes(othD),
 						Coeff: new(big.Int).SetBytes(othT),
 						R:     new(big.Int).SetBytes(othR),
 					}
 				}
+			} else {
+				primes = []*big.Int{
+					new(big.Int).SetBytes(p),
+					new(big.Int).SetBytes(q),
+				}
 			}
 			privateKey := &rsa.PrivateKey{
 				PublicKey: publicKey,
 				D:         new(big.Int).SetBytes(d),
-				Primes: []*big.Int{
-					new(big.Int).SetBytes(p),
-					new(big.Int).SetBytes(q),
-				},
+				Primes:    primes,
 				Precomputed: rsa.PrecomputedValues{
 					Dp:        new(big.Int).SetBytes(dp),
 					Dq:        new(big.Int).SetBytes(dq),
 					Qinv:      new(big.Int).SetBytes(qi),
 					CRTValues: oth,
 				},
+			}
+			err = privateKey.Validate()
+			if err != nil {
+				return KeyWithMeta{}, fmt.Errorf(`failed to validate %s key: %w`, KeyTypeRSA, err)
 			}
 			meta.Key = privateKey
 		} else if !options.AsymmetricPrivate {
