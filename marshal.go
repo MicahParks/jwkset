@@ -116,7 +116,7 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 		if options.AsymmetricPrivate {
 			jwk.D = bigIntToBase64RawURL(key.D)
 		}
-	case *ecdsa.PublicKey: // TODO Make this a pointer. Maybe support value with reassignment and fallthrough.
+	case *ecdsa.PublicKey:
 		jwk.CRV = CRV(key.Curve.Params().Name)
 		jwk.X = bigIntToBase64RawURL(key.X)
 		jwk.Y = bigIntToBase64RawURL(key.Y)
@@ -156,7 +156,7 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 				}
 			}
 		}
-	case *rsa.PublicKey: // TODO Make this a pointer. Maybe support value with reassignment and fallthrough.
+	case *rsa.PublicKey:
 		jwk.E = bigIntToBase64RawURL(big.NewInt(int64(key.E)))
 		jwk.N = bigIntToBase64RawURL(key.N)
 		jwk.KTY = KeyTypeRSA
@@ -267,7 +267,7 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			N: new(big.Int).SetBytes(n),
 			E: int(new(big.Int).SetBytes(e).Uint64()),
 		}
-		if options.AsymmetricPrivate && jwk.D != "" && jwk.P != "" && jwk.Q != "" && jwk.DP != "" && jwk.DQ != "" && jwk.QI != "" { // TODO Are all required?
+		if options.AsymmetricPrivate && jwk.D != "" && jwk.P != "" && jwk.Q != "" && jwk.DP != "" && jwk.DQ != "" && jwk.QI != "" {
 			d, err := base64urlTrailingPadding(jwk.D)
 			if err != nil {
 				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KeyTypeRSA, err)
