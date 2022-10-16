@@ -42,7 +42,7 @@ const (
 func TestMarshalECDSA(t *testing.T) {
 	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.KeyMarshalOptions) {
 		// TODO Check ALG.
-		if marshal.CRV != jwkset.CurveP256.String() {
+		if marshal.CRV != jwkset.CurveP256 {
 			t.Fatal(`Marshalled parameter "crv" does not match original key.`)
 		}
 		if options.AsymmetricPrivate {
@@ -54,7 +54,7 @@ func TestMarshalECDSA(t *testing.T) {
 				t.Fatal("Asymmetric private key should be unsupported for given options.")
 			}
 		}
-		if marshal.KTY != jwkset.KeyTypeEC.String() {
+		if marshal.KTY != jwkset.KeyTypeEC {
 			t.Fatal(`Marshalled parameter "kty" does not match original key.`)
 		}
 		if marshal.X != ecdsaP256X {
@@ -127,9 +127,9 @@ func TestUnmarshalECDSA(t *testing.T) {
 	}
 
 	jwk := jwkset.JWKMarshal{
-		CRV: jwkset.CurveP256.String(),
+		CRV: jwkset.CurveP256,
 		D:   ecdsaP256D,
-		KTY: jwkset.KeyTypeEC.String(),
+		KTY: jwkset.KeyTypeEC,
 		X:   ecdsaP256X,
 		Y:   ecdsaP256Y,
 	}
@@ -150,7 +150,7 @@ func TestUnmarshalECDSA(t *testing.T) {
 	checkUnmarshal(meta, options, key)
 
 	key = makeECDSAP384(t)
-	jwk.CRV = jwkset.CurveP384.String()
+	jwk.CRV = jwkset.CurveP384
 	jwk.D = ecdsaP384D
 	jwk.X = ecdsaP384X
 	jwk.Y = ecdsaP384Y
@@ -161,7 +161,7 @@ func TestUnmarshalECDSA(t *testing.T) {
 	checkUnmarshal(meta, options, key)
 
 	key = makeECDSAP521(t)
-	jwk.CRV = jwkset.CurveP521.String()
+	jwk.CRV = jwkset.CurveP521
 	jwk.D = ecdsaP521D
 	jwk.X = ecdsaP521X
 	jwk.Y = ecdsaP521Y
@@ -182,7 +182,7 @@ func TestUnmarshalECDSA(t *testing.T) {
 	if !errors.Is(err, jwkset.ErrKeyUnmarshalParameter) {
 		t.Fatalf(`Should get ErrKeyUnmarshalParameter when parameter "crv" is invalid. %s`, err)
 	}
-	jwk.CRV = jwkset.CurveP521.String()
+	jwk.CRV = jwkset.CurveP521
 
 	jwk.D = invalidB64URL
 	_, err = jwkset.KeyUnmarshal(jwk, options)
@@ -209,7 +209,7 @@ func TestUnmarshalECDSA(t *testing.T) {
 func TestMarshalEdDSA(t *testing.T) {
 	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.KeyMarshalOptions) {
 		// TODO Check ALG.
-		if marshal.CRV != jwkset.CurveEd25519.String() {
+		if marshal.CRV != jwkset.CurveEd25519 {
 			t.Fatal(`Marshalled key parameter "crv" does not match original key.`)
 		}
 		if options.AsymmetricPrivate {
@@ -221,7 +221,7 @@ func TestMarshalEdDSA(t *testing.T) {
 				t.Fatalf("Asymmetric private key should be unsupported for given options.")
 			}
 		}
-		if marshal.KTY != jwkset.KeyTypeOKP.String() {
+		if marshal.KTY != jwkset.KeyTypeOKP {
 			t.Fatal(`Marshalled key parameter "kty" does not match original key.`)
 		}
 		if marshal.X != eddsaPublic {
@@ -263,10 +263,10 @@ func TestUnmarshalEdDSA(t *testing.T) {
 	private := makeEdDSA(t)
 
 	jwk := jwkset.JWKMarshal{
-		CRV: jwkset.CurveEd25519.String(),
+		CRV: jwkset.CurveEd25519,
 		D:   eddsaPrivate,
 		KID: myKeyID,
-		KTY: jwkset.KeyTypeOKP.String(),
+		KTY: jwkset.KeyTypeOKP,
 		X:   eddsaPublic,
 	}
 
@@ -317,7 +317,7 @@ func TestUnmarshalEdDSA(t *testing.T) {
 	if !errors.Is(err, jwkset.ErrKeyUnmarshalParameter) {
 		t.Fatalf(`Should get ErrKeyUnmarshalParameter when parameter "crv" is empty. %s`, err)
 	}
-	jwk.CRV = jwkset.CurveEd25519.String()
+	jwk.CRV = jwkset.CurveEd25519
 
 	invalidSize := base64.RawURLEncoding.EncodeToString([]byte("invalidSize"))
 	jwk.X = invalidSize
@@ -355,7 +355,7 @@ func TestMarshalOct(t *testing.T) {
 	if marshal.K != base64.RawURLEncoding.EncodeToString(meta.Key.([]byte)) {
 		t.Fatalf("Unmarshalled key does not match original key.")
 	}
-	if marshal.KTY != jwkset.KeyTypeOct.String() {
+	if marshal.KTY != jwkset.KeyTypeOct {
 		t.Fatalf("Key type does not match original key.")
 	}
 }
@@ -364,7 +364,7 @@ func TestUnmarshalOct(t *testing.T) {
 	jwk := jwkset.JWKMarshal{
 		K:   base64.RawURLEncoding.EncodeToString([]byte(hmacSecret)),
 		KID: myKeyID,
-		KTY: jwkset.KeyTypeOct.String(),
+		KTY: jwkset.KeyTypeOct,
 	}
 
 	options := jwkset.KeyUnmarshalOptions{}
@@ -405,7 +405,7 @@ func TestMarshalRSA(t *testing.T) {
 		if marshal.E != rsa2048RS256E {
 			t.Fatal(`Marshall parameter "e" does not match original key.`)
 		}
-		if marshal.KTY != jwkset.KeyTypeRSA.String() {
+		if marshal.KTY != jwkset.KeyTypeRSA {
 			t.Fatal(`Marshall parameter "kty" does not match original key.`)
 		}
 		if marshal.N != rsa2048RS256N {
@@ -521,7 +521,7 @@ func TestUnmarshalRSA(t *testing.T) {
 		D:   rsa2048RS256D,
 		DP:  rsa2048RS256DP,
 		DQ:  rsa2048RS256DQ,
-		KTY: jwkset.KeyTypeRSA.String(),
+		KTY: jwkset.KeyTypeRSA,
 		N:   rsa2048RS256N,
 		P:   rsa2048RS256P,
 		Q:   rsa2048RS256Q,

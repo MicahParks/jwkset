@@ -68,14 +68,14 @@ type OtherPrimes struct {
 // https://www.rfc-editor.org/rfc/rfc7518
 // https://www.rfc-editor.org/rfc/rfc8037
 type JWKMarshal struct {
-	CRV string        `json:"crv,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
+	CRV CRV           `json:"crv,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
 	D   string        `json:"d,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.1 and https://www.rfc-editor.org/rfc/rfc7518#section-6.2.2.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
 	DP  string        `json:"dp,omitempty"`  // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.4
 	DQ  string        `json:"dq,omitempty"`  // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.5
 	E   string        `json:"e,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.1.2
 	K   string        `json:"k,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.4.1
 	KID string        `json:"kid,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.5
-	KTY string        `json:"kty,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.1
+	KTY KTY           `json:"kty,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.1
 	N   string        `json:"n,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.1.1
 	OTH []OtherPrimes `json:"oth,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7
 	P   string        `json:"p,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.2
@@ -109,35 +109,35 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 	switch key := meta.Key.(type) {
 	case *ecdsa.PrivateKey:
 		pub := key.PublicKey
-		jwk.CRV = pub.Curve.Params().Name
+		jwk.CRV = CRV(pub.Curve.Params().Name)
 		jwk.X = bigIntToBase64RawURL(pub.X)
 		jwk.Y = bigIntToBase64RawURL(pub.Y)
-		jwk.KTY = KeyTypeEC.String()
+		jwk.KTY = KeyTypeEC
 		if options.AsymmetricPrivate {
 			jwk.D = bigIntToBase64RawURL(key.D)
 		}
 	case *ecdsa.PublicKey: // TODO Make this a pointer. Maybe support value with reassignment and fallthrough.
-		jwk.CRV = key.Curve.Params().Name
+		jwk.CRV = CRV(key.Curve.Params().Name)
 		jwk.X = bigIntToBase64RawURL(key.X)
 		jwk.Y = bigIntToBase64RawURL(key.Y)
-		jwk.KTY = KeyTypeEC.String()
+		jwk.KTY = KeyTypeEC
 	case ed25519.PrivateKey:
 		pub := key.Public().(ed25519.PublicKey)
-		jwk.CRV = CurveEd25519.String()
+		jwk.CRV = CurveEd25519
 		jwk.X = base64.RawURLEncoding.EncodeToString(pub)
-		jwk.KTY = KeyTypeOKP.String()
+		jwk.KTY = KeyTypeOKP
 		if options.AsymmetricPrivate {
 			jwk.D = base64.RawURLEncoding.EncodeToString(key[:32])
 		}
 	case ed25519.PublicKey:
-		jwk.CRV = CurveEd25519.String()
+		jwk.CRV = CurveEd25519
 		jwk.X = base64.RawURLEncoding.EncodeToString(key)
-		jwk.KTY = KeyTypeOKP.String()
+		jwk.KTY = KeyTypeOKP
 	case *rsa.PrivateKey:
 		pub := key.PublicKey
 		jwk.E = bigIntToBase64RawURL(big.NewInt(int64(pub.E)))
 		jwk.N = bigIntToBase64RawURL(pub.N)
-		jwk.KTY = KeyTypeRSA.String()
+		jwk.KTY = KeyTypeRSA
 		if options.AsymmetricPrivate {
 			jwk.D = bigIntToBase64RawURL(key.D)
 			jwk.P = bigIntToBase64RawURL(key.Primes[0])
@@ -156,10 +156,10 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 	case rsa.PublicKey: // TODO Make this a pointer. Maybe support value with reassignment and fallthrough.
 		jwk.E = bigIntToBase64RawURL(big.NewInt(int64(key.E)))
 		jwk.N = bigIntToBase64RawURL(key.N)
-		jwk.KTY = KeyTypeRSA.String()
+		jwk.KTY = KeyTypeRSA
 	case []byte:
 		if options.Symmetric {
-			jwk.KTY = KeyTypeOct.String()
+			jwk.KTY = KeyTypeOct
 			jwk.K = base64.RawURLEncoding.EncodeToString(key)
 		} else {
 			return JWKMarshal{}, fmt.Errorf("%w: incorrect options to marshal symmetric key (oct)", ErrUnsupportedKeyType)
