@@ -511,6 +511,16 @@ func TestMarshalRSA(t *testing.T) {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
 	}
 	checkMarshal(marshal, options)
+
+	metaPublic := jwkset.KeyWithMeta{
+		Key: private.Public(),
+	}
+	options.AsymmetricPrivate = false
+	marshal, err = jwkset.KeyMarshal(metaPublic, options)
+	if err != nil {
+		t.Fatalf("Failed to marshal key with correct options. %s", err)
+	}
+	checkMarshal(marshal, options)
 }
 
 func TestUnmarshalRSA(t *testing.T) {

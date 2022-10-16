@@ -19,7 +19,7 @@ func TestJSON(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	jwkSet := jwkset.NewMemory()
+	jwks := jwkset.NewMemory()
 
 	block, _ := pem.Decode([]byte(ecPrivateKey))
 	eKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
@@ -27,7 +27,7 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to parse EC private key. %s", err)
 	}
 	const eID = "myECKey"
-	err = jwkSet.Store.WriteKey(ctx, jwkset.NewKey(eKey.(*ecdsa.PrivateKey), eID))
+	err = jwks.Store.WriteKey(ctx, jwkset.NewKey(eKey.(*ecdsa.PrivateKey), eID))
 	if err != nil {
 		t.Fatalf("Failed to write EC key. %s", err)
 	}
@@ -42,7 +42,7 @@ func TestJSON(t *testing.T) {
 	}
 	ed := ed25519.PrivateKey(append(edPriv, edPub...))
 	const edID = "myEdDSAKey"
-	err = jwkSet.Store.WriteKey(ctx, jwkset.NewKey(ed, edID))
+	err = jwks.Store.WriteKey(ctx, jwkset.NewKey(ed, edID))
 	if err != nil {
 		t.Fatalf("Failed to write EdDSA key. %s", err)
 	}
@@ -53,14 +53,14 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to parse RSA private key. %s", err)
 	}
 	const rID = "myRSAKey"
-	err = jwkSet.Store.WriteKey(ctx, jwkset.NewKey(rKey.(*rsa.PrivateKey), rID))
+	err = jwks.Store.WriteKey(ctx, jwkset.NewKey(rKey.(*rsa.PrivateKey), rID))
 	if err != nil {
 		t.Fatalf("Failed to write RSA key. %s", err)
 	}
 
 	hKey := []byte(hmacSecret)
 	const hID = "myHMACKey"
-	err = jwkSet.Store.WriteKey(ctx, jwkset.KeyWithMeta{
+	err = jwks.Store.WriteKey(ctx, jwkset.KeyWithMeta{
 		Key:   hKey,
 		KeyID: hID,
 	})
@@ -68,76 +68,20 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to write HMAC key. %s", err)
 	}
 
-	jsonRepresentation, err := jwkSet.JSON(ctx)
+	jsonRepresentation, err := jwks.JSONPublic(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get JSON. %s", err)
 	}
+	compareJSON(t, jsonRepresentation, false)
 
-	compareJSON(t, jsonRepresentation)
-}
-
-func TestJSONPublic(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	jwkSet := jwkset.NewMemory()
-
-	block, _ := pem.Decode([]byte(ecPrivateKey))
-	eKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		t.Fatalf("Failed to parse EC private key. %s", err)
-	}
-	const eID = "myECKey"
-	err = jwkSet.Store.WriteKey(ctx, jwkset.NewKey(&eKey.(*ecdsa.PrivateKey).PublicKey, eID))
-	if err != nil {
-		t.Fatalf("Failed to write EC key. %s", err)
-	}
-
-	edPriv, err := base64.RawURLEncoding.DecodeString(edPrivateKey)
-	if err != nil {
-		t.Fatalf("Failed to decode EdDSA private key. %s", err)
-	}
-	edPub, err := base64.RawURLEncoding.DecodeString(edPublicKey)
-	if err != nil {
-		t.Fatalf("Failed to decode EdDSA public key. %s", err)
-	}
-	ed := ed25519.PrivateKey(append(edPriv, edPub...))
-	const edID = "myEdDSAKey"
-	err = jwkSet.Store.WriteKey(ctx, jwkset.NewKey(ed.Public(), edID))
-	if err != nil {
-		t.Fatalf("Failed to write EdDSA key. %s", err)
-	}
-
-	block, _ = pem.Decode([]byte(rsaPrivateKey))
-	rKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		t.Fatalf("Failed to parse RSA private key. %s", err)
-	}
-	const rID = "myRSAKey"
-	err = jwkSet.Store.WriteKey(ctx, jwkset.NewKey(rKey.(*rsa.PrivateKey).PublicKey, rID))
-	if err != nil {
-		t.Fatalf("Failed to write RSA key. %s", err)
-	}
-
-	hKey := []byte(hmacSecret)
-	const hID = "myHMACKey"
-	err = jwkSet.Store.WriteKey(ctx, jwkset.KeyWithMeta{
-		Key:   hKey,
-		KeyID: hID,
-	})
-	if err != nil {
-		t.Fatalf("Failed to write HMAC key. %s", err)
-	}
-
-	jsonRepresentation, err := jwkSet.JSON(ctx)
+	jsonRepresentation, err = jwks.JSONPrivate(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get JSON. %s", err)
 	}
-
-	compareJSON(t, jsonRepresentation)
+	compareJSON(t, jsonRepresentation, true)
 }
 
-func compareJSON(t *testing.T, actual json.RawMessage) {
+func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 	type jwksUnmarshal struct {
 		Keys []map[string]interface{} `json:"keys"`
 	}
@@ -148,7 +92,13 @@ func compareJSON(t *testing.T, actual json.RawMessage) {
 		t.Fatalf("Failed to unmarshal actual JSON. %s", err)
 	}
 
-	if len(keys.Keys) != 3 {
+	wrongLength := false
+	if private && len(keys.Keys) != 4 {
+		wrongLength = true
+	} else if !private && len(keys.Keys) != 3 {
+		wrongLength = true
+	}
+	if wrongLength {
 		t.Fatalf("Expected 3 keys. Got %d. HMAC keys should not have a JSON representation.", len(keys.Keys))
 	}
 
@@ -164,12 +114,28 @@ func compareJSON(t *testing.T, actual json.RawMessage) {
 		case jwkset.KeyTypeEC:
 			expectedJSON = json.RawMessage(ecExpected)
 			matchingAttributes = []string{"kty", "kid", "crv", "x", "y"}
+			if private {
+				matchingAttributes = append(matchingAttributes, "d")
+			}
 		case jwkset.KeyTypeOKP:
 			expectedJSON = json.RawMessage(edExpected)
 			matchingAttributes = []string{"kty", "kid", "x"}
+			if private {
+				matchingAttributes = append(matchingAttributes, "d")
+			}
 		case jwkset.KeyTypeRSA:
 			expectedJSON = json.RawMessage(rsaExpected)
 			matchingAttributes = []string{"kty", "kid", "n", "e"}
+			if private {
+				matchingAttributes = append(matchingAttributes, "d", "p", "q", "dp", "dq", "qi")
+			}
+		case jwkset.KeyTypeOct:
+			if private {
+				expectedJSON = json.RawMessage(hmacExpected)
+				matchingAttributes = []string{"kty", "kid", "k"}
+			} else {
+				t.Fatal("HMAC keys should not have a JSON representation.")
+			}
 		}
 		var expectedMap map[string]interface{}
 		err = json.Unmarshal(expectedJSON, &expectedMap)
@@ -199,60 +165,69 @@ https://mkjwk.org/
 */
 const (
 	ecExpected = `{
-    "kid": "myECKey",
     "kty": "EC",
-    "use": "enc",
+    "d": "Vp3epfDd9viOo1w6Co7DpIP2lPnqwIB8HcOrI7Jt0II",
     "crv": "P-256",
-    "x": "ySFyLLthCEMqO1TVh2B5SM85DBhg-wuVlcVsSdswEl8",
-    "y": "-MbIwk9t-vt3GpGpp_0yoiCpp8yRB3igUQkBStwJjyI",
-    "alg": "ECDH-ES"
+    "kid": "myECKey",
+    "x": "24yKWYrRffYdpQzbnkzbhABivplltO-eimNwqK3xeAM",
+    "y": "qGxS4s4TH35_VK4Bk119s16tFGKegwHJc3pL2p2Zy30"
 }`
 	ecPrivateKey = `-----BEGIN PRIVATE KEY-----
-MEECAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQcEJzAlAgEBBCBa80vb9tIT7/EQ8rjE
-O9NiIPiTn67K5a9I9ai++4ZpeA==
+MEECAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQcEJzAlAgEBBCBWnd6l8N32+I6jXDoK
+jsOkg/aU+erAgHwdw6sjsm3Qgg==
 -----END PRIVATE KEY-----`
 	edExpected = `{
-    "kid": "myEdDSAKey",
     "kty": "OKP",
+    "d": "tKqo1bnSif18g2hE0D7zPDNgSTKQKwBMEl2UvhJZ-bs",
     "crv": "Ed25519",
-    "x": "LYqimvjlMIx_qs9UKpigrlJDyP2RKfEljOLWhUgzQyE"
+    "kid": "myEdDSAKey",
+    "x": "eX81_IFCbcbhBDD-wgUYbYk8E6DLnPnl39YXx_ru7ao"
 }`
-	edPrivateKey = "tsXK0Kzrt5tkQitfrNezrJ8ky4whAEnoBE4fZg0jbQw"
-	edPublicKey  = "LYqimvjlMIx_qs9UKpigrlJDyP2RKfEljOLWhUgzQyE"
-	rsaExpected  = `{
-    "kid": "myRSAKey",
+	edPrivateKey = "tKqo1bnSif18g2hE0D7zPDNgSTKQKwBMEl2UvhJZ-bs"
+	edPublicKey  = "eX81_IFCbcbhBDD-wgUYbYk8E6DLnPnl39YXx_ru7ao"
+	hmacExpected = `{
+    "kty": "oct",
+    "kid": "myHMACKey",
+    "k": "bXlITUFDU2VjcmV0"
+}`
+	rsaExpected = `{
+    "p": "5x2fw5e3bz20IxlbU3Jxn9OOAeMuVGqC-BP2XYk6-2T9T_TeKRgEEIoHtt0lre3QZrefB-6UjNfXU6pfuMr4BsSpT-tAjiUI1c8EmHC5hhpCDJ8LWekWrTJDPApfQjpZK-HO0UdIZCIILyVr82KuZax5RKBMTMfDPjF2NQxwqFc",
     "kty": "RSA",
+    "q": "wbu1LZuDBRq8PZ-G2SJNU_t-b1Zev3Hn6iLFNYF5Y3CYRVtAg_TWpErfrM-4YUXucLQGsLOaCnRNQ81GXFb9e6W7sY8UeyAlqFxxtm0FZ2CnpxxS9EYq57AP5EfpyOi7DNUe0fe0wTwC5o_sq-pMOeCsuWgiXjgTpDoydwtjIFM",
+    "d": "c0w8JqtmAAX5TC5Ba0KaGft-uAi-Q0rngcob_l8dVcF6pRqN0QKhwZAKKlb57hwHLdzl6Rc9YmVjWBemVo-Pi-ZKpeXSnkxFEc_50NMMGOp4TIjBaoJcrQ3KP5T7djwPc0aZ51z7XtUZ8Q_G0gEGAywnG6zUTJlqS8ctybBcol0LDl--Ps52I2pupZ1RiIRsgPF0zrGTsGrnxdtFVxOVRqNTZ26fEOSqRRTXxC4PNN4PDR2OSTDc-G1F_OPGJutgPnt7dpgw0vAkGD0b4FxtMXTXoS3cgB5zug4ySi9-1jBvAvNkWt0i3OoYPPLarDjlesRTHs5P_iOWjt6nFBeLpQ",
     "e": "AQAB",
-    "use": "enc",
-    "alg": "RSA1_5",
-    "n": "neGKcVtE7bSvOZpqku2AtubWmjYIU3BH3EIUmTgKCswL2jYEcYMnLUQdOTBobBrhzgP2V1xN79s_LuqSHcFzvqE1wg64RvCWE4tF0aHCBQieH1PnRKsZlw5ZAPNKQC7e7QRgqmdcp9ljJQLCLFNfftQHYR1WzCwD2IslJkX5endXW4M7jyoCwbp1_KNnibgU29glQEk2FsII6Q1UG1Qi-LMPn2Tj2dIST9x_toYiuI2WZ5P4YfPI8xGNx5_uCgi7m9JZouwhcNGdAwa_ro6D7xzlwz4Me6_rpdR2lCNgeA2aRs6e9qbvx5-WmtXHzdZ7k6DU-FTjMGFhrLG23NSqaw"
+    "kid": "myRSAKey",
+    "qi": "eJxCTg3NoEUcK8eCMBp0ukJ1SZD11UbWrL-Js6YaAr-Mx5nrWozMfcyaerSrwGYcCmD3Ga3bhv28TyGCujCsT35aWqOyi9S51M8AJ6VoiLgYSufuI7DnlUHjKpoPezhSM-RWW1QFdLR9InCBsfQctiy0Hf8IjaKqtPotx6zTR2E",
+    "dp": "xHCRkxYpfAveSNcMoOjtWwPd-Ay5HFdL6sBM70PtNjCofoWLLzKSgdxQokVl-Wfhcu0v5vYKnYv4Icz2f4NFPbt6jctPm4Iu-Ex1g3yMtEctTL0CUPGlrKDENQw723bsxDeyKn-EMFgczLXqA30k7painIoDUF-avAoehwiD2RE",
+    "dq": "BK60wlVv5T-wLQ0eBUF-_PinJanAwH_QSyhr-88VUAH4rDR4argQOAhXP6YFntRB3xd60eqFXptRAsKDYNf5aHOpBbGfnRo5zsftN6uK5eTAKJnWp3DKuK7Ys3vJesGlQ7oi9JA4HjOFHm18GuuezAdSJWkO65gPYXjGn3n2-2E",
+    "n": "rubLp0fQtgIIy1xq-fM-mDxlobK7qUf1UIH4DQHUSWXzauvRNaV2cj4iIhooJVej24v0EOH3ZNzdt8MTj7X9r5P1GSIFfNydcP_00T8zeYec0x7XjdNsZ2EY5rYV3Eo-rRivz08y5622Bt82o0td4QvMovmYKGwTKIiIe0mCByOOVbIACPEvZsCiI-Fbd_ovFv1zAl_-G8DAXCQHz-MwpW_ouZmdlnFz0kMCPf58cEUvLCczt4C8xCRYYqQyz84Nal0BiZ4x8ZiZ6k_z8SRN_QB5bk9aetwKgjBPWsBpwnuccXjGyGqSIWa91tTxeGMC4nsHWT89LDH_0dn-9DZ0NQ"
 }`
 	rsaPrivateKey = `-----BEGIN PRIVATE KEY-----
-MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCd4YpxW0TttK85
-mmqS7YC25taaNghTcEfcQhSZOAoKzAvaNgRxgyctRB05MGhsGuHOA/ZXXE3v2z8u
-6pIdwXO+oTXCDrhG8JYTi0XRocIFCJ4fU+dEqxmXDlkA80pALt7tBGCqZ1yn2WMl
-AsIsU19+1AdhHVbMLAPYiyUmRfl6d1dbgzuPKgLBunX8o2eJuBTb2CVASTYWwgjp
-DVQbVCL4sw+fZOPZ0hJP3H+2hiK4jZZnk/hh88jzEY3Hn+4KCLub0lmi7CFw0Z0D
-Br+ujoPvHOXDPgx7r+ul1HaUI2B4DZpGzp72pu/Hn5aa1cfN1nuToNT4VOMwYWGs
-sbbc1KprAgMBAAECggEBAII4cD8VP6IsgMarRbIQcTTq6yDg5jckCjFy05iY7zd+
-m1wNZ9bUjXC5mLz933MjLRIGlJ3zxVjL5q5kzcX7NOOMBlIcYAQrFi3iluDUYbpT
-JFDEnKE32vCL5f9xq9GKl1a5YJ3MiVDsbekuAEgdMEvkyH1ifKAEwdtO0YJi/uXx
-0y1wOlDsnzFHqERG6b8Jxm0AhXbTIAueKtoNgbSV5k0vNQFC4WUbLqVuEAQdrGO5
-0tcCrDC+8mxMDoMwBs/Es+q6Hm/KD0QEUj3GwwEZALwMrnvrMl9+qNOGjMn1xFkv
-jxhn3ZBUxVQ91zASG1L3oiz/8lRPqTFUc+MjuMIHJDkCgYEA02JFMhaMQzu8ufGf
-ht6J3JMRcEKMRik0WvkPKUS7SlffRYj6AGyrFmlb97uRv7fobdHtXdKLS9cj7YgD
-Xjty3ylrLL9GBTNXAg791TI8HNbapf2YicvnfMqP07epLMeDlp2ORzyj+wJiOAEH
-Bdx0duAepdYN/9DaBVacXKBJjI0CgYEAvzRYO4Y7dVcoi23cw3jTaA1Cmxkn/Q6f
-kwIMmBYCFC1goA3Yl8GGT0hlFZyd2+/fz2h1T7Y2r1xadoYeCq5qpvA+4tkuHboU
-ABt04u2CoR0+ZXK7SiLzaPMv/HBOblz0kjPzy9OhmzH9YqBzY/Guc137Zfq1V3If
-pw1RYXb2INcCgYEAnmPtO3nfweU6Jg5iHboUjR36HCcRWuU3IM+sx5yDxlIPr9fS
-lIzYqeNqkTeQH5sbY2bAuOOxkrNzbWHUPEDJc2RitVXhjrYIhTdcheqtVmK71VMv
-gFk0bLKPkPH2puIcvLf0S3ap3MTNee9zJrYo4oZPEK5TMRN6ujNK2LEWS2UCgYEA
-lK3OYlLpzz+8DleakAFXWpTdEx/HoZaKbVTtmCGc8jWq6ip6Ht9kYigoOlrzwX9Q
-aMaQWjCVa10EFyAJIkMoObGdJOa+Xm1AeijfhkosBr5ns5k4m9h7sENSMBjgVB9C
-KqHtVLS2+KgxoUylDbVz8s/E2jLOajYa+Np5SrGniDcCgYBE3c8d0qiu8ugKDdHd
-zmKk8gnHYzeELNR8f526vMNuhFSDRSWIqh/U3vTHSW85de9AjAdoqnNEeLWQrqXE
-yZWXNOy1L7SFlQuOazzfqMSdQjVc69u1ynpDqDpcvYTqxCjyN3vg0lUivwIEnlZb
-B+NVKlk8klnh9O7UBmbF17ExCA==
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCu5sunR9C2AgjL
+XGr58z6YPGWhsrupR/VQgfgNAdRJZfNq69E1pXZyPiIiGiglV6Pbi/QQ4fdk3N23
+wxOPtf2vk/UZIgV83J1w//TRPzN5h5zTHteN02xnYRjmthXcSj6tGK/PTzLnrbYG
+3zajS13hC8yi+ZgobBMoiIh7SYIHI45VsgAI8S9mwKIj4Vt3+i8W/XMCX/4bwMBc
+JAfP4zClb+i5mZ2WcXPSQwI9/nxwRS8sJzO3gLzEJFhipDLPzg1qXQGJnjHxmJnq
+T/PxJE39AHluT1p63AqCME9awGnCe5xxeMbIapIhZr3W1PF4YwLiewdZPz0sMf/R
+2f70NnQ1AgMBAAECggEAc0w8JqtmAAX5TC5Ba0KaGft+uAi+Q0rngcob/l8dVcF6
+pRqN0QKhwZAKKlb57hwHLdzl6Rc9YmVjWBemVo+Pi+ZKpeXSnkxFEc/50NMMGOp4
+TIjBaoJcrQ3KP5T7djwPc0aZ51z7XtUZ8Q/G0gEGAywnG6zUTJlqS8ctybBcol0L
+Dl++Ps52I2pupZ1RiIRsgPF0zrGTsGrnxdtFVxOVRqNTZ26fEOSqRRTXxC4PNN4P
+DR2OSTDc+G1F/OPGJutgPnt7dpgw0vAkGD0b4FxtMXTXoS3cgB5zug4ySi9+1jBv
+AvNkWt0i3OoYPPLarDjlesRTHs5P/iOWjt6nFBeLpQKBgQDnHZ/Dl7dvPbQjGVtT
+cnGf044B4y5UaoL4E/ZdiTr7ZP1P9N4pGAQQige23SWt7dBmt58H7pSM19dTql+4
+yvgGxKlP60COJQjVzwSYcLmGGkIMnwtZ6RatMkM8Cl9COlkr4c7RR0hkIggvJWvz
+Yq5lrHlEoExMx8M+MXY1DHCoVwKBgQDBu7Utm4MFGrw9n4bZIk1T+35vVl6/cefq
+IsU1gXljcJhFW0CD9NakSt+sz7hhRe5wtAaws5oKdE1DzUZcVv17pbuxjxR7ICWo
+XHG2bQVnYKenHFL0RirnsA/kR+nI6LsM1R7R97TBPALmj+yr6kw54Ky5aCJeOBOk
+OjJ3C2MgUwKBgQDEcJGTFil8C95I1wyg6O1bA934DLkcV0vqwEzvQ+02MKh+hYsv
+MpKB3FCiRWX5Z+Fy7S/m9gqdi/ghzPZ/g0U9u3qNy0+bgi74THWDfIy0Ry1MvQJQ
+8aWsoMQ1DDvbduzEN7Iqf4QwWBzMteoDfSTulqKcigNQX5q8Ch6HCIPZEQKBgASu
+tMJVb+U/sC0NHgVBfvz4pyWpwMB/0Esoa/vPFVAB+Kw0eGq4EDgIVz+mBZ7UQd8X
+etHqhV6bUQLCg2DX+WhzqQWxn50aOc7H7TeriuXkwCiZ1qdwyriu2LN7yXrBpUO6
+IvSQOB4zhR5tfBrrnswHUiVpDuuYD2F4xp959vthAoGAeJxCTg3NoEUcK8eCMBp0
+ukJ1SZD11UbWrL+Js6YaAr+Mx5nrWozMfcyaerSrwGYcCmD3Ga3bhv28TyGCujCs
+T35aWqOyi9S51M8AJ6VoiLgYSufuI7DnlUHjKpoPezhSM+RWW1QFdLR9InCBsfQc
+tiy0Hf8IjaKqtPotx6zTR2E=
 -----END PRIVATE KEY-----`
 )

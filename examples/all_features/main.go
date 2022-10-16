@@ -67,7 +67,7 @@ func main() {
 	})
 
 	// Print the JSON representation of the JWK Set.
-	jsonRepresentation, err := jwkSet.JSON(ctx)
+	jsonRepresentation, err := jwkSet.JSONPublic(ctx)
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to get JSON representation.", err)
 	}
@@ -79,7 +79,7 @@ func main() {
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to delete RSA key.", err)
 	}
-	jsonRepresentation, err = jwkSet.JSON(ctx)
+	jsonRepresentation, err = jwkSet.JSONPublic(ctx)
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to get JSON representation.", err)
 	}
@@ -99,7 +99,7 @@ func main() {
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to store ECDSA key.", err)
 	}
-	jsonRepresentation, err = jwkSet.JSON(ctx)
+	jsonRepresentation, err = jwkSet.JSONPublic(ctx)
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to get JSON representation.", err)
 	}

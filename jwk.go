@@ -33,12 +33,12 @@ func NewMemory() JWKSet {
 	}
 }
 
-// JSON creates the JSON representation of the JWKSet.
-func (j JWKSet) JSON(ctx context.Context) (json.RawMessage, error) {
+// JSONPublic creates the JSON representation of the public keys in JWKSet.
+func (j JWKSet) JSONPublic(ctx context.Context) (json.RawMessage, error) {
 	return j.JSONWithOptions(ctx, KeyMarshalOptions{})
 }
 
-// JSONPrivate creates the JSON representation of the JWKSet private key material, if available.
+// JSONPrivate creates the JSON representation of the JWKSet public and private key material.
 func (j JWKSet) JSONPrivate(ctx context.Context) (json.RawMessage, error) {
 	options := KeyMarshalOptions{
 		AsymmetricPrivate: true,

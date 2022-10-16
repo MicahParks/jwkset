@@ -33,7 +33,7 @@ func main() {
 
 	http.HandleFunc("/jwks.json", func(writer http.ResponseWriter, request *http.Request) {
 		// TODO Cache the JWK Set so storage isn't called for every request.
-		response, err := jwkSet.JSON(request.Context())
+		response, err := jwkSet.JSONPublic(request.Context())
 		if err != nil {
 			logger.Printf(logFmt, "Failed to get JWK Set JSON.", err)
 			writer.WriteHeader(http.StatusInternalServerError)

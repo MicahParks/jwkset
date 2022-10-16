@@ -156,7 +156,7 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 				}
 			}
 		}
-	case rsa.PublicKey: // TODO Make this a pointer. Maybe support value with reassignment and fallthrough.
+	case *rsa.PublicKey: // TODO Make this a pointer. Maybe support value with reassignment and fallthrough.
 		jwk.E = bigIntToBase64RawURL(big.NewInt(int64(key.E)))
 		jwk.N = bigIntToBase64RawURL(key.N)
 		jwk.KTY = KeyTypeRSA
