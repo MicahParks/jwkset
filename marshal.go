@@ -36,7 +36,7 @@ const (
 )
 
 var (
-	// ErrKeyUnmarshalParameter indicates that a JWK's attributes are invalid and cannot be unmarshalled.
+	// ErrKeyUnmarshalParameter indicates that a JWK's attributes are invalid and cannot be unmarshaled.
 	ErrKeyUnmarshalParameter = errors.New("unable to unmarshal JWK due to invalid attributes")
 	// ErrUnsupportedKeyType indicates a key type is not supported.
 	ErrUnsupportedKeyType = errors.New("unsupported key type")
@@ -105,7 +105,7 @@ type JWKSMarshal struct {
 	Keys []JWKMarshal `json:"keys"`
 }
 
-// KeyMarshalOptions are used to specify options for marshalling a JSON Web Key.
+// KeyMarshalOptions are used to specify options for marshaling a JSON Web Key.
 type KeyMarshalOptions struct {
 	AsymmetricPrivate bool
 	Symmetric         bool
@@ -184,7 +184,7 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 	return jwk, nil
 }
 
-// KeyUnmarshalOptions are used to specify options for unmarshalling a JSON Web Key.
+// KeyUnmarshalOptions are used to specify options for unmarshaling a JSON Web Key.
 type KeyUnmarshalOptions struct {
 	AsymmetricPrivate bool
 	Symmetric         bool
