@@ -16,8 +16,8 @@ The following key types have a JSON representation:
 | `RSA`    | [`*rsa.PrivateKey`](https://pkg.go.dev/crypto/rsa#PrivateKey)        | [`*rsa.PublicKey`](https://pkg.go.dev/crypto/rsa#PublicKey)        | [Rivest–Shamir–Adleman (RSA)](https://en.wikipedia.org/wiki/RSA_(cryptosystem))                                                |
 | `oct`    | `[]byte`                                                             | none                                                               |                                                                                                                                |
 
-Only the Go types listed in this table can be stored. If you would like support for another key type, please open an
-issue on GitHub.
+Only the Go types listed in this table have a JSON representation. If you would like support for another key type,
+please open an issue on GitHub.
 
 # Example HTTP server
 ```go
