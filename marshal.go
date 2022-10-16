@@ -296,27 +296,31 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "qi": %w`, KeyTypeRSA, err)
 			}
 			var oth []rsa.CRTValue
-			for _, otherPrimes := range jwk.OTH {
-				if otherPrimes.R == "" || otherPrimes.D == "" || otherPrimes.T == "" {
-					return KeyWithMeta{}, fmt.Errorf(`%w: %s requires parameters "r", "d", and "t" for each "oth"`, ErrKeyUnmarshalParameter, KeyTypeRSA)
+			if len(jwk.OTH) > 0 {
+				// TODO Does each extra multi-prime need to be added to the slice of primes on the private key?
+				oth = make([]rsa.CRTValue, len(jwk.OTH))
+				for i, otherPrimes := range jwk.OTH {
+					if otherPrimes.R == "" || otherPrimes.D == "" || otherPrimes.T == "" {
+						return KeyWithMeta{}, fmt.Errorf(`%w: %s requires parameters "r", "d", and "t" for each "oth"`, ErrKeyUnmarshalParameter, KeyTypeRSA)
+					}
+					othD, err := base64urlTrailingPadding(otherPrimes.D)
+					if err != nil {
+						return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KeyTypeRSA, err)
+					}
+					othT, err := base64urlTrailingPadding(otherPrimes.T)
+					if err != nil {
+						return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "t": %w`, KeyTypeRSA, err)
+					}
+					othR, err := base64urlTrailingPadding(otherPrimes.R)
+					if err != nil {
+						return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "r": %w`, KeyTypeRSA, err)
+					}
+					oth[i] = rsa.CRTValue{
+						Exp:   new(big.Int).SetBytes(othD),
+						Coeff: new(big.Int).SetBytes(othT),
+						R:     new(big.Int).SetBytes(othR),
+					}
 				}
-				othD, err := base64urlTrailingPadding(otherPrimes.D)
-				if err != nil {
-					return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KeyTypeRSA, err)
-				}
-				othT, err := base64urlTrailingPadding(otherPrimes.T)
-				if err != nil {
-					return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "t": %w`, KeyTypeRSA, err)
-				}
-				othR, err := base64urlTrailingPadding(otherPrimes.R)
-				if err != nil {
-					return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "r": %w`, KeyTypeRSA, err)
-				}
-				oth = append(oth, rsa.CRTValue{
-					Exp:   new(big.Int).SetBytes(othD),
-					Coeff: new(big.Int).SetBytes(othT),
-					R:     new(big.Int).SetBytes(othR),
-				})
 			}
 			privateKey := &rsa.PrivateKey{
 				PublicKey: publicKey,

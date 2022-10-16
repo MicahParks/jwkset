@@ -540,6 +540,20 @@ func TestUnmarshalRSA(t *testing.T) {
 			if private.Precomputed.Qinv.Cmp(original.Precomputed.Qinv) != 0 {
 				t.Fatal(`Unmarshalled key parameter "qi" does not match original key.`)
 			}
+			if len(private.Precomputed.CRTValues) != len(original.Precomputed.CRTValues) {
+				t.Fatal(`Unmarshalled key parameter "oth" does not match original key.`)
+			}
+			for i, crt := range private.Precomputed.CRTValues {
+				if crt.Coeff.Cmp(original.Precomputed.CRTValues[i].Coeff) != 0 {
+					t.Fatal(`Unmarshalled key parameter "oth" coeff does not match original key.`)
+				}
+				if crt.Exp.Cmp(original.Precomputed.CRTValues[i].Exp) != 0 {
+					t.Fatal(`Unmarshalled key parameter "oth" exp does not match original key.`)
+				}
+				if crt.R.Cmp(original.Precomputed.CRTValues[i].R) != 0 {
+					t.Fatal(`Unmarshalled key parameter "oth" r does not match original key.`)
+				}
+			}
 			public = private.Public().(*rsa.PublicKey)
 		} else {
 			public, ok = meta.Key.(*rsa.PublicKey)
@@ -566,6 +580,23 @@ func TestUnmarshalRSA(t *testing.T) {
 		P:   rsa2048P,
 		Q:   rsa2048Q,
 		QI:  rsa2048QI,
+		OTH: []jwkset.OtherPrimes{
+			{
+				D: rsa2048OthD1,
+				R: rsa2048OthR1,
+				T: rsa2048OthT1,
+			},
+			{
+				D: rsa2048OthD2,
+				R: rsa2048OthR2,
+				T: rsa2048OthT2,
+			},
+			{
+				D: rsa2048OthD3,
+				R: rsa2048OthR3,
+				T: rsa2048OthT3,
+			},
+		},
 	}
 
 	options := jwkset.KeyUnmarshalOptions{}
@@ -644,7 +675,32 @@ func TestUnmarshalRSA(t *testing.T) {
 	}
 	jwk.QI = rsa2048QI
 
-	// TODO Tests for multi-prime keys.
+	jwk.OTH[0].D = ""
+	_, err = jwkset.KeyUnmarshal(jwk, options)
+	if !errors.Is(err, jwkset.ErrKeyUnmarshalParameter) {
+		t.Fatalf(`Should get error when parameter "oth" "d" is empty. %s`, err)
+	}
+
+	jwk.OTH[0].D = invalidB64URL
+	_, err = jwkset.KeyUnmarshal(jwk, options)
+	if err == nil {
+		t.Fatalf(`Should get error when parameter "oth" "d"" is invalid raw Base64 URL. %s`, err)
+	}
+	jwk.OTH[0].D = rsa2048OthD1
+
+	jwk.OTH[0].R = invalidB64URL
+	_, err = jwkset.KeyUnmarshal(jwk, options)
+	if err == nil {
+		t.Fatalf(`Should get error when parameter "oth" "r"" is invalid raw Base64 URL. %s`, err)
+	}
+	jwk.OTH[0].R = rsa2048OthR1
+
+	jwk.OTH[0].T = invalidB64URL
+	_, err = jwkset.KeyUnmarshal(jwk, options)
+	if err == nil {
+		t.Fatalf(`Should get error when parameter "oth" "t"" is invalid raw Base64 URL. %s`, err)
+	}
+	jwk.OTH[0].T = rsa2048OthT1
 }
 
 func TestMarshalUnsupported(t *testing.T) {
