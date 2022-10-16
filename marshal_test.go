@@ -473,6 +473,140 @@ func TestMarshalRSA(t *testing.T) {
 	// TODO Tests for multi-prime keys.
 }
 
+func TestUnmarshalRSA(t *testing.T) {
+	checkUnmarshal := func(meta jwkset.KeyWithMeta, options jwkset.KeyUnmarshalOptions, original *rsa.PrivateKey) {
+		var public *rsa.PublicKey
+		var ok bool
+		if options.AsymmetricPrivate {
+			private, ok := meta.Key.(*rsa.PrivateKey)
+			if !ok {
+				t.Fatal("Unmarshalled key should be a private key.")
+			}
+			if private.D.Cmp(original.D) != 0 {
+				t.Fatal(`Unmarshalled key parameter "d" does not match original key.`)
+			}
+			if private.Primes[0].Cmp(original.Primes[0]) != 0 {
+				t.Fatal(`Unmarshalled key parameter "p" does not match original key.`)
+			}
+			if private.Primes[1].Cmp(original.Primes[1]) != 0 {
+				t.Fatal(`Unmarshalled key parameter "q" does not match original key.`)
+			}
+			if private.Precomputed.Dp.Cmp(original.Precomputed.Dp) != 0 {
+				t.Fatal(`Unmarshalled key parameter "dp" does not match original key.`)
+			}
+			if private.Precomputed.Dq.Cmp(original.Precomputed.Dq) != 0 {
+				t.Fatal(`Unmarshalled key parameter "dq" does not match original key.`)
+			}
+			if private.Precomputed.Qinv.Cmp(original.Precomputed.Qinv) != 0 {
+				t.Fatal(`Unmarshalled key parameter "qi" does not match original key.`)
+			}
+			public = private.Public().(*rsa.PublicKey)
+		} else {
+			public, ok = meta.Key.(*rsa.PublicKey)
+			if !ok {
+				t.Fatal("Unmarshalled key should be a public key.")
+			}
+		}
+		if public.N.Cmp(original.N) != 0 {
+			t.Fatal(`Unmarshalled key parameter "n" does not match original key.`)
+		}
+		if public.E != original.E {
+			t.Fatal(`Unmarshalled key parameter "e" does not match original key.`)
+		}
+	}
+	private := makeRSA(t)
+
+	jwk := jwkset.JWKMarshal{
+		E:   rsa2048RS256E,
+		D:   rsa2048RS256D,
+		DP:  rsa2048RS256DP,
+		DQ:  rsa2048RS256DQ,
+		KTY: jwkset.KeyTypeRSA.String(),
+		N:   rsa2048RS256N,
+		P:   rsa2048RS256P,
+		Q:   rsa2048RS256Q,
+		QI:  rsa2048RS256QI,
+	}
+
+	options := jwkset.KeyUnmarshalOptions{}
+	meta, err := jwkset.KeyUnmarshal(jwk, options)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal key with correct options. %s", err)
+	}
+	checkUnmarshal(meta, options, private)
+
+	options.AsymmetricPrivate = true
+	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal key with correct options. %s", err)
+	}
+	checkUnmarshal(meta, options, private)
+
+	jwk.N = ""
+	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	if err == nil {
+		t.Fatal(`Should get error when parameter "n" is empty.`)
+	}
+
+	jwk.N = invalidB64URL
+	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	if err == nil {
+		t.Fatalf(`Should get error when parameter "n" is invalid raw Base64 URL. %s`, err)
+	}
+	jwk.N = rsa2048RS256N
+
+	jwk.E = invalidB64URL
+	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	if err == nil {
+		t.Fatalf(`Should get error when parameter "e" is invalid raw Base64 URL. %s`, err)
+	}
+	jwk.E = rsa2048RS256E
+
+	jwk.D = invalidB64URL
+	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	if err == nil {
+		t.Fatalf(`Should get error when parameter "d" is invalid raw Base64 URL. %s`, err)
+	}
+	jwk.D = rsa2048RS256D
+
+	jwk.DP = invalidB64URL
+	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	if err == nil {
+		t.Fatalf(`Should get error when parameter "dp" is invalid raw Base64 URL. %s`, err)
+	}
+	jwk.DP = rsa2048RS256DP
+
+	jwk.DQ = invalidB64URL
+	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	if err == nil {
+		t.Fatalf(`Should get error when parameter "dq" is invalid raw Base64 URL. %s`, err)
+	}
+	jwk.DQ = rsa2048RS256DQ
+
+	jwk.P = invalidB64URL
+	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	if err == nil {
+		t.Fatalf(`Should get error when parameter "p" is invalid raw Base64 URL. %s`, err)
+	}
+	jwk.P = rsa2048RS256P
+
+	jwk.Q = invalidB64URL
+	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	if err == nil {
+		t.Fatalf(`Should get error when parameter "q" is invalid raw Base64 URL. %s`, err)
+	}
+	jwk.Q = rsa2048RS256Q
+
+	jwk.QI = invalidB64URL
+	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	if err == nil {
+		t.Fatalf(`Should get error when parameter "qi" is invalid raw Base64 URL. %s`, err)
+	}
+	jwk.QI = rsa2048RS256QI
+
+	// TODO Tests for multi-prime keys.
+}
+
 func TestMarshalUnsupported(t *testing.T) {
 	meta := jwkset.KeyWithMeta{
 		Key: "unsupported",

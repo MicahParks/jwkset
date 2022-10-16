@@ -267,10 +267,7 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			N: new(big.Int).SetBytes(n),
 			E: int(new(big.Int).SetBytes(e).Uint64()),
 		}
-		if options.AsymmetricPrivate {
-			if jwk.D == "" || jwk.P == "" || jwk.Q == "" || jwk.DP == "" || jwk.DQ == "" || jwk.QI == "" {
-				return KeyWithMeta{}, fmt.Errorf(`%w: %s requires parameters "d", "p", "q", "dp", "dq", and "qi"`, ErrKeyUnmarshalParameter, KeyTypeRSA)
-			}
+		if options.AsymmetricPrivate && jwk.D != "" && jwk.P != "" && jwk.Q != "" && jwk.DP != "" && jwk.DQ != "" && jwk.QI != "" { // TODO Are all required?
 			d, err := base64urlTrailingPadding(jwk.D)
 			if err != nil {
 				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KeyTypeRSA, err)
@@ -334,7 +331,7 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			}
 			meta.Key = privateKey
 		} else if !options.AsymmetricPrivate {
-			meta.Key = publicKey
+			meta.Key = &publicKey
 		}
 	case KeyTypeOct:
 		if options.Symmetric {
