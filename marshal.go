@@ -145,12 +145,15 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 			jwk.DP = bigIntToBase64RawURL(key.Precomputed.Dp)
 			jwk.DQ = bigIntToBase64RawURL(key.Precomputed.Dq)
 			jwk.QI = bigIntToBase64RawURL(key.Precomputed.Qinv)
-			for i := 0; i+2 < len(key.Primes); i++ {
-				jwk.OTH = append(jwk.OTH, OtherPrimes{
-					D: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Exp),
-					T: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Coeff),
-					R: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].R),
-				})
+			if len(key.Precomputed.CRTValues) > 0 {
+				jwk.OTH = make([]OtherPrimes, len(key.Precomputed.CRTValues))
+				for i := 0; i < len(key.Precomputed.CRTValues); i++ {
+					jwk.OTH[i] = OtherPrimes{
+						D: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Exp),
+						T: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Coeff),
+						R: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].R),
+					}
+				}
 			}
 		}
 	case rsa.PublicKey: // TODO Make this a pointer. Maybe support value with reassignment and fallthrough.

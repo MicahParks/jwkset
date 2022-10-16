@@ -15,28 +15,37 @@ import (
 )
 
 const (
-	ecdsaP256D     = "GpanYiHB-TeCKFmfAwqzIJVhziUH6QX77obHwDPERGo"
-	ecdsaP256X     = "IZrURsAt0DcSytZRCBQ4SjCcbIhLLQvg53uSkRdETZ4"
-	ecdsaP256Y     = "Uy2iBhx7jMXB4n8fPASCOaNjnUPd8C1toVwytGeAEdU"
-	ecdsaP384D     = "P0mnrdElxUwAOcYeRlEz6uUNM6v_Bj4iBB4qxfEQ0xpKiAI5wM1lhzyoXibfWRHo"
-	ecdsaP384X     = "qL8wKJLZT5qowOGc8FMYqMWurcdVL15VxHqYV5JmJYj0EjBiPv14iwUrnhEEHVS9"
-	ecdsaP384Y     = "5qSWUmTjYNREUNCjDyAxu-ymHUGOtnEzO2z_pxtl5vd4W5Eb_9QcK9E9z3G3Xxjp"
-	ecdsaP521D     = "AE4nfzwC69AYJhoJav6VH_rCFodPqcy5Li-6ISmJsLBZwvHX-2S0EYxsPuuk5shfxSFHJbXaD_t85doozgcsV_8t"
-	ecdsaP521X     = "ARxti_MdbyBVgT4N-08XzYBx5c8ZUPtZXshNHu_AoMwQqXq0WjZznL5b2175hv8nsUvRshjHpHaj_7SWQl5vH9f0"
-	ecdsaP521Y     = "AYx5MdFtiuPA1_IVS0A0z8MhLmQNJOxKd1hnhSRlod1sd7sz17WSXz-DggJwK5gj0qFp9_8dsVvI1Yn688myoImU"
-	eddsaPrivate   = "5hT6NTzNJyUCaG7mqtq2ru0EsA2z5SwnnkP0pBycP64"
-	eddsaPublic    = "VYk14QSFla7FKnL_okf6TqLIyV2X6DPaDi26UpAMVnM"
-	hmacSecret     = "myHMACSecret"
-	invalidB64URL  = "&"
-	myKeyID        = "myKeyID"
-	rsa2048RS256D  = "d_cI2SZFrrjn5mJ4dz-SMKw73EhWk-F0q69mhQZOQTC3JdSuBffqAZow6uyJ2kxyhJyu6bSxHM6Crmpf8DiQ1xnST25N9AxLRvHnG4uCm1c8D_Pxi7S19c7H9UqUZp_mHznQ8g8zfBgBl936Hi8EtvzlqmrTXfeccU-5Iieqqq1eMCwSDeBxyNzWhqwytreoSSO8KkIQmtrVPKc2w5qoUhEAv_f2eTGEcCX9J4GuXeFAWqXb3_sWzAaVzMShXDrLmAORebl1105lI3yQoJigst7xGqunsjQ6VcKQ6EZpIypwqUaQTqyup14roNlNbgSIaW-GJJWzy8-GzaamnWBvkQ"
-	rsa2048RS256DP = "SoKY6vHD0-KI5tYD9HG0vYHi7lieP3Wqu7Hk_v5lvx31REIBGhHtE25Pae_qjLx35IMbmbzH_MpWe50TfrN8mhnDxO2D2TttbWwKw_B_mQ3mayCPAZb-MwQmnBrrjGJVfaJ1Le9Zfo-3XGrcKDzQ1mNI6MCv3qcdoqawfS0RdpE"
-	rsa2048RS256DQ = "C_2JqWBA6z0c9oVEiAJ3D3O92SisHj2c7fjUrC1ZnRaj-A3Y-Fh772oKGp09CwU1n31kqtKIHhGMOodpvb4aNyy15rwNjp4TAkxvTfUyO0z3Xox95rghB8fuGjSDZgFlSUXFSYw3mBKj4IGwbDrevE4W1VaYzxZ81qkO2upTxik"
-	rsa2048RS256E  = "AQAB"
-	rsa2048RS256N  = "ndE98WGJceW0C9oMxfv1RYoEoKMONvv7_2d-nA5yQvudACH58y8KIYvmFgrQ2f7k7KoBqBsGBR3AHtEtjXNZTHei5KJpJmXN9zVm1TqFNbq_bECCO8j2dxky8gvJXxkxmsRm9V0XJsDlJPx26ROyNddjFLtoTzvLy6XRaXCnqDzBZV4XBF6xQDipPA3U0jAamybsZN6ydKLqhGUlEOH4ZUkSHzSCazfqN6o4iUceFMQoqzpmkGDYRp96o9xx3NFo5ND-RSTEBEDYdOAvtZInHKqltQuT_Mj98GqczxvV5Jaw4mJMC8mWUE2UHFdFAkdL80Tt74HCk-mKMaBW1CkwMw"
-	rsa2048RS256P  = "70b-D_1gG8b1lJviBn5b6c4HoTYMJMc6UnKcj79uqHA_2ihouBXEDmSW1Vd2rOVDjLt13_4Du5arrY3877rl-nXJl6YxqK8ZTLAfG_Bjq3i3wkUres6F_wakyFLJZjuiEcMFUtkOUwHHwQGc4-nV5Fq1yiFs39_XLbb7iFlMAz8"
-	rsa2048RS256Q  = "qNjQ9vlqWsMsiPqOpZ_MLetjnHeLU5hSfKGk9vrtir2AF9zaKouDBQ8nwCgGnXE9GHqQIPW14mNbpRwRchMj0w5AN43Smf9t7GMZi2nz7QieK_9dW4hKzcblmrZFAbGhwXX28QLQKQw1a1lFhhEa6GSBH6cB9oANC2-Gw6r_eg0"
-	rsa2048RS256QI = "xcDoI05jRx-eRfQ6XoKTA360XdK3yc6hVm3ysgyGiEAhBS7xuGy0KSXeX6M-W7ir37CYGxcm4UkfoT4JFGISttu89C1LaQUTmDzJzgOTvFmlHuhvn0mZkTAhzsnQtnKihFdNtekU6DAb4JSMgwJU-rd4xajPfdxgp2okYYl2QOE"
+	ecdsaP256D    = "GpanYiHB-TeCKFmfAwqzIJVhziUH6QX77obHwDPERGo"
+	ecdsaP256X    = "IZrURsAt0DcSytZRCBQ4SjCcbIhLLQvg53uSkRdETZ4"
+	ecdsaP256Y    = "Uy2iBhx7jMXB4n8fPASCOaNjnUPd8C1toVwytGeAEdU"
+	ecdsaP384D    = "P0mnrdElxUwAOcYeRlEz6uUNM6v_Bj4iBB4qxfEQ0xpKiAI5wM1lhzyoXibfWRHo"
+	ecdsaP384X    = "qL8wKJLZT5qowOGc8FMYqMWurcdVL15VxHqYV5JmJYj0EjBiPv14iwUrnhEEHVS9"
+	ecdsaP384Y    = "5qSWUmTjYNREUNCjDyAxu-ymHUGOtnEzO2z_pxtl5vd4W5Eb_9QcK9E9z3G3Xxjp"
+	ecdsaP521D    = "AE4nfzwC69AYJhoJav6VH_rCFodPqcy5Li-6ISmJsLBZwvHX-2S0EYxsPuuk5shfxSFHJbXaD_t85doozgcsV_8t"
+	ecdsaP521X    = "ARxti_MdbyBVgT4N-08XzYBx5c8ZUPtZXshNHu_AoMwQqXq0WjZznL5b2175hv8nsUvRshjHpHaj_7SWQl5vH9f0"
+	ecdsaP521Y    = "AYx5MdFtiuPA1_IVS0A0z8MhLmQNJOxKd1hnhSRlod1sd7sz17WSXz-DggJwK5gj0qFp9_8dsVvI1Yn688myoImU"
+	eddsaPrivate  = "5hT6NTzNJyUCaG7mqtq2ru0EsA2z5SwnnkP0pBycP64"
+	eddsaPublic   = "VYk14QSFla7FKnL_okf6TqLIyV2X6DPaDi26UpAMVnM"
+	hmacSecret    = "myHMACSecret"
+	invalidB64URL = "&"
+	myKeyID       = "myKeyID"
+	rsa2048D      = "Zui8puQOkFxh_iZ6u2a0LTwATsFpuJ7gfcRkKmBr-1-FK_tZ9sU7IXQdlrompx6qG6-XZIUTZ_io0SKc_kH23GiFA95k8HnBsS90YUSfCssKbQbkBMSixEFcKJf208U9U4mCc7fbMhECmCqvZJrLtGaUHt6kQQ3Yb1RWyDbuDChu-YB_bzq7sIVU6QHVDh8H-gyizM_0-E0E8JJYc8tHepq4gNq0_rPOzmXAfUyYimBFJgKcvim2WyNtuwDnRUGj1jV40aP4LtR7DyztvntO1dNHKhqitQmqDYSuB6W2mEeP0sX4cQ_Guf4-KW_6G0OsFhDyLWMclG6jqXbbvpPVgQ"
+	rsa2048DP     = "HpqJZ6DBb6ajhJpA-z068Tl-Y1wRTxyhRTHiOmfDgMPphED9V0MKrXCnBnKumQb1BK6p"
+	rsa2048DQ     = "TpzlUvfmDjNkDISCGGmztdEu6wUVqAYmJw-crSv7Lf8jdJOeroY3oRTyRLuXFDlLQMCj"
+	rsa2048E      = "AQAB"
+	rsa2048N      = "qoyDkVtvxSKGtPeVYN_Ua0hDIvMJUNcWW45PPgcY8QyU8TYMTPqyjB-cbY7jepmMuEAxCqBdoUrBUsLHbNopWUuRiixpyiuNZNKdu7ClWBAM6xcxmO_WzHfJou58-T65FQ0d7S9zhzYG9oDki8X_MpVFRooMqvd25LmsG-7L1449Zq8LHpExM7kG25GvXSDERaa_9SAoW7-UItfaoDxkUtlH0sn4VsUJAy39G6TyMDh9evjzl4H1MQMT_lcYUaxZOALY3gYwAVnDLmLkK7wyew-dvSUs8yaJ4o0AMvelKK5mDEBYr3DzTHvnM1qOHqsRXflqU1c0E6Pdjbg_UjVhPQ"
+	rsa2048P      = "Ae_2YN1yRGTIvyEHsluM7Ok9AA3UPHdjB_cVfJmS_Dw6YkH-lOf4BRhEJOmSbJxU9NXyLw"
+	rsa2048Q      = "AcJQmIJuyE8nGItHUzDi5Fr0Z0pmLrNQccjzWhRgZvjp_hG-3sZ-Be-tu4X1v2tvFV6rQw"
+	rsa2048QI     = "ATMgJKsgGYGMUidDkmCKl9xGzDbiuPnq5xP2sGZHlcmwBlSfnMW8IwJENRI2glgk-gZ3tA"
+	rsa2048OthD1  = "2-yulQWFPZYzVsFF5FvXY1QVv0UZQxjFqa2UF4N2iLuYIK2GrKFtg6pMNuWtoTif5c_D"
+	rsa2048OthR1  = "A2hrOrqDUIpIm1rYDPXk_zxix2KLF6QBHxsvOIvvYZwaQirxsw4vpEhpvIaRXTqlypfUhXtP627GR8LJRdtgCva9_loEvm4AFfnfCpe2mLjpO_DBRMtUAvT4TG85OaF_L8SUxQXHTQ"
+	rsa2048OthT1  = "HKO1p9rP9WNdtpScd8pKl3CmbmKgLwQTPmxyQQD5YI4f-PHkpee2bpiBGOMJQ1SiJmfY"
+	rsa2048OthD2  = "AVJVNkEQL-tOQT0y2_Jp2mZKfsV-L4l6SN9Igtyql6IEhPdtuxU4SkjXqnFzwF_PlVbIyw"
+	rsa2048OthR2  = "DSbRvI-C6bBFfRd-YTJE_SYRtGMgSaA6SdezHwESTol8IHxhzlw6N0h1dWk1LJeyYIZk6BQUuWzkmBEiM65OE_C4e8EFfWVKzavNcq68escl1gFPZHjFO8M7YurPEmjr9GViOWsZbVSIAWCm18PcJ6GWe9aS0RbZj5ETLZoxMqhLM6yEKRs7XohOm2tmrRmOO0Eh6XeMGyp0Lw"
+	rsa2048OthT2  = "AUe2iS2xCOLclLCZSRAX8HFXw3IlGRcAlQ0H6zrYnb_gIJXgpUFwvI6AROczhFoDRctUMQ"
+	rsa2048OthD3  = "AcLE_2vdfUjNKB0RaXMtfj0RQr1nBtUbibfjbqFrBs2qwh_tEK3hBgAWF3lqC46L75xjEQ"
+	rsa2048OthR3  = "Lj5oNtEVTK8ZmmcMNipODiMxE81zOP7W24gbBQIzviaLBf03XBjUc5K-AXn-n1c4mhEsEDLbmUbJdHJ_vte6Vx1mo_jRNAeq7He8BsbVsnDV1mP7VR0IDLeb9Ad7KJRY9ydaErRu4PXnnY_fHXLpKS351aeEax7h8-ZMEZwCfT5X9oQb5CpuqBgJV0hjp9Y7-1r435tBXRr6IRPsL8jkqMzI89BlhUsM5DFNd2kkZ1Bk8nbKUMplp_LNT5lXnPQPbFB0QKHjhKx0-Jk19Q"
+	rsa2048OthT3  = "f_WvkHD-YgKUosQfXci-r8b2w5Th12yQqQUcoQprLd8CUWDv3-NLWOEov3ZwCAktgfwQ"
 )
 
 func TestMarshalECDSA(t *testing.T) {
@@ -402,52 +411,85 @@ func TestMarshalRSA(t *testing.T) {
 	private := makeRSA(t)
 	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.KeyMarshalOptions) {
 		// TODO Check ALG.
-		if marshal.E != rsa2048RS256E {
-			t.Fatal(`Marshall parameter "e" does not match original key.`)
+		if marshal.E != rsa2048E {
+			t.Fatal(`Marshal parameter "e" does not match original key.`)
 		}
 		if marshal.KTY != jwkset.KeyTypeRSA {
-			t.Fatal(`Marshall parameter "kty" does not match original key.`)
+			t.Fatal(`Marshal parameter "kty" does not match original key.`)
 		}
-		if marshal.N != rsa2048RS256N {
-			t.Fatal(`Marshall parameter "n" does not match original key.`)
+		if marshal.N != rsa2048N {
+			t.Fatal(`Marshal parameter "n" does not match original key.`)
 		}
 		if options.AsymmetricPrivate {
-			if marshal.D != rsa2048RS256D {
-				t.Fatal(`Marshall parameter "d" does not match original key.`)
+			if marshal.D != rsa2048D {
+				t.Fatal(`Marshal parameter "d" does not match original key.`)
 			}
-			if marshal.DP != rsa2048RS256DP {
-				t.Fatal(`Marshall parameter "dp" does not match original key.`)
+			if marshal.DP != rsa2048DP {
+				t.Fatal(`Marshal parameter "dp" does not match original key.`)
 			}
-			if marshal.DQ != rsa2048RS256DQ {
-				t.Fatal(`Marshall parameter "dq" does not match original key.`)
+			if marshal.DQ != rsa2048DQ {
+				t.Fatal(`Marshal parameter "dq" does not match original key.`)
 			}
-			if marshal.P != rsa2048RS256P {
-				t.Fatal(`Marshall parameter "p" does not match original key.`)
+			if marshal.P != rsa2048P {
+				t.Fatal(`Marshal parameter "p" does not match original key.`)
 			}
-			if marshal.Q != rsa2048RS256Q {
-				t.Fatal(`Marshall parameter "q" does not match original key.`)
+			if marshal.Q != rsa2048Q {
+				t.Fatal(`Marshal parameter "q" does not match original key.`)
 			}
-			if marshal.QI != rsa2048RS256QI {
-				t.Fatal(`Marshall parameter "qi" does not match original key.`)
+			if marshal.QI != rsa2048QI {
+				t.Fatal(`Marshal parameter "qi" does not match original key.`)
+			}
+			if len(marshal.OTH) != 3 {
+				t.Fatal(`Marshal parameter "oth" does not match original key.`)
+			}
+			if marshal.OTH[0].D != rsa2048OthD1 {
+				t.Fatal(`Marshal parameter "d" does not match original key's first multi-prime.`)
+			}
+			if marshal.OTH[0].R != rsa2048OthR1 {
+				t.Fatal(`Marshal parameter "r" does not match original key's first multi-prime.`)
+			}
+			if marshal.OTH[0].T != rsa2048OthT1 {
+				t.Fatal(`Marshal parameter "t" does not match original key's first multi-prime.`)
+			}
+			if marshal.OTH[1].D != rsa2048OthD2 {
+				t.Fatal(`Marshal parameter "d" does not match original key's second multi-prime.`)
+			}
+			if marshal.OTH[1].R != rsa2048OthR2 {
+				t.Fatal(`Marshal parameter "r" does not match original key's second multi-prime.`)
+			}
+			if marshal.OTH[1].T != rsa2048OthT2 {
+				t.Fatal(`Marshal parameter "t" does not match original key's second multi-prime.`)
+			}
+			if marshal.OTH[2].D != rsa2048OthD3 {
+				t.Fatal(`Marshal parameter "d" does not match original key's third multi-prime.`)
+			}
+			if marshal.OTH[2].R != rsa2048OthR3 {
+				t.Fatal(`Marshal parameter "r" does not match original key's third multi-prime.`)
+			}
+			if marshal.OTH[2].T != rsa2048OthT3 {
+				t.Fatal(`Marshal parameter "t" does not match original key's third multi-prime.`)
 			}
 		} else {
 			if marshal.D != "" {
-				t.Fatal(`Marshall parameter "d" should be empty.`)
+				t.Fatal(`Marshal parameter "d" should be empty.`)
 			}
 			if marshal.DP != "" {
-				t.Fatal(`Marshall parameter "dp" should be empty.`)
+				t.Fatal(`Marshal parameter "dp" should be empty.`)
 			}
 			if marshal.DQ != "" {
-				t.Fatal(`Marshall parameter "dq" should be empty.`)
+				t.Fatal(`Marshal parameter "dq" should be empty.`)
 			}
 			if marshal.P != "" {
-				t.Fatal(`Marshall parameter "p" should be empty.`)
+				t.Fatal(`Marshal parameter "p" should be empty.`)
 			}
 			if marshal.Q != "" {
-				t.Fatal(`Marshall parameter "q" should be empty.`)
+				t.Fatal(`Marshal parameter "q" should be empty.`)
 			}
 			if marshal.QI != "" {
-				t.Fatal(`Marshall parameter "qi" should be empty.`)
+				t.Fatal(`Marshal parameter "qi" should be empty.`)
+			}
+			if len(marshal.OTH) != 0 {
+				t.Fatal(`Marshal parameter "oth" should be empty.`)
 			}
 		}
 	}
@@ -469,8 +511,6 @@ func TestMarshalRSA(t *testing.T) {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
 	}
 	checkMarshal(marshal, options)
-
-	// TODO Tests for multi-prime keys.
 }
 
 func TestUnmarshalRSA(t *testing.T) {
@@ -517,15 +557,15 @@ func TestUnmarshalRSA(t *testing.T) {
 	private := makeRSA(t)
 
 	jwk := jwkset.JWKMarshal{
-		E:   rsa2048RS256E,
-		D:   rsa2048RS256D,
-		DP:  rsa2048RS256DP,
-		DQ:  rsa2048RS256DQ,
+		E:   rsa2048E,
+		D:   rsa2048D,
+		DP:  rsa2048DP,
+		DQ:  rsa2048DQ,
 		KTY: jwkset.KeyTypeRSA,
-		N:   rsa2048RS256N,
-		P:   rsa2048RS256P,
-		Q:   rsa2048RS256Q,
-		QI:  rsa2048RS256QI,
+		N:   rsa2048N,
+		P:   rsa2048P,
+		Q:   rsa2048Q,
+		QI:  rsa2048QI,
 	}
 
 	options := jwkset.KeyUnmarshalOptions{}
@@ -553,56 +593,56 @@ func TestUnmarshalRSA(t *testing.T) {
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "n" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.N = rsa2048RS256N
+	jwk.N = rsa2048N
 
 	jwk.E = invalidB64URL
 	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "e" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.E = rsa2048RS256E
+	jwk.E = rsa2048E
 
 	jwk.D = invalidB64URL
 	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "d" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.D = rsa2048RS256D
+	jwk.D = rsa2048D
 
 	jwk.DP = invalidB64URL
 	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "dp" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.DP = rsa2048RS256DP
+	jwk.DP = rsa2048DP
 
 	jwk.DQ = invalidB64URL
 	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "dq" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.DQ = rsa2048RS256DQ
+	jwk.DQ = rsa2048DQ
 
 	jwk.P = invalidB64URL
 	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "p" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.P = rsa2048RS256P
+	jwk.P = rsa2048P
 
 	jwk.Q = invalidB64URL
 	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "q" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.Q = rsa2048RS256Q
+	jwk.Q = rsa2048Q
 
 	jwk.QI = invalidB64URL
 	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "qi" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.QI = rsa2048RS256QI
+	jwk.QI = rsa2048QI
 
 	// TODO Tests for multi-prime keys.
 }
@@ -717,37 +757,73 @@ func makeEdDSA(t *testing.T) ed25519.PrivateKey {
 }
 
 func makeRSA(t *testing.T) *rsa.PrivateKey {
-	d, err := base64.RawURLEncoding.DecodeString(rsa2048RS256D)
+	d, err := base64.RawURLEncoding.DecodeString(rsa2048D)
 	if err != nil {
 		t.Fatalf(`Failed to decode "d" parameter. %s`, err)
 	}
-	dp, err := base64.RawURLEncoding.DecodeString(rsa2048RS256DP)
+	dp, err := base64.RawURLEncoding.DecodeString(rsa2048DP)
 	if err != nil {
 		t.Fatalf(`Failed to decode "dp" parameter. %s`, err)
 	}
-	dq, err := base64.RawURLEncoding.DecodeString(rsa2048RS256DQ)
+	dq, err := base64.RawURLEncoding.DecodeString(rsa2048DQ)
 	if err != nil {
 		t.Fatalf(`Failed to decode "dq" parameter. %s`, err)
 	}
-	e, err := base64.RawURLEncoding.DecodeString(rsa2048RS256E)
+	e, err := base64.RawURLEncoding.DecodeString(rsa2048E)
 	if err != nil {
 		t.Fatalf(`Failed to decode "e" parameter. %s`, err)
 	}
-	n, err := base64.RawURLEncoding.DecodeString(rsa2048RS256N)
+	n, err := base64.RawURLEncoding.DecodeString(rsa2048N)
 	if err != nil {
 		t.Fatalf(`Failed to decode "n" parameter. %s`, err)
 	}
-	p, err := base64.RawURLEncoding.DecodeString(rsa2048RS256P)
+	p, err := base64.RawURLEncoding.DecodeString(rsa2048P)
 	if err != nil {
 		t.Fatalf(`Failed to decode "p" parameter. %s`, err)
 	}
-	q, err := base64.RawURLEncoding.DecodeString(rsa2048RS256Q)
+	q, err := base64.RawURLEncoding.DecodeString(rsa2048Q)
 	if err != nil {
 		t.Fatalf(`Failed to decode "q" parameter. %s`, err)
 	}
-	qi, err := base64.RawURLEncoding.DecodeString(rsa2048RS256QI)
+	qi, err := base64.RawURLEncoding.DecodeString(rsa2048QI)
 	if err != nil {
 		t.Fatalf(`Failed to decode "qi" parameter. %s`, err)
+	}
+	othD1, err := base64.RawURLEncoding.DecodeString(rsa2048OthD1)
+	if err != nil {
+		t.Fatalf(`Failed to decode "othD1" parameter. %s`, err)
+	}
+	othR1, err := base64.RawURLEncoding.DecodeString(rsa2048OthR1)
+	if err != nil {
+		t.Fatalf(`Failed to decode "othR1" parameter. %s`, err)
+	}
+	othT1, err := base64.RawURLEncoding.DecodeString(rsa2048OthT1)
+	if err != nil {
+		t.Fatalf(`Failed to decode "othT1" parameter. %s`, err)
+	}
+	othD2, err := base64.RawURLEncoding.DecodeString(rsa2048OthD2)
+	if err != nil {
+		t.Fatalf(`Failed to decode "othD2" parameter. %s`, err)
+	}
+	othR2, err := base64.RawURLEncoding.DecodeString(rsa2048OthR2)
+	if err != nil {
+		t.Fatalf(`Failed to decode "othR2" parameter. %s`, err)
+	}
+	othT2, err := base64.RawURLEncoding.DecodeString(rsa2048OthT2)
+	if err != nil {
+		t.Fatalf(`Failed to decode "othT2" parameter. %s`, err)
+	}
+	othD3, err := base64.RawURLEncoding.DecodeString(rsa2048OthD3)
+	if err != nil {
+		t.Fatalf(`Failed to decode "othD3" parameter. %s`, err)
+	}
+	othR3, err := base64.RawURLEncoding.DecodeString(rsa2048OthR3)
+	if err != nil {
+		t.Fatalf(`Failed to decode "othR3" parameter. %s`, err)
+	}
+	othT3, err := base64.RawURLEncoding.DecodeString(rsa2048OthT3)
+	if err != nil {
+		t.Fatalf(`Failed to decode "othT3" parameter. %s`, err)
 	}
 	private := &rsa.PrivateKey{
 		PublicKey: rsa.PublicKey{
@@ -757,10 +833,26 @@ func makeRSA(t *testing.T) *rsa.PrivateKey {
 		D:      new(big.Int).SetBytes(d),
 		Primes: []*big.Int{new(big.Int).SetBytes(p), new(big.Int).SetBytes(q)},
 		Precomputed: rsa.PrecomputedValues{
-			Dp:        new(big.Int).SetBytes(dp),
-			Dq:        new(big.Int).SetBytes(dq),
-			Qinv:      new(big.Int).SetBytes(qi),
-			CRTValues: []rsa.CRTValue{},
+			Dp:   new(big.Int).SetBytes(dp),
+			Dq:   new(big.Int).SetBytes(dq),
+			Qinv: new(big.Int).SetBytes(qi),
+			CRTValues: []rsa.CRTValue{
+				{
+					Exp:   new(big.Int).SetBytes(othD1),
+					Coeff: new(big.Int).SetBytes(othT1),
+					R:     new(big.Int).SetBytes(othR1),
+				},
+				{
+					Exp:   new(big.Int).SetBytes(othD2),
+					Coeff: new(big.Int).SetBytes(othT2),
+					R:     new(big.Int).SetBytes(othR2),
+				},
+				{
+					Exp:   new(big.Int).SetBytes(othD3),
+					Coeff: new(big.Int).SetBytes(othT3),
+					R:     new(big.Int).SetBytes(othR3),
+				},
+			},
 		},
 	}
 	return private
