@@ -127,7 +127,7 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 		jwk.X = base64.RawURLEncoding.EncodeToString(pub)
 		jwk.KTY = KeyTypeOKP.String()
 		if options.AsymmetricPrivate {
-			jwk.D = base64.RawURLEncoding.EncodeToString(key)
+			jwk.D = base64.RawURLEncoding.EncodeToString(key[:32])
 		}
 	case ed25519.PublicKey:
 		jwk.CRV = CurveEd25519.String()
@@ -180,6 +180,9 @@ type KeyUnmarshalOptions struct {
 // KeyUnmarshal transforms a JWKMarshal into a KeyWithMeta, which contains the correct Go type for the cryptographic
 // key.
 func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, error) {
+	// TODO Does current code force private key unmarshal if option is set? It should only select private key if all
+	//      assets are present.
+	//      Check if and else if conditions.
 	meta := KeyWithMeta{}
 	switch KTY(jwk.KTY) {
 	case KeyTypeEC:
@@ -225,33 +228,31 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			meta.Key = &publicKey
 		}
 	case KeyTypeOKP:
-		if CRV(jwk.CRV) != CurveEd25519 {
-			return KeyWithMeta{}, fmt.Errorf("%w: %s key type should have %q curve", ErrUnsupportedKeyType, KeyTypeOKP, CurveEd25519)
+		if CRV(jwk.CRV) != CurveEd25519 { // TODO Change the field type to CRV?
+			return KeyWithMeta{}, fmt.Errorf("%w: %s key type should have %q curve", ErrKeyUnmarshalParameter, KeyTypeOKP, CurveEd25519)
 		}
-		if options.AsymmetricPrivate {
-			if jwk.D == "" {
-				return KeyWithMeta{}, fmt.Errorf(`%w: %s requires parameter "d"`, ErrKeyUnmarshalParameter, KeyTypeOKP)
-			}
-			key, err := base64urlTrailingPadding(jwk.D)
+		if jwk.X == "" {
+			return KeyWithMeta{}, fmt.Errorf(`%w: %s requires parameter "x"`, ErrKeyUnmarshalParameter, KeyTypeOKP)
+		}
+		public, err := base64urlTrailingPadding(jwk.X)
+		if err != nil {
+			return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "x": %w`, KeyTypeOKP, err)
+		}
+		if len(public) != ed25519.PublicKeySize {
+			return KeyWithMeta{}, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KeyTypeOKP, ed25519.PublicKeySize)
+		}
+		if options.AsymmetricPrivate && jwk.D != "" {
+			private, err := base64urlTrailingPadding(jwk.D)
 			if err != nil {
 				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KeyTypeOKP, err)
 			}
-			if len(key) != ed25519.PrivateKeySize {
-				return KeyWithMeta{}, fmt.Errorf("%w: %s key should be %d bytes", ErrUnsupportedKeyType, KeyTypeOKP, ed25519.PrivateKeySize)
+			private = append(private, public...)
+			if len(private) != ed25519.PrivateKeySize {
+				return KeyWithMeta{}, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KeyTypeOKP, ed25519.PrivateKeySize)
 			}
-			meta.Key = ed25519.PrivateKey(key)
-		} else if !options.AsymmetricPrivate {
-			if jwk.X == "" {
-				return KeyWithMeta{}, fmt.Errorf(`%w: %s requires parameter "x"`, ErrKeyUnmarshalParameter, KeyTypeOKP)
-			}
-			key, err := base64urlTrailingPadding(jwk.X)
-			if err != nil {
-				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "x": %w`, KeyTypeOKP, err)
-			}
-			if len(key) != ed25519.PublicKeySize {
-				return KeyWithMeta{}, fmt.Errorf("%w: %s key should be %d bytes", ErrUnsupportedKeyType, KeyTypeOKP, ed25519.PublicKeySize)
-			}
-			meta.Key = ed25519.PublicKey(key)
+			meta.Key = ed25519.PrivateKey(private)
+		} else {
+			meta.Key = ed25519.PublicKey(public)
 		}
 	case KeyTypeRSA:
 		if jwk.N == "" || jwk.E == "" {
