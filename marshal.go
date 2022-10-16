@@ -13,6 +13,9 @@ import (
 )
 
 const (
+	// ALGEdDSA is the EdDSA algorithm.
+	ALGEdDSA ALG = "EdDSA"
+
 	// KeyTypeEC is the key type for ECDSA.
 	KeyTypeEC KTY = "EC"
 	// KeyTypeOKP is the key type for EdDSA.
@@ -38,6 +41,11 @@ var (
 	// ErrUnsupportedKeyType indicates a key type is not supported.
 	ErrUnsupportedKeyType = errors.New("unsupported key type")
 )
+
+// ALG is a set of "JSON Web Signature and Encryption Algorithms" types from
+// https://www.iana.org/assignments/jose/jose.xhtml(JWA) as defined in
+// https://www.rfc-editor.org/rfc/rfc7518#section-7.1
+type ALG string
 
 // CRV is a set of "JSON Web Key Elliptic Curve" types from https://www.iana.org/assignments/jose/jose.xhtml as
 // mentioned in https://www.rfc-editor.org/rfc/rfc7518.html#section-6.2.1.1.
@@ -68,8 +76,8 @@ type OtherPrimes struct {
 // https://www.rfc-editor.org/rfc/rfc7518
 // https://www.rfc-editor.org/rfc/rfc8037
 type JWKMarshal struct {
-	// // TODO Use ALG field.
-	// ALG string        `json:"alg,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.4 and https://www.rfc-editor.org/rfc/rfc7518#section-4.1
+	// TODO Use ALG field.
+	ALG ALG    `json:"alg,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.4 and https://www.rfc-editor.org/rfc/rfc7518#section-4.1
 	CRV CRV    `json:"crv,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
 	D   string `json:"d,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.1 and https://www.rfc-editor.org/rfc/rfc7518#section-6.2.2.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
 	DP  string `json:"dp,omitempty"`  // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.4
@@ -86,7 +94,7 @@ type JWKMarshal struct {
 	Q   string        `json:"q,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.3
 	QI  string        `json:"qi,omitempty"`  // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.6
 	// TODO Use USE field.
-	// USE string        `json:"use,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.2
+	// USE USE        `json:"use,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.2
 	X string `json:"x,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.2 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
 	// TODO X.509 related fields.
 	Y string `json:"y,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.3
@@ -123,6 +131,7 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 		jwk.KTY = KeyTypeEC
 	case ed25519.PrivateKey:
 		pub := key.Public().(ed25519.PublicKey)
+		jwk.ALG = ALGEdDSA
 		jwk.CRV = CurveEd25519
 		jwk.X = base64.RawURLEncoding.EncodeToString(pub)
 		jwk.KTY = KeyTypeOKP
@@ -130,6 +139,7 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 			jwk.D = base64.RawURLEncoding.EncodeToString(key[:32])
 		}
 	case ed25519.PublicKey:
+		jwk.ALG = ALGEdDSA
 		jwk.CRV = CurveEd25519
 		jwk.X = base64.RawURLEncoding.EncodeToString(key)
 		jwk.KTY = KeyTypeOKP

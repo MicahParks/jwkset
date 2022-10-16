@@ -217,7 +217,9 @@ func TestUnmarshalECDSA(t *testing.T) {
 
 func TestMarshalEdDSA(t *testing.T) {
 	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.KeyMarshalOptions) {
-		// TODO Check ALG.
+		if marshal.ALG != jwkset.ALGEdDSA {
+			t.Fatal(`Marshalled key parameter "alg" does not match original key.`)
+		}
 		if marshal.CRV != jwkset.CurveEd25519 {
 			t.Fatal(`Marshalled key parameter "crv" does not match original key.`)
 		}
@@ -272,6 +274,7 @@ func TestUnmarshalEdDSA(t *testing.T) {
 	private := makeEdDSA(t)
 
 	jwk := jwkset.JWKMarshal{
+		ALG: jwkset.ALGEdDSA,
 		CRV: jwkset.CurveEd25519,
 		D:   eddsaPrivate,
 		KID: myKeyID,
