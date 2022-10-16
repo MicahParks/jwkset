@@ -186,8 +186,8 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 	meta := KeyWithMeta{}
 	switch KTY(jwk.KTY) {
 	case KeyTypeEC:
-		if jwk.X == "" || jwk.Y == "" || jwk.CRV == "" {
-			return KeyWithMeta{}, fmt.Errorf(`%w: %s requires parameters "x", "y", and "crv"`, ErrKeyUnmarshalParameter, KeyTypeEC)
+		if jwk.CRV == "" || jwk.X == "" || jwk.Y == "" {
+			return KeyWithMeta{}, fmt.Errorf(`%w: %s requires parameters "crv", "x", and "y"`, ErrKeyUnmarshalParameter, KeyTypeEC)
 		}
 		x, err := base64urlTrailingPadding(jwk.X)
 		if err != nil {
@@ -222,7 +222,7 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			}
 			meta.Key = privateKey
 		} else {
-			meta.Key = &publicKey
+			meta.Key = publicKey
 		}
 	case KeyTypeOKP:
 		if CRV(jwk.CRV) != CurveEd25519 { // TODO Change the field type to CRV?
