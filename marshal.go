@@ -161,7 +161,7 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 					jwk.OTH[i] = OtherPrimes{
 						D: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Exp),
 						T: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Coeff),
-						R: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].R),
+						R: bigIntToBase64RawURL(key.Primes[i+2]),
 					}
 				}
 			}
@@ -277,7 +277,7 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			N: new(big.Int).SetBytes(n),
 			E: int(new(big.Int).SetBytes(e).Uint64()),
 		}
-		if options.AsymmetricPrivate && jwk.D != "" && jwk.P != "" && jwk.Q != "" && jwk.DP != "" && jwk.DQ != "" && jwk.QI != "" {
+		if options.AsymmetricPrivate && jwk.D != "" && jwk.P != "" && jwk.Q != "" && jwk.DP != "" && jwk.DQ != "" && jwk.QI != "" { // TODO Only "d" is required, but if one of the others is present, they all must be.
 			d, err := base64urlTrailingPadding(jwk.D)
 			if err != nil {
 				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KeyTypeRSA, err)
@@ -290,7 +290,6 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			if err != nil {
 				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "q": %w`, KeyTypeRSA, err)
 			}
-
 			dp, err := base64urlTrailingPadding(jwk.DP)
 			if err != nil {
 				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "dp": %w`, KeyTypeRSA, err)
@@ -304,12 +303,11 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "qi": %w`, KeyTypeRSA, err)
 			}
 			var oth []rsa.CRTValue
-			var primes []*big.Int
+			primes := []*big.Int{
+				new(big.Int).SetBytes(p),
+				new(big.Int).SetBytes(q),
+			}
 			if len(jwk.OTH) > 0 {
-				primes = make([]*big.Int, 2+len(jwk.OTH))
-				primes[0] = new(big.Int).SetBytes(p)
-				primes[1] = new(big.Int).SetBytes(q)
-				// TODO Does each extra multi-prime need to be added to the slice of primes on the private key?
 				oth = make([]rsa.CRTValue, len(jwk.OTH))
 				for i, otherPrimes := range jwk.OTH {
 					if otherPrimes.R == "" || otherPrimes.D == "" || otherPrimes.T == "" {
@@ -327,17 +325,12 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 					if err != nil {
 						return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "r": %w`, KeyTypeRSA, err)
 					}
-					primes[i+2] = new(big.Int).SetBytes(othR) // TODO This is incorrect
+					primes = append(primes, new(big.Int).SetBytes(othR))
 					oth[i] = rsa.CRTValue{
 						Exp:   new(big.Int).SetBytes(othD),
 						Coeff: new(big.Int).SetBytes(othT),
 						R:     new(big.Int).SetBytes(othR),
 					}
-				}
-			} else {
-				primes = []*big.Int{
-					new(big.Int).SetBytes(p),
-					new(big.Int).SetBytes(q),
 				}
 			}
 			privateKey := &rsa.PrivateKey{

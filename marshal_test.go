@@ -29,23 +29,23 @@ const (
 	hmacSecret    = "myHMACSecret"
 	invalidB64URL = "&"
 	myKeyID       = "myKeyID"
-	rsa2048D      = "Zui8puQOkFxh_iZ6u2a0LTwATsFpuJ7gfcRkKmBr-1-FK_tZ9sU7IXQdlrompx6qG6-XZIUTZ_io0SKc_kH23GiFA95k8HnBsS90YUSfCssKbQbkBMSixEFcKJf208U9U4mCc7fbMhECmCqvZJrLtGaUHt6kQQ3Yb1RWyDbuDChu-YB_bzq7sIVU6QHVDh8H-gyizM_0-E0E8JJYc8tHepq4gNq0_rPOzmXAfUyYimBFJgKcvim2WyNtuwDnRUGj1jV40aP4LtR7DyztvntO1dNHKhqitQmqDYSuB6W2mEeP0sX4cQ_Guf4-KW_6G0OsFhDyLWMclG6jqXbbvpPVgQ"
-	rsa2048DP     = "HpqJZ6DBb6ajhJpA-z068Tl-Y1wRTxyhRTHiOmfDgMPphED9V0MKrXCnBnKumQb1BK6p"
-	rsa2048DQ     = "TpzlUvfmDjNkDISCGGmztdEu6wUVqAYmJw-crSv7Lf8jdJOeroY3oRTyRLuXFDlLQMCj"
+	rsa2048D      = "cNNmGwtIladiUlF9v4774vjflIMQvrr-AV-_tHjXK59PY2k4b2HvpKXAoOTn4FAR8fuEeYuMRA-cky5KpBvyXdTxCpPFjI-ZS7QFiTyKk5TmJh73g--ZvyAjjUmsJhL_A02zUD8N2cEP4dKmffSdhe4JO-HVuIHKQCF6TJ_IrrP7IkA5Kji2DZR9_xPiBEele_RkB74TykrClkbXZ-fASt-gdO3e058__j0Ou5LYnzxcnA0vkxarIdqszZ3rHxI2MtqaNobKGJ6R3i9CmjxRKlBw-cDOnFz_L1v7P2QL9szxuGSYCCbKE7d04zc-7GqissY_SRdKM4cJ66SJxin6AQ"
+	rsa2048DP     = "AV-vUYbJgrfbtLEc8i4N8k__BsFyiN3OjkqqqjgxJIYViOZPa7QMPwSbqhGTKJE8EzjkJw"
+	rsa2048DQ     = "s-ehKBdb1qBJ8b06TOt1u6VK2AqWR_nhXPLhdnqXbHcvWGNv54wI_C0VU8Wt3SA3Jm1h"
 	rsa2048E      = "AQAB"
-	rsa2048N      = "qoyDkVtvxSKGtPeVYN_Ua0hDIvMJUNcWW45PPgcY8QyU8TYMTPqyjB-cbY7jepmMuEAxCqBdoUrBUsLHbNopWUuRiixpyiuNZNKdu7ClWBAM6xcxmO_WzHfJou58-T65FQ0d7S9zhzYG9oDki8X_MpVFRooMqvd25LmsG-7L1449Zq8LHpExM7kG25GvXSDERaa_9SAoW7-UItfaoDxkUtlH0sn4VsUJAy39G6TyMDh9evjzl4H1MQMT_lcYUaxZOALY3gYwAVnDLmLkK7wyew-dvSUs8yaJ4o0AMvelKK5mDEBYr3DzTHvnM1qOHqsRXflqU1c0E6Pdjbg_UjVhPQ"
-	rsa2048P      = "Ae_2YN1yRGTIvyEHsluM7Ok9AA3UPHdjB_cVfJmS_Dw6YkH-lOf4BRhEJOmSbJxU9NXyLw"
-	rsa2048Q      = "AcJQmIJuyE8nGItHUzDi5Fr0Z0pmLrNQccjzWhRgZvjp_hG-3sZ-Be-tu4X1v2tvFV6rQw"
-	rsa2048QI     = "ATMgJKsgGYGMUidDkmCKl9xGzDbiuPnq5xP2sGZHlcmwBlSfnMW8IwJENRI2glgk-gZ3tA"
-	rsa2048OthD1  = "2-yulQWFPZYzVsFF5FvXY1QVv0UZQxjFqa2UF4N2iLuYIK2GrKFtg6pMNuWtoTif5c_D"
-	rsa2048OthR1  = "A2hrOrqDUIpIm1rYDPXk_zxix2KLF6QBHxsvOIvvYZwaQirxsw4vpEhpvIaRXTqlypfUhXtP627GR8LJRdtgCva9_loEvm4AFfnfCpe2mLjpO_DBRMtUAvT4TG85OaF_L8SUxQXHTQ"
-	rsa2048OthT1  = "HKO1p9rP9WNdtpScd8pKl3CmbmKgLwQTPmxyQQD5YI4f-PHkpee2bpiBGOMJQ1SiJmfY"
-	rsa2048OthD2  = "AVJVNkEQL-tOQT0y2_Jp2mZKfsV-L4l6SN9Igtyql6IEhPdtuxU4SkjXqnFzwF_PlVbIyw"
-	rsa2048OthR2  = "DSbRvI-C6bBFfRd-YTJE_SYRtGMgSaA6SdezHwESTol8IHxhzlw6N0h1dWk1LJeyYIZk6BQUuWzkmBEiM65OE_C4e8EFfWVKzavNcq68escl1gFPZHjFO8M7YurPEmjr9GViOWsZbVSIAWCm18PcJ6GWe9aS0RbZj5ETLZoxMqhLM6yEKRs7XohOm2tmrRmOO0Eh6XeMGyp0Lw"
-	rsa2048OthT2  = "AUe2iS2xCOLclLCZSRAX8HFXw3IlGRcAlQ0H6zrYnb_gIJXgpUFwvI6AROczhFoDRctUMQ"
-	rsa2048OthD3  = "AcLE_2vdfUjNKB0RaXMtfj0RQr1nBtUbibfjbqFrBs2qwh_tEK3hBgAWF3lqC46L75xjEQ"
-	rsa2048OthR3  = "Lj5oNtEVTK8ZmmcMNipODiMxE81zOP7W24gbBQIzviaLBf03XBjUc5K-AXn-n1c4mhEsEDLbmUbJdHJ_vte6Vx1mo_jRNAeq7He8BsbVsnDV1mP7VR0IDLeb9Ad7KJRY9ydaErRu4PXnnY_fHXLpKS351aeEax7h8-ZMEZwCfT5X9oQb5CpuqBgJV0hjp9Y7-1r435tBXRr6IRPsL8jkqMzI89BlhUsM5DFNd2kkZ1Bk8nbKUMplp_LNT5lXnPQPbFB0QKHjhKx0-Jk19Q"
-	rsa2048OthT3  = "f_WvkHD-YgKUosQfXci-r8b2w5Th12yQqQUcoQprLd8CUWDv3-NLWOEov3ZwCAktgfwQ"
+	rsa2048N      = "mE4elfuO41dIwsjUJllqwIsNcr_pvHjnXHColxtL6wwrkcwJ8AOfaW5QJ0KuctXq2EvtkUESZLNKyA4xijsF7XtuEedLgHQheubXOp2YddCTuSiGEqRpWnYaJWDe05PzcWCNAGkXvsWL2Cz-jnjU1VCCnZDwBF5N5sNSXovfm5KVeEGZ1PwkDIc2XHGpjora37CQGh3KboqLDwwF5iRi5M1gTbW_VaGi05jv1fchRhs_6WlcUMJAUJsHLGiMgyj-XirjN3u3zGLFzuM1NkRp9eNijghq3fjkBPFCsGfPnryLwxjs6ZPg98ipFcJUwoqUk1hzOa_iJvAx-nDwnZSEFw"
+	rsa2048P      = "AaGvyuF5RegGs6CbARhJhmUdWM_Ye-0M7hyqeEEKKwClJ1ExiJxAKolv6DvtNipXTdZwPw"
+	rsa2048Q      = "AcQEclDgR23sTFZHzYka_wKAwC4QPHttlOSt0WAGau3PW5WPaVugh8FndYHGxzi1abU4GQ"
+	rsa2048QI     = "DOMVnjENDseMasjhWwfbVSasID0254_t4REMTnoqcfV7m9iBpCT2OjO1AHOSgZc0zkm8"
+	rsa2048OthD1  = "ATNJ2PNpn3NXTTtb7TYBcgQZN8jYCwKdKFhzTsLduqaHqjH5-p5okeISJ8osVaRJtJhqIQ"
+	rsa2048OthR1  = "A8mD0s9gHYp108OTdGoSJECefSQ7ND0IK6XUzlXVFLU-qmQf5w94JAT6v4X9uuShzdd2SQ"
+	rsa2048OthT1  = "AWj6bdr0udGInXeU0mDScIxa84-f2QFBSnbWZjwo6qDqPmk11GNbtOId3WiUAlmloZwWxg"
+	rsa2048OthD2  = "AZmpHHucdyCmzCFUO82u9cre3D7lC2dCO0mBi3n1oTilPY7zngl-ZW7DshPtu5DAjiOy5w"
+	rsa2048OthR2  = "A5RHuzHITMonYBSxMb0MCyoOcXAUXA3-StaIfxmij3Zc5H06QfA5lZPCdvDf8Jwcrquejw"
+	rsa2048OthT2  = "t48pBgBi-seV7vh9tgFw64oiIyw7auLuHRYnUEIN7wHGmSsPl5rUrip3Pe9UKqfNdfJ8"
+	rsa2048OthD3  = "AUyP-XN0Gg0GuxL8rDQxthUpUBYM9izNyJ8uX5Bgm1mPGRtkN3qwxYUUTbAeX8lPoEZC_w"
+	rsa2048OthR3  = "A-Zy7gnYivX7bW0ZH2GbbZSXoMPcoehJVlBqYJi9v4Am33A8dC71varbLEC8k89Y7Mb75w"
+	rsa2048OthT3  = "AssFXSpsj1ZFVjZ_tsJ2yePXdjdgQ-Wj59BcfKpzgJ6YuSEhf6kW4kbMZQULiSeNlckiYw"
 )
 
 func TestMarshalECDSA(t *testing.T) {
@@ -563,9 +563,6 @@ func TestUnmarshalRSA(t *testing.T) {
 				if crt.Exp.Cmp(original.Precomputed.CRTValues[i].Exp) != 0 {
 					t.Fatal(`Unmarshaled key parameter "oth" exp does not match original key.`)
 				}
-				if crt.R.Cmp(original.Precomputed.CRTValues[i].R) != 0 {
-					t.Fatal(`Unmarshaled key parameter "oth" r does not match original key.`)
-				}
 			}
 			public = private.Public().(*rsa.PublicKey)
 		} else {
@@ -900,7 +897,7 @@ func makeRSA(t *testing.T) *rsa.PrivateKey {
 			E: int(new(big.Int).SetBytes(e).Int64()),
 		},
 		D:      new(big.Int).SetBytes(d),
-		Primes: []*big.Int{new(big.Int).SetBytes(p), new(big.Int).SetBytes(q)},
+		Primes: []*big.Int{new(big.Int).SetBytes(p), new(big.Int).SetBytes(q), new(big.Int).SetBytes(othR1), new(big.Int).SetBytes(othR2), new(big.Int).SetBytes(othR3)},
 		Precomputed: rsa.PrecomputedValues{
 			Dp:   new(big.Int).SetBytes(dp),
 			Dq:   new(big.Int).SetBytes(dq),
@@ -909,17 +906,14 @@ func makeRSA(t *testing.T) *rsa.PrivateKey {
 				{
 					Exp:   new(big.Int).SetBytes(othD1),
 					Coeff: new(big.Int).SetBytes(othT1),
-					R:     new(big.Int).SetBytes(othR1),
 				},
 				{
 					Exp:   new(big.Int).SetBytes(othD2),
 					Coeff: new(big.Int).SetBytes(othT2),
-					R:     new(big.Int).SetBytes(othR2),
 				},
 				{
 					Exp:   new(big.Int).SetBytes(othD3),
 					Coeff: new(big.Int).SetBytes(othT3),
-					R:     new(big.Int).SetBytes(othR3),
 				},
 			},
 		},

@@ -143,12 +143,12 @@ func main() {
 ```
 
 # Test coverage
-Test coverage is currently greater than `99%`.
+Test coverage is currently `99%`.
 
 ```
 $ go test -cover -race
 PASS
-coverage: 99.5% of statements
+coverage: 99.0% of statements
 ok      github.com/MicahParks/jwkset    0.031s
 ```
 
