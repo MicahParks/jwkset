@@ -38,6 +38,7 @@ func (j JWKSet) JSON(ctx context.Context) (json.RawMessage, error) {
 	return j.JSONWithOptions(ctx, KeyMarshalOptions{})
 }
 
+// JSONPrivate creates the JSON representation of the JWKSet private key material, if available.
 func (j JWKSet) JSONPrivate(ctx context.Context) (json.RawMessage, error) {
 	options := KeyMarshalOptions{
 		AsymmetricPrivate: true,
@@ -46,6 +47,7 @@ func (j JWKSet) JSONPrivate(ctx context.Context) (json.RawMessage, error) {
 	return j.JSONWithOptions(ctx, options)
 }
 
+// JSONWithOptions creates the JSON representation of the JWKSet with the given options.
 func (j JWKSet) JSONWithOptions(ctx context.Context, options KeyMarshalOptions) (json.RawMessage, error) {
 	jwks := JWKSMarshal{}
 

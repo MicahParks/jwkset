@@ -201,7 +201,7 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			X: new(big.Int).SetBytes(x),
 			Y: new(big.Int).SetBytes(y),
 		}
-		switch CRV(jwk.CRV) {
+		switch jwk.CRV {
 		case CurveP256:
 			publicKey.Curve = elliptic.P256()
 		case CurveP384:

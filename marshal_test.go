@@ -543,62 +543,62 @@ func TestUnmarshalRSA(t *testing.T) {
 	checkUnmarshal(meta, options, private)
 
 	jwk.N = ""
-	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatal(`Should get error when parameter "n" is empty.`)
 	}
 
 	jwk.N = invalidB64URL
-	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "n" is invalid raw Base64 URL. %s`, err)
 	}
 	jwk.N = rsa2048RS256N
 
 	jwk.E = invalidB64URL
-	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "e" is invalid raw Base64 URL. %s`, err)
 	}
 	jwk.E = rsa2048RS256E
 
 	jwk.D = invalidB64URL
-	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "d" is invalid raw Base64 URL. %s`, err)
 	}
 	jwk.D = rsa2048RS256D
 
 	jwk.DP = invalidB64URL
-	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "dp" is invalid raw Base64 URL. %s`, err)
 	}
 	jwk.DP = rsa2048RS256DP
 
 	jwk.DQ = invalidB64URL
-	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "dq" is invalid raw Base64 URL. %s`, err)
 	}
 	jwk.DQ = rsa2048RS256DQ
 
 	jwk.P = invalidB64URL
-	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "p" is invalid raw Base64 URL. %s`, err)
 	}
 	jwk.P = rsa2048RS256P
 
 	jwk.Q = invalidB64URL
-	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "q" is invalid raw Base64 URL. %s`, err)
 	}
 	jwk.Q = rsa2048RS256Q
 
 	jwk.QI = invalidB64URL
-	meta, err = jwkset.KeyUnmarshal(jwk, options)
+	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "qi" is invalid raw Base64 URL. %s`, err)
 	}
