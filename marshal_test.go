@@ -250,7 +250,7 @@ func TestMarshalEdDSA(t *testing.T) {
 	checkMarshal(marshal, options)
 }
 
-func TestUnmarshalledDSA(t *testing.T) {
+func TestUnmarshalEdDSA(t *testing.T) {
 	private := makeEdDSA(t)
 
 	jwk := jwkset.JWKMarshal{
@@ -386,6 +386,30 @@ func TestUnmarshalOct(t *testing.T) {
 	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "k" is invalid raw Base64URL. %s`, err)
+	}
+}
+
+func TestMarshalUnsupported(t *testing.T) {
+	meta := jwkset.KeyWithMeta{
+		Key: "unsupported",
+	}
+
+	options := jwkset.KeyMarshalOptions{}
+	_, err := jwkset.KeyMarshal(meta, options)
+	if !errors.Is(err, jwkset.ErrUnsupportedKeyType) {
+		t.Fatalf("Unsupported key type should be unsupported for given options. %s", err)
+	}
+}
+
+func TestUnmarshalUnsupported(t *testing.T) {
+	jwk := jwkset.JWKMarshal{
+		KTY: "unsupported",
+	}
+
+	options := jwkset.KeyUnmarshalOptions{}
+	_, err := jwkset.KeyUnmarshal(jwk, options)
+	if !errors.Is(err, jwkset.ErrUnsupportedKeyType) {
+		t.Fatalf("Unsupported key type should return ErrUnsupportedKeyType. %s", err)
 	}
 }
 
