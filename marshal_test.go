@@ -2,9 +2,12 @@ package jwkset_test
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"encoding/base64"
 	"errors"
+	"math/big"
 	"testing"
 
 	"github.com/MicahParks/jwkset"
@@ -17,12 +20,115 @@ const (
 )
 
 func TestMarshalECDSA(t *testing.T) {
+	const (
+		dString = "GpanYiHB-TeCKFmfAwqzIJVhziUH6QX77obHwDPERGo"
+		xString = "IZrURsAt0DcSytZRCBQ4SjCcbIhLLQvg53uSkRdETZ4"
+		yString = "Uy2iBhx7jMXB4n8fPASCOaNjnUPd8C1toVwytGeAEdU"
+	)
 
+	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.KeyMarshalOptions) {
+		// TODO Check ALG.
+		if marshal.CRV != jwkset.CurveP256.String() {
+			t.Fatalf(`Should get curve "%s". %s`, jwkset.CurveP256.String(), marshal.CRV)
+		}
+		if options.AsymmetricPrivate {
+			if marshal.D != dString {
+				t.Fatalf("Private key does not match original key.")
+			}
+		} else {
+			if marshal.D != "" {
+				t.Fatalf("Asymmetric private key should be unsupported for given options.")
+			}
+		}
+		if marshal.KTY != jwkset.KeyTypeEC.String() {
+			t.Fatalf("Key type does not match original key.")
+		}
+		if marshal.X != xString {
+			t.Fatalf("Public key does not match original key.")
+		}
+		if marshal.Y != yString {
+			t.Fatalf("Public key does not match original key.")
+		}
+	}
+
+	d, err := base64.RawURLEncoding.DecodeString(dString)
+	if err != nil {
+		t.Fatalf("Failed to decode private key. %s", err)
+	}
+	x, err := base64.RawURLEncoding.DecodeString(xString)
+	if err != nil {
+		t.Fatalf("Failed to decode x coordinate. %s", err)
+	}
+	y, err := base64.RawURLEncoding.DecodeString(yString)
+	if err != nil {
+		t.Fatalf("Failed to decode y coordinate. %s", err)
+	}
+	metaP256 := &ecdsa.PrivateKey{
+		PublicKey: ecdsa.PublicKey{
+			Curve: elliptic.P256(),
+			X:     big.NewInt(0).SetBytes(x),
+			Y:     big.NewInt(0).SetBytes(y),
+		},
+		D: big.NewInt(0).SetBytes(d),
+	}
+
+	meta := jwkset.KeyWithMeta{
+		Key: metaP256,
+	}
+
+	options := jwkset.KeyMarshalOptions{}
+	marshal, err := jwkset.KeyMarshal(meta, options)
+	if err != nil {
+		t.Fatalf("Failed to marshal key with correct options. %s", err)
+	}
+	checkMarshal(marshal, options)
+
+	options.AsymmetricPrivate = true
+	marshal, err = jwkset.KeyMarshal(meta, options)
+	if err != nil {
+		t.Fatalf("Failed to marshal key with correct options. %s", err)
+	}
+	checkMarshal(marshal, options)
+
+	publicMeta := jwkset.KeyWithMeta{
+		Key: metaP256.Public(),
+	}
+	options.AsymmetricPrivate = false
+	marshal, err = jwkset.KeyMarshal(publicMeta, options)
+	if err != nil {
+		t.Fatalf("Failed to marshal key with correct options. %s", err)
+	}
+
+	checkMarshal(marshal, options)
 }
 
 func TestMarshalEdDSA(t *testing.T) {
-	const privateString = "5hT6NTzNJyUCaG7mqtq2ru0EsA2z5SwnnkP0pBycP64"
-	const publicString = "VYk14QSFla7FKnL_okf6TqLIyV2X6DPaDi26UpAMVnM"
+	const (
+		privateString = "5hT6NTzNJyUCaG7mqtq2ru0EsA2z5SwnnkP0pBycP64"
+		publicString  = "VYk14QSFla7FKnL_okf6TqLIyV2X6DPaDi26UpAMVnM"
+	)
+	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.KeyMarshalOptions) {
+		// TODO Check ALG.
+		if marshal.CRV != jwkset.CurveEd25519.String() {
+			t.Fatalf(`Should get curve "%s". %s`, jwkset.CurveEd25519.String(), marshal.CRV)
+		}
+		if options.AsymmetricPrivate {
+			if marshal.D != privateString {
+				t.Fatalf("Private key does not match original key.")
+			}
+		} else {
+			if marshal.D != "" {
+				t.Fatalf("Asymmetric private key should be unsupported for given options.")
+			}
+		}
+		if marshal.KTY != jwkset.KeyTypeOKP.String() {
+			t.Fatalf("Key type does not match original key.")
+		}
+		if marshal.X != publicString {
+			t.Fatalf("Public key does not match original key.")
+		}
+	}
+
 	privateBytes, err := base64.RawURLEncoding.DecodeString(privateString)
 	if err != nil {
 		t.Fatalf("Failed to decode private key. %s", err)
@@ -42,30 +148,24 @@ func TestMarshalEdDSA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
 	}
-
-	if marshal.D != "" {
-		t.Fatalf("Symmetric key should be unsupported for given options.")
-	}
+	checkMarshal(marshal, options)
 
 	options.AsymmetricPrivate = true
 	marshal, err = jwkset.KeyMarshal(meta, options)
 	if err != nil {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
 	}
+	checkMarshal(marshal, options)
 
-	// TODO Check ALG.
-	if marshal.CRV != jwkset.CurveEd25519.String() {
-		t.Fatalf(`Should get curve "%s". %s`, jwkset.CurveEd25519.String(), marshal.CRV)
+	publicMeta := jwkset.KeyWithMeta{
+		Key: private.Public(),
 	}
-	if marshal.D != privateString {
-		t.Fatalf("Private key does not match original key.")
+	options.AsymmetricPrivate = false
+	marshal, err = jwkset.KeyMarshal(publicMeta, options)
+	if err != nil {
+		t.Fatalf("Failed to marshal key with correct options. %s", err)
 	}
-	if marshal.KTY != jwkset.KeyTypeOKP.String() {
-		t.Fatalf("Key type does not match original key.")
-	}
-	if marshal.X != publicString {
-		t.Fatalf("Public key does not match original key.")
-	}
+	checkMarshal(marshal, options)
 }
 
 func TestUnmarshalEdDSA(t *testing.T) {

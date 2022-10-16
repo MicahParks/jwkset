@@ -116,7 +116,7 @@ func KeyMarshal(meta KeyWithMeta, options KeyMarshalOptions) (JWKMarshal, error)
 		if options.AsymmetricPrivate {
 			jwk.D = bigIntToBase64RawURL(key.D)
 		}
-	case ecdsa.PublicKey: // TODO Make this a pointer. Maybe support value with reassignment and fallthrough.
+	case *ecdsa.PublicKey: // TODO Make this a pointer. Maybe support value with reassignment and fallthrough.
 		jwk.CRV = key.Curve.Params().Name
 		jwk.X = bigIntToBase64RawURL(key.X)
 		jwk.Y = bigIntToBase64RawURL(key.Y)
@@ -197,7 +197,7 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 		if err != nil {
 			return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "y": %w`, KeyTypeEC, err)
 		}
-		publicKey := ecdsa.PublicKey{
+		publicKey := &ecdsa.PublicKey{
 			X: big.NewInt(0).SetBytes(x),
 			Y: big.NewInt(0).SetBytes(y),
 		}
@@ -211,16 +211,13 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 		default:
 			return KeyWithMeta{}, fmt.Errorf("%w: unsupported curve type %q", ErrKeyUnmarshalParameter, jwk.CRV)
 		}
-		if options.AsymmetricPrivate {
-			if jwk.D == "" {
-				return KeyWithMeta{}, fmt.Errorf(`%w: %s requires parameter "d"`, ErrKeyUnmarshalParameter, KeyTypeEC)
-			}
+		if options.AsymmetricPrivate && jwk.D != "" {
 			d, err := base64urlTrailingPadding(jwk.D)
 			if err != nil {
 				return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KeyTypeEC, err)
 			}
 			privateKey := &ecdsa.PrivateKey{
-				PublicKey: publicKey,
+				PublicKey: *publicKey,
 				D:         big.NewInt(0).SetBytes(d),
 			}
 			meta.Key = privateKey

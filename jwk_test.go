@@ -88,7 +88,7 @@ func TestJSONPublic(t *testing.T) {
 		t.Fatalf("Failed to parse EC private key. %s", err)
 	}
 	const eID = "myECKey"
-	err = jwkSet.Store.WriteKey(ctx, jwkset.NewKey(eKey.(*ecdsa.PrivateKey).PublicKey, eID))
+	err = jwkSet.Store.WriteKey(ctx, jwkset.NewKey(&eKey.(*ecdsa.PrivateKey).PublicKey, eID))
 	if err != nil {
 		t.Fatalf("Failed to write EC key. %s", err)
 	}
