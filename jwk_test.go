@@ -58,7 +58,7 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to write RSA key. %s", err)
 	}
 
-	hKey := []byte("myHMACSecret")
+	hKey := []byte(hmacSecret)
 	const hID = "myHMACKey"
 	err = jwkSet.Store.WriteKey(ctx, jwkset.KeyWithMeta{
 		Key:   hKey,
@@ -119,7 +119,7 @@ func TestJSONPublic(t *testing.T) {
 		t.Fatalf("Failed to write RSA key. %s", err)
 	}
 
-	hKey := []byte("myHMACSecret")
+	hKey := []byte(hmacSecret)
 	const hID = "myHMACKey"
 	err = jwkSet.Store.WriteKey(ctx, jwkset.KeyWithMeta{
 		Key:   hKey,

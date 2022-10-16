@@ -10,7 +10,15 @@ import (
 	"github.com/MicahParks/jwkset"
 )
 
-const myKeyID = "myKeyID"
+const (
+	hmacSecret    = "myHMACSecret"
+	invalidB64URL = "&"
+	myKeyID       = "myKeyID"
+)
+
+func TestMarshalECDSA(t *testing.T) {
+
+}
 
 func TestMarshalEdDSA(t *testing.T) {
 	const privateString = "5hT6NTzNJyUCaG7mqtq2ru0EsA2z5SwnnkP0pBycP64"
@@ -108,7 +116,7 @@ func TestUnmarshalEdDSA(t *testing.T) {
 		t.Fatalf("Unmarshaled key ID does not match original key ID.")
 	}
 
-	jwk.D = "&"
+	jwk.D = invalidB64URL
 	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "D" is invalid raw Base64URL. %s`, err)
@@ -120,7 +128,7 @@ func TestUnmarshalEdDSA(t *testing.T) {
 		t.Fatalf(`Should get ErrKeyUnmarshalParameter when parameter "X" is empty. %s`, err)
 	}
 
-	jwk.X = "&"
+	jwk.X = invalidB64URL
 	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "X" is invalid raw Base64URL. %s`, err)
@@ -151,7 +159,7 @@ func TestUnmarshalEdDSA(t *testing.T) {
 
 func TestMarshalOct(t *testing.T) {
 	meta := jwkset.KeyWithMeta{
-		Key: []byte("myHMACSecret"),
+		Key: []byte(hmacSecret),
 	}
 
 	options := jwkset.KeyMarshalOptions{}
@@ -175,8 +183,6 @@ func TestMarshalOct(t *testing.T) {
 }
 
 func TestUnmarshalOct(t *testing.T) {
-	const hmacSecret = "myHMACSecret"
-
 	jwk := jwkset.JWKMarshal{
 		K:   base64.RawURLEncoding.EncodeToString([]byte(hmacSecret)),
 		KID: myKeyID,
@@ -207,7 +213,7 @@ func TestUnmarshalOct(t *testing.T) {
 		t.Fatalf(`Should get ErrKeyUnmarshalParameter when parameter "K" is empty. %s`, err)
 	}
 
-	jwk.K = "&"
+	jwk.K = invalidB64URL
 	_, err = jwkset.KeyUnmarshal(jwk, options)
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "K" is invalid raw Base64URL. %s`, err)
