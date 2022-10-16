@@ -198,8 +198,8 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "y": %w`, KeyTypeEC, err)
 		}
 		publicKey := &ecdsa.PublicKey{
-			X: big.NewInt(0).SetBytes(x),
-			Y: big.NewInt(0).SetBytes(y),
+			X: new(big.Int).SetBytes(x),
+			Y: new(big.Int).SetBytes(y),
 		}
 		switch CRV(jwk.CRV) {
 		case CurveP256:
@@ -218,7 +218,7 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			}
 			privateKey := &ecdsa.PrivateKey{
 				PublicKey: *publicKey,
-				D:         big.NewInt(0).SetBytes(d),
+				D:         new(big.Int).SetBytes(d),
 			}
 			meta.Key = privateKey
 		} else {
@@ -264,8 +264,8 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 			return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "e": %w`, KeyTypeRSA, err)
 		}
 		publicKey := rsa.PublicKey{
-			N: big.NewInt(0).SetBytes(n),
-			E: int(big.NewInt(0).SetBytes(e).Uint64()),
+			N: new(big.Int).SetBytes(n),
+			E: int(new(big.Int).SetBytes(e).Uint64()),
 		}
 		if options.AsymmetricPrivate {
 			if jwk.D == "" || jwk.P == "" || jwk.Q == "" || jwk.DP == "" || jwk.DQ == "" || jwk.QI == "" {
@@ -313,22 +313,22 @@ func KeyUnmarshal(jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta, err
 					return KeyWithMeta{}, fmt.Errorf(`failed to decode %s key parameter "r": %w`, KeyTypeRSA, err)
 				}
 				oth = append(oth, rsa.CRTValue{
-					Exp:   big.NewInt(0).SetBytes(othD),
-					Coeff: big.NewInt(0).SetBytes(othT),
-					R:     big.NewInt(0).SetBytes(othR),
+					Exp:   new(big.Int).SetBytes(othD),
+					Coeff: new(big.Int).SetBytes(othT),
+					R:     new(big.Int).SetBytes(othR),
 				})
 			}
 			privateKey := &rsa.PrivateKey{
 				PublicKey: publicKey,
-				D:         big.NewInt(0).SetBytes(d),
+				D:         new(big.Int).SetBytes(d),
 				Primes: []*big.Int{
-					big.NewInt(0).SetBytes(p),
-					big.NewInt(0).SetBytes(q),
+					new(big.Int).SetBytes(p),
+					new(big.Int).SetBytes(q),
 				},
 				Precomputed: rsa.PrecomputedValues{
-					Dp:        big.NewInt(0).SetBytes(dp),
-					Dq:        big.NewInt(0).SetBytes(dq),
-					Qinv:      big.NewInt(0).SetBytes(qi),
+					Dp:        new(big.Int).SetBytes(dp),
+					Dq:        new(big.Int).SetBytes(dq),
+					Qinv:      new(big.Int).SetBytes(qi),
 					CRTValues: oth,
 				},
 			}

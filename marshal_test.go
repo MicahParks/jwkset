@@ -66,10 +66,10 @@ func TestMarshalECDSA(t *testing.T) {
 	metaP256 := &ecdsa.PrivateKey{
 		PublicKey: ecdsa.PublicKey{
 			Curve: elliptic.P256(),
-			X:     big.NewInt(0).SetBytes(x),
-			Y:     big.NewInt(0).SetBytes(y),
+			X:     new(big.Int).SetBytes(x),
+			Y:     new(big.Int).SetBytes(y),
 		},
-		D: big.NewInt(0).SetBytes(d),
+		D: new(big.Int).SetBytes(d),
 	}
 
 	meta := jwkset.KeyWithMeta{
