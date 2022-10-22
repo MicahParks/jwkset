@@ -13,21 +13,21 @@ var (
 	errStorage = errors.New("storage error")
 )
 
-type storageError struct{}
+type storageError[CustomKeyMeta any] struct{}
 
-func (s storageError) DeleteKey(ctx context.Context, keyID string) (ok bool, err error) {
+func (s storageError[CustomKeyMeta]) DeleteKey(ctx context.Context, keyID string) (ok bool, err error) {
 	return false, errStorage
 }
 
-func (s storageError) ReadKey(ctx context.Context, keyID string) (jwkset.KeyWithMeta, error) {
-	return jwkset.KeyWithMeta{}, errStorage
+func (s storageError[CustomKeyMeta]) ReadKey(ctx context.Context, keyID string) (jwkset.KeyWithMeta[CustomKeyMeta], error) {
+	return jwkset.KeyWithMeta[CustomKeyMeta]{}, errStorage
 }
 
-func (s storageError) SnapshotKeys(ctx context.Context) ([]jwkset.KeyWithMeta, error) {
+func (s storageError[CustomKeyMeta]) SnapshotKeys(ctx context.Context) ([]jwkset.KeyWithMeta[CustomKeyMeta], error) {
 	return nil, errStorage
 }
 
-func (s storageError) WriteKey(ctx context.Context, meta jwkset.KeyWithMeta) error {
+func (s storageError[CustomKeyMeta]) WriteKey(ctx context.Context, meta jwkset.KeyWithMeta[CustomKeyMeta]) error {
 	return errStorage
 }
 
@@ -35,8 +35,8 @@ func TestStorageError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	jwks := jwkset.NewMemory()
-	jwks.Store = storageError{}
+	jwks := jwkset.NewMemory[any]()
+	jwks.Store = storageError[any]{}
 
 	_, err := jwks.JSONPublic(ctx)
 	if err == nil {

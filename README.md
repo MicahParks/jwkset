@@ -3,7 +3,8 @@
 This is a JWK Set (JWKS or jwks) implementation. For a JWK Set client,
 see [`github.com/MicahParks/keyfunc`](https://github.com/MicahParks/keyfunc). Cryptographic keys can be added, deleted,
 and read from the JWK Set. A JSON representation of the JWK Set can be created for hosting via HTTPS. This project
-includes an in-memory storage implementation, but an interface is provided for more advanced use cases.
+includes an in-memory storage implementation, but an interface is provided for more advanced use cases. For this
+implementation, a key ID (`kid`) is required.
 
 This project only depends on packages from the standard Go library. It has no external dependencies.
 

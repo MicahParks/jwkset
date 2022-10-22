@@ -22,7 +22,7 @@ func main() {
 	}
 
 	// Wrap the key in the appropriate Go type.
-	meta := jwkset.NewKey(private, "my-key-id")
+	meta := jwkset.NewKey[any](private, "my-key-id")
 
 	// Create the approrpiate options to include the private key material in the JSON representation.
 	options := jwkset.KeyMarshalOptions{
@@ -56,7 +56,7 @@ func main() {
 	}
 
 	// Convert the Go type back into a key with metadata.
-	meta, err = jwkset.KeyUnmarshal(marshal, unmarshalOptions)
+	meta, err = jwkset.KeyUnmarshal[any](marshal, unmarshalOptions)
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to unmarshal key.", err)
 	}

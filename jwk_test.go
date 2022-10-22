@@ -19,7 +19,7 @@ func TestJSON(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	jwks := jwkset.NewMemory()
+	jwks := jwkset.NewMemory[any]()
 
 	block, _ := pem.Decode([]byte(ecPrivateKey))
 	eKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
@@ -27,7 +27,7 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to parse EC private key. %s", err)
 	}
 	const eID = "myECKey"
-	err = jwks.Store.WriteKey(ctx, jwkset.NewKey(eKey.(*ecdsa.PrivateKey), eID))
+	err = jwks.Store.WriteKey(ctx, jwkset.NewKey[any](eKey.(*ecdsa.PrivateKey), eID))
 	if err != nil {
 		t.Fatalf("Failed to write EC key. %s", err)
 	}
@@ -42,7 +42,7 @@ func TestJSON(t *testing.T) {
 	}
 	ed := ed25519.PrivateKey(append(edPriv, edPub...))
 	const edID = "myEdDSAKey"
-	err = jwks.Store.WriteKey(ctx, jwkset.NewKey(ed, edID))
+	err = jwks.Store.WriteKey(ctx, jwkset.NewKey[any](ed, edID))
 	if err != nil {
 		t.Fatalf("Failed to write EdDSA key. %s", err)
 	}
@@ -53,14 +53,14 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to parse RSA private key. %s", err)
 	}
 	const rID = "myRSAKey"
-	err = jwks.Store.WriteKey(ctx, jwkset.NewKey(rKey.(*rsa.PrivateKey), rID))
+	err = jwks.Store.WriteKey(ctx, jwkset.NewKey[any](rKey.(*rsa.PrivateKey), rID))
 	if err != nil {
 		t.Fatalf("Failed to write RSA key. %s", err)
 	}
 
 	hKey := []byte(hmacSecret)
 	const hID = "myHMACKey"
-	err = jwks.Store.WriteKey(ctx, jwkset.KeyWithMeta{
+	err = jwks.Store.WriteKey(ctx, jwkset.KeyWithMeta[any]{
 		Key:   hKey,
 		KeyID: hID,
 	})
