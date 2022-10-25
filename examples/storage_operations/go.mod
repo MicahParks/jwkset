@@ -1,6 +1,6 @@
 module readme
 
-go 1.16
+go 1.19
 
 replace github.com/MicahParks/jwkset => ../..
 
