@@ -184,7 +184,7 @@ func KeyMarshal[CustomKeyMeta any](meta KeyWithMeta[CustomKeyMeta], options KeyM
 	default:
 		return JWKMarshal{}, fmt.Errorf("%w: %T", ErrUnsupportedKeyType, key)
 	}
-	if meta.ALG == "" {
+	if meta.ALG != "" {
 		jwk.ALG = meta.ALG
 	}
 	jwk.KID = meta.KeyID
