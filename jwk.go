@@ -9,6 +9,7 @@ import (
 
 // KeyWithMeta is holds a Key and its metadata.
 type KeyWithMeta[CustomKeyMeta any] struct {
+	ALG    ALG
 	Custom CustomKeyMeta
 	Key    interface{}
 	KeyID  string

@@ -47,6 +47,10 @@ var (
 // https://www.rfc-editor.org/rfc/rfc7518#section-7.1
 type ALG string
 
+func (alg ALG) String() string {
+	return string(alg)
+}
+
 // CRV is a set of "JSON Web Key Elliptic Curve" types from https://www.iana.org/assignments/jose/jose.xhtml as
 // mentioned in https://www.rfc-editor.org/rfc/rfc7518.html#section-6.2.1.1.
 type CRV string
@@ -76,7 +80,7 @@ type OtherPrimes struct {
 // https://www.rfc-editor.org/rfc/rfc7518
 // https://www.rfc-editor.org/rfc/rfc8037
 type JWKMarshal struct {
-	// TODO Use ALG field.
+	// TODO Check that ALG field is utilized fully.
 	ALG ALG    `json:"alg,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.4 and https://www.rfc-editor.org/rfc/rfc7518#section-4.1
 	CRV CRV    `json:"crv,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
 	D   string `json:"d,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.1 and https://www.rfc-editor.org/rfc/rfc7518#section-6.2.2.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
@@ -179,6 +183,9 @@ func KeyMarshal[CustomKeyMeta any](meta KeyWithMeta[CustomKeyMeta], options KeyM
 		}
 	default:
 		return JWKMarshal{}, fmt.Errorf("%w: %T", ErrUnsupportedKeyType, key)
+	}
+	if meta.ALG == "" {
+		jwk.ALG = meta.ALG
 	}
 	jwk.KID = meta.KeyID
 	return jwk, nil
@@ -368,6 +375,7 @@ func KeyUnmarshal[CustomKeyMeta any](jwk JWKMarshal, options KeyUnmarshalOptions
 	default:
 		return meta, fmt.Errorf("%w: %s", ErrUnsupportedKeyType, jwk.KTY)
 	}
+	meta.ALG = jwk.ALG
 	meta.KeyID = jwk.KID
 	return meta, nil
 }
