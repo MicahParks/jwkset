@@ -149,7 +149,7 @@ Test coverage is currently `99%`.
 ```
 $ go test -cover -race
 PASS
-coverage: 99.0% of statements
+coverage: 98.5% of statements
 ok      github.com/MicahParks/jwkset    0.031s
 ```
 

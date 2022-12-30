@@ -27,26 +27,26 @@ const (
 	AlgPS512 ALG = "PS512"
 	// AlgNone is the No digital signature or MAC performed algorithm.
 	AlgNone ALG = "none"
-	// ALGEdDSA is the EdDSA algorithm.
-	ALGEdDSA ALG = "EdDSA"
+	// AlgEdDSA is the EdDSA algorithm.
+	AlgEdDSA ALG = "EdDSA"
 
-	// KeyTypeEC is the key type for ECDSA.
-	KeyTypeEC KTY = "EC"
-	// KeyTypeOKP is the key type for EdDSA.
-	KeyTypeOKP KTY = "OKP"
-	// KeyTypeRSA is the key type for RSA.
-	KeyTypeRSA KTY = "RSA"
-	// KeyTypeOct is the key type for octet sequences, such as HMAC.
-	KeyTypeOct KTY = "oct"
+	// KtyEC is the key type for ECDSA.
+	KtyEC KTY = "EC"
+	// KtyOKP is the key type for EdDSA.
+	KtyOKP KTY = "OKP"
+	// KtyRSA is the key type for RSA.
+	KtyRSA KTY = "RSA"
+	// KtyOct is the key type for octet sequences, such as HMAC.
+	KtyOct KTY = "oct"
 
-	// CurveEd25519 is a curve for EdDSA.
-	CurveEd25519 CRV = "Ed25519"
-	// CurveP256 is a curve for ECDSA.
-	CurveP256 CRV = "P-256"
-	// CurveP384 is a curve for ECDSA.
-	CurveP384 CRV = "P-384"
-	// CurveP521 is a curve for ECDSA.
-	CurveP521 CRV = "P-521"
+	// CrvEd25519 is a curve for EdDSA.
+	CrvEd25519 CRV = "Ed25519"
+	// CrvP256 is a curve for ECDSA.
+	CrvP256 CRV = "P-256"
+	// CrvP384 is a curve for ECDSA.
+	CrvP384 CRV = "P-384"
+	// CrvP521 is a curve for ECDSA.
+	CrvP521 CRV = "P-521"
 )
 
 // ALG is a set of "JSON Web Signature and Encryption Algorithms" types from

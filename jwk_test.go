@@ -111,25 +111,25 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 		var expectedJSON json.RawMessage
 		var matchingAttributes []string
 		switch jwkset.KTY(kty) {
-		case jwkset.KeyTypeEC:
+		case jwkset.KtyEC:
 			expectedJSON = json.RawMessage(ecExpected)
 			matchingAttributes = []string{"kty", "kid", "crv", "x", "y"}
 			if private {
 				matchingAttributes = append(matchingAttributes, "d")
 			}
-		case jwkset.KeyTypeOKP:
+		case jwkset.KtyOKP:
 			expectedJSON = json.RawMessage(edExpected)
 			matchingAttributes = []string{"kty", "kid", "x"}
 			if private {
 				matchingAttributes = append(matchingAttributes, "d")
 			}
-		case jwkset.KeyTypeRSA:
+		case jwkset.KtyRSA:
 			expectedJSON = json.RawMessage(rsaExpected)
 			matchingAttributes = []string{"kty", "kid", "n", "e"}
 			if private {
 				matchingAttributes = append(matchingAttributes, "d", "p", "q", "dp", "dq", "qi")
 			}
-		case jwkset.KeyTypeOct:
+		case jwkset.KtyOct:
 			if private {
 				expectedJSON = json.RawMessage(hmacExpected)
 				matchingAttributes = []string{"kty", "kid", "k"}

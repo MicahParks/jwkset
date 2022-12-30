@@ -76,7 +76,7 @@ func KeyMarshal[CustomKeyMeta any](meta KeyWithMeta[CustomKeyMeta], options KeyM
 		jwk.CRV = CRV(pub.Curve.Params().Name)
 		jwk.X = bigIntToBase64RawURL(pub.X)
 		jwk.Y = bigIntToBase64RawURL(pub.Y)
-		jwk.KTY = KeyTypeEC
+		jwk.KTY = KtyEC
 		if options.AsymmetricPrivate {
 			jwk.D = bigIntToBase64RawURL(key.D)
 		}
@@ -84,26 +84,26 @@ func KeyMarshal[CustomKeyMeta any](meta KeyWithMeta[CustomKeyMeta], options KeyM
 		jwk.CRV = CRV(key.Curve.Params().Name)
 		jwk.X = bigIntToBase64RawURL(key.X)
 		jwk.Y = bigIntToBase64RawURL(key.Y)
-		jwk.KTY = KeyTypeEC
+		jwk.KTY = KtyEC
 	case ed25519.PrivateKey:
 		pub := key.Public().(ed25519.PublicKey)
-		jwk.ALG = ALGEdDSA
-		jwk.CRV = CurveEd25519
+		jwk.ALG = AlgEdDSA
+		jwk.CRV = CrvEd25519
 		jwk.X = base64.RawURLEncoding.EncodeToString(pub)
-		jwk.KTY = KeyTypeOKP
+		jwk.KTY = KtyOKP
 		if options.AsymmetricPrivate {
 			jwk.D = base64.RawURLEncoding.EncodeToString(key[:32])
 		}
 	case ed25519.PublicKey:
-		jwk.ALG = ALGEdDSA
-		jwk.CRV = CurveEd25519
+		jwk.ALG = AlgEdDSA
+		jwk.CRV = CrvEd25519
 		jwk.X = base64.RawURLEncoding.EncodeToString(key)
-		jwk.KTY = KeyTypeOKP
+		jwk.KTY = KtyOKP
 	case *rsa.PrivateKey:
 		pub := key.PublicKey
 		jwk.E = bigIntToBase64RawURL(big.NewInt(int64(pub.E)))
 		jwk.N = bigIntToBase64RawURL(pub.N)
-		jwk.KTY = KeyTypeRSA
+		jwk.KTY = KtyRSA
 		if options.AsymmetricPrivate {
 			jwk.D = bigIntToBase64RawURL(key.D)
 			jwk.P = bigIntToBase64RawURL(key.Primes[0])
@@ -125,10 +125,10 @@ func KeyMarshal[CustomKeyMeta any](meta KeyWithMeta[CustomKeyMeta], options KeyM
 	case *rsa.PublicKey:
 		jwk.E = bigIntToBase64RawURL(big.NewInt(int64(key.E)))
 		jwk.N = bigIntToBase64RawURL(key.N)
-		jwk.KTY = KeyTypeRSA
+		jwk.KTY = KtyRSA
 	case []byte:
 		if options.Symmetric {
-			jwk.KTY = KeyTypeOct
+			jwk.KTY = KtyOct
 			jwk.K = base64.RawURLEncoding.EncodeToString(key)
 		} else {
 			return JWKMarshal{}, fmt.Errorf("%w: incorrect options to marshal symmetric key (oct)", ErrUnsupportedKeyType)
@@ -154,28 +154,28 @@ type KeyUnmarshalOptions struct {
 func KeyUnmarshal[CustomKeyMeta any](jwk JWKMarshal, options KeyUnmarshalOptions) (KeyWithMeta[CustomKeyMeta], error) {
 	var meta KeyWithMeta[CustomKeyMeta]
 	switch jwk.KTY {
-	case KeyTypeEC:
+	case KtyEC:
 		if jwk.CRV == "" || jwk.X == "" || jwk.Y == "" {
-			return meta, fmt.Errorf(`%w: %s requires parameters "crv", "x", and "y"`, ErrKeyUnmarshalParameter, KeyTypeEC)
+			return meta, fmt.Errorf(`%w: %s requires parameters "crv", "x", and "y"`, ErrKeyUnmarshalParameter, KtyEC)
 		}
 		x, err := base64urlTrailingPadding(jwk.X)
 		if err != nil {
-			return meta, fmt.Errorf(`failed to decode %s key parameter "x": %w`, KeyTypeEC, err)
+			return meta, fmt.Errorf(`failed to decode %s key parameter "x": %w`, KtyEC, err)
 		}
 		y, err := base64urlTrailingPadding(jwk.Y)
 		if err != nil {
-			return meta, fmt.Errorf(`failed to decode %s key parameter "y": %w`, KeyTypeEC, err)
+			return meta, fmt.Errorf(`failed to decode %s key parameter "y": %w`, KtyEC, err)
 		}
 		publicKey := &ecdsa.PublicKey{
 			X: new(big.Int).SetBytes(x),
 			Y: new(big.Int).SetBytes(y),
 		}
 		switch jwk.CRV {
-		case CurveP256:
+		case CrvP256:
 			publicKey.Curve = elliptic.P256()
-		case CurveP384:
+		case CrvP384:
 			publicKey.Curve = elliptic.P384()
-		case CurveP521:
+		case CrvP521:
 			publicKey.Curve = elliptic.P521()
 		default:
 			return meta, fmt.Errorf("%w: unsupported curve type %q", ErrKeyUnmarshalParameter, jwk.CRV)
@@ -183,7 +183,7 @@ func KeyUnmarshal[CustomKeyMeta any](jwk JWKMarshal, options KeyUnmarshalOptions
 		if options.AsymmetricPrivate && jwk.D != "" {
 			d, err := base64urlTrailingPadding(jwk.D)
 			if err != nil {
-				return meta, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KeyTypeEC, err)
+				return meta, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyEC, err)
 			}
 			privateKey := &ecdsa.PrivateKey{
 				PublicKey: *publicKey,
@@ -193,44 +193,44 @@ func KeyUnmarshal[CustomKeyMeta any](jwk JWKMarshal, options KeyUnmarshalOptions
 		} else {
 			meta.Key = publicKey
 		}
-	case KeyTypeOKP:
-		if jwk.CRV != CurveEd25519 {
-			return meta, fmt.Errorf("%w: %s key type should have %q curve", ErrKeyUnmarshalParameter, KeyTypeOKP, CurveEd25519)
+	case KtyOKP:
+		if jwk.CRV != CrvEd25519 {
+			return meta, fmt.Errorf("%w: %s key type should have %q curve", ErrKeyUnmarshalParameter, KtyOKP, CrvEd25519)
 		}
 		if jwk.X == "" {
-			return meta, fmt.Errorf(`%w: %s requires parameter "x"`, ErrKeyUnmarshalParameter, KeyTypeOKP)
+			return meta, fmt.Errorf(`%w: %s requires parameter "x"`, ErrKeyUnmarshalParameter, KtyOKP)
 		}
 		public, err := base64urlTrailingPadding(jwk.X)
 		if err != nil {
-			return meta, fmt.Errorf(`failed to decode %s key parameter "x": %w`, KeyTypeOKP, err)
+			return meta, fmt.Errorf(`failed to decode %s key parameter "x": %w`, KtyOKP, err)
 		}
 		if len(public) != ed25519.PublicKeySize {
-			return meta, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KeyTypeOKP, ed25519.PublicKeySize)
+			return meta, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, ed25519.PublicKeySize)
 		}
 		if options.AsymmetricPrivate && jwk.D != "" {
 			private, err := base64urlTrailingPadding(jwk.D)
 			if err != nil {
-				return meta, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KeyTypeOKP, err)
+				return meta, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyOKP, err)
 			}
 			private = append(private, public...)
 			if len(private) != ed25519.PrivateKeySize {
-				return meta, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KeyTypeOKP, ed25519.PrivateKeySize)
+				return meta, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, ed25519.PrivateKeySize)
 			}
 			meta.Key = ed25519.PrivateKey(private)
 		} else {
 			meta.Key = ed25519.PublicKey(public)
 		}
-	case KeyTypeRSA:
+	case KtyRSA:
 		if jwk.N == "" || jwk.E == "" {
-			return meta, fmt.Errorf(`%w: %s requires parameters "n" and "e"`, ErrKeyUnmarshalParameter, KeyTypeRSA)
+			return meta, fmt.Errorf(`%w: %s requires parameters "n" and "e"`, ErrKeyUnmarshalParameter, KtyRSA)
 		}
 		n, err := base64urlTrailingPadding(jwk.N)
 		if err != nil {
-			return meta, fmt.Errorf(`failed to decode %s key parameter "n": %w`, KeyTypeRSA, err)
+			return meta, fmt.Errorf(`failed to decode %s key parameter "n": %w`, KtyRSA, err)
 		}
 		e, err := base64urlTrailingPadding(jwk.E)
 		if err != nil {
-			return meta, fmt.Errorf(`failed to decode %s key parameter "e": %w`, KeyTypeRSA, err)
+			return meta, fmt.Errorf(`failed to decode %s key parameter "e": %w`, KtyRSA, err)
 		}
 		publicKey := rsa.PublicKey{
 			N: new(big.Int).SetBytes(n),
@@ -239,27 +239,27 @@ func KeyUnmarshal[CustomKeyMeta any](jwk JWKMarshal, options KeyUnmarshalOptions
 		if options.AsymmetricPrivate && jwk.D != "" && jwk.P != "" && jwk.Q != "" && jwk.DP != "" && jwk.DQ != "" && jwk.QI != "" { // TODO Only "d" is required, but if one of the others is present, they all must be.
 			d, err := base64urlTrailingPadding(jwk.D)
 			if err != nil {
-				return meta, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KeyTypeRSA, err)
+				return meta, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyRSA, err)
 			}
 			p, err := base64urlTrailingPadding(jwk.P)
 			if err != nil {
-				return meta, fmt.Errorf(`failed to decode %s key parameter "p": %w`, KeyTypeRSA, err)
+				return meta, fmt.Errorf(`failed to decode %s key parameter "p": %w`, KtyRSA, err)
 			}
 			q, err := base64urlTrailingPadding(jwk.Q)
 			if err != nil {
-				return meta, fmt.Errorf(`failed to decode %s key parameter "q": %w`, KeyTypeRSA, err)
+				return meta, fmt.Errorf(`failed to decode %s key parameter "q": %w`, KtyRSA, err)
 			}
 			dp, err := base64urlTrailingPadding(jwk.DP)
 			if err != nil {
-				return meta, fmt.Errorf(`failed to decode %s key parameter "dp": %w`, KeyTypeRSA, err)
+				return meta, fmt.Errorf(`failed to decode %s key parameter "dp": %w`, KtyRSA, err)
 			}
 			dq, err := base64urlTrailingPadding(jwk.DQ)
 			if err != nil {
-				return meta, fmt.Errorf(`failed to decode %s key parameter "dq": %w`, KeyTypeRSA, err)
+				return meta, fmt.Errorf(`failed to decode %s key parameter "dq": %w`, KtyRSA, err)
 			}
 			qi, err := base64urlTrailingPadding(jwk.QI)
 			if err != nil {
-				return meta, fmt.Errorf(`failed to decode %s key parameter "qi": %w`, KeyTypeRSA, err)
+				return meta, fmt.Errorf(`failed to decode %s key parameter "qi": %w`, KtyRSA, err)
 			}
 			var oth []rsa.CRTValue
 			primes := []*big.Int{
@@ -270,19 +270,19 @@ func KeyUnmarshal[CustomKeyMeta any](jwk JWKMarshal, options KeyUnmarshalOptions
 				oth = make([]rsa.CRTValue, len(jwk.OTH))
 				for i, otherPrimes := range jwk.OTH {
 					if otherPrimes.R == "" || otherPrimes.D == "" || otherPrimes.T == "" {
-						return meta, fmt.Errorf(`%w: %s requires parameters "r", "d", and "t" for each "oth"`, ErrKeyUnmarshalParameter, KeyTypeRSA)
+						return meta, fmt.Errorf(`%w: %s requires parameters "r", "d", and "t" for each "oth"`, ErrKeyUnmarshalParameter, KtyRSA)
 					}
 					othD, err := base64urlTrailingPadding(otherPrimes.D)
 					if err != nil {
-						return meta, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KeyTypeRSA, err)
+						return meta, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyRSA, err)
 					}
 					othT, err := base64urlTrailingPadding(otherPrimes.T)
 					if err != nil {
-						return meta, fmt.Errorf(`failed to decode %s key parameter "t": %w`, KeyTypeRSA, err)
+						return meta, fmt.Errorf(`failed to decode %s key parameter "t": %w`, KtyRSA, err)
 					}
 					othR, err := base64urlTrailingPadding(otherPrimes.R)
 					if err != nil {
-						return meta, fmt.Errorf(`failed to decode %s key parameter "r": %w`, KeyTypeRSA, err)
+						return meta, fmt.Errorf(`failed to decode %s key parameter "r": %w`, KtyRSA, err)
 					}
 					primes = append(primes, new(big.Int).SetBytes(othR))
 					oth[i] = rsa.CRTValue{
@@ -305,24 +305,24 @@ func KeyUnmarshal[CustomKeyMeta any](jwk JWKMarshal, options KeyUnmarshalOptions
 			}
 			err = privateKey.Validate()
 			if err != nil {
-				return meta, fmt.Errorf(`failed to validate %s key: %w`, KeyTypeRSA, err)
+				return meta, fmt.Errorf(`failed to validate %s key: %w`, KtyRSA, err)
 			}
 			meta.Key = privateKey
 		} else if !options.AsymmetricPrivate {
 			meta.Key = &publicKey
 		}
-	case KeyTypeOct:
+	case KtyOct:
 		if options.Symmetric {
 			if jwk.K == "" {
-				return meta, fmt.Errorf(`%w: %s requires parameter "k"`, ErrKeyUnmarshalParameter, KeyTypeOct)
+				return meta, fmt.Errorf(`%w: %s requires parameter "k"`, ErrKeyUnmarshalParameter, KtyOct)
 			}
 			key, err := base64urlTrailingPadding(jwk.K)
 			if err != nil {
-				return meta, fmt.Errorf(`failed to decode %s key parameter "k": %w`, KeyTypeOct, err)
+				return meta, fmt.Errorf(`failed to decode %s key parameter "k": %w`, KtyOct, err)
 			}
 			meta.Key = key
 		} else {
-			return meta, fmt.Errorf("%w: incorrect options to unmarshal symmetric key (%s)", ErrUnsupportedKeyType, KeyTypeOct)
+			return meta, fmt.Errorf("%w: incorrect options to unmarshal symmetric key (%s)", ErrUnsupportedKeyType, KtyOct)
 		}
 	default:
 		return meta, fmt.Errorf("%w: %s", ErrUnsupportedKeyType, jwk.KTY)
