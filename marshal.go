@@ -12,60 +12,12 @@ import (
 	"strings"
 )
 
-const (
-	// ALGEdDSA is the EdDSA algorithm.
-	ALGEdDSA ALG = "EdDSA"
-
-	// KeyTypeEC is the key type for ECDSA.
-	KeyTypeEC KTY = "EC"
-	// KeyTypeOKP is the key type for EdDSA.
-	KeyTypeOKP KTY = "OKP"
-	// KeyTypeRSA is the key type for RSA.
-	KeyTypeRSA KTY = "RSA"
-	// KeyTypeOct is the key type for octet sequences, such as HMAC.
-	KeyTypeOct KTY = "oct"
-
-	// CurveEd25519 is a curve for EdDSA.
-	CurveEd25519 CRV = "Ed25519"
-	// CurveP256 is a curve for ECDSA.
-	CurveP256 CRV = "P-256"
-	// CurveP384 is a curve for ECDSA.
-	CurveP384 CRV = "P-384"
-	// CurveP521 is a curve for ECDSA.
-	CurveP521 CRV = "P-521"
-)
-
 var (
 	// ErrKeyUnmarshalParameter indicates that a JWK's attributes are invalid and cannot be unmarshaled.
 	ErrKeyUnmarshalParameter = errors.New("unable to unmarshal JWK due to invalid attributes")
 	// ErrUnsupportedKeyType indicates a key type is not supported.
 	ErrUnsupportedKeyType = errors.New("unsupported key type")
 )
-
-// ALG is a set of "JSON Web Signature and Encryption Algorithms" types from
-// https://www.iana.org/assignments/jose/jose.xhtml(JWA) as defined in
-// https://www.rfc-editor.org/rfc/rfc7518#section-7.1
-type ALG string
-
-func (alg ALG) String() string {
-	return string(alg)
-}
-
-// CRV is a set of "JSON Web Key Elliptic Curve" types from https://www.iana.org/assignments/jose/jose.xhtml as
-// mentioned in https://www.rfc-editor.org/rfc/rfc7518.html#section-6.2.1.1.
-type CRV string
-
-func (crv CRV) String() string {
-	return string(crv)
-}
-
-// KTY is a set of "JSON Web Key Types" from https://www.iana.org/assignments/jose/jose.xhtml as mentioned in
-// https://www.rfc-editor.org/rfc/rfc7517#section-4.1
-type KTY string
-
-func (kty KTY) String() string {
-	return string(kty)
-}
 
 // OtherPrimes is for RSA private keys that have more than 2 primes.
 // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7
