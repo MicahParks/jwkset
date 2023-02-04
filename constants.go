@@ -47,6 +47,9 @@ const (
 	CrvP384 CRV = "P-384"
 	// CrvP521 is a curve for ECDSA.
 	CrvP521 CRV = "P-521"
+
+	// HeaderKID is a JWT header for the key ID.
+	HeaderKID = "kid"
 )
 
 // ALG is a set of "JSON Web Signature and Encryption Algorithms" types from
