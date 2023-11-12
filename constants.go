@@ -76,3 +76,7 @@ type KTY string
 func (kty KTY) String() string {
 	return string(kty)
 }
+
+func ptr[T any](t T) *T {
+	return &t
+}

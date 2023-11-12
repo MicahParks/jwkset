@@ -12,11 +12,13 @@ import (
 	"strings"
 )
 
+// TODO Implement https://datatracker.ietf.org/doc/html/rfc7517#section-7 JWK Set encryption?
+
 var (
 	// ErrKeyUnmarshalParameter indicates that a JWK's attributes are invalid and cannot be unmarshaled.
 	ErrKeyUnmarshalParameter = errors.New("unable to unmarshal JWK due to invalid attributes")
-	// ErrUnsupportedKeyType indicates a key type is not supported.
-	ErrUnsupportedKeyType = errors.New("unsupported key type")
+	// ErrUnsupportedKey indicates a key is not supported.
+	ErrUnsupportedKey = errors.New("unsupported key")
 )
 
 // OtherPrimes is for RSA private keys that have more than 2 primes.
@@ -51,9 +53,12 @@ type JWKMarshal struct {
 	QI  string        `json:"qi,omitempty"`  // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.6
 	// TODO Use USE field.
 	// USE USE        `json:"use,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.2
-	X string `json:"x,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.2 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
-	// TODO X.509 related fields.
-	Y string `json:"y,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.3
+	X       string   `json:"x,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.2 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
+	X5U     string   `json:"x5u,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.6
+	X5C     []string `json:"x5c,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.7 TODO Needs to marshal to standard base64.
+	X5T     string   `json:"x5t,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.8 TODO Needs to marshal to base64url.
+	X5TS256 string   `json:"x5t#S256,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.9 TODO Needs to marshal to base64url.
+	Y       string   `json:"y,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.3
 }
 
 // JWKSMarshal is used to marshal or unmarshal a JSON Web Key Set.
@@ -131,10 +136,10 @@ func KeyMarshal[CustomKeyMeta any](meta KeyWithMeta[CustomKeyMeta], options KeyM
 			jwk.KTY = KtyOct
 			jwk.K = base64.RawURLEncoding.EncodeToString(key)
 		} else {
-			return JWKMarshal{}, fmt.Errorf("%w: incorrect options to marshal symmetric key (oct)", ErrUnsupportedKeyType)
+			return JWKMarshal{}, fmt.Errorf("%w: incorrect options to marshal symmetric key (oct)", ErrUnsupportedKey)
 		}
 	default:
-		return JWKMarshal{}, fmt.Errorf("%w: %T", ErrUnsupportedKeyType, key)
+		return JWKMarshal{}, fmt.Errorf("%w: %T", ErrUnsupportedKey, key)
 	}
 	if meta.ALG != "" {
 		jwk.ALG = meta.ALG
@@ -322,10 +327,10 @@ func KeyUnmarshal[CustomKeyMeta any](jwk JWKMarshal, options KeyUnmarshalOptions
 			}
 			meta.Key = key
 		} else {
-			return meta, fmt.Errorf("%w: incorrect options to unmarshal symmetric key (%s)", ErrUnsupportedKeyType, KtyOct)
+			return meta, fmt.Errorf("%w: incorrect options to unmarshal symmetric key (%s)", ErrUnsupportedKey, KtyOct)
 		}
 	default:
-		return meta, fmt.Errorf("%w: %s", ErrUnsupportedKeyType, jwk.KTY)
+		return meta, fmt.Errorf("%w: %s", ErrUnsupportedKey, jwk.KTY)
 	}
 	meta.ALG = jwk.ALG
 	meta.KeyID = jwk.KID

@@ -354,7 +354,7 @@ func TestMarshalOct(t *testing.T) {
 
 	options := jwkset.KeyMarshalOptions{}
 	_, err := jwkset.KeyMarshal(meta, options)
-	if !errors.Is(err, jwkset.ErrUnsupportedKeyType) {
+	if !errors.Is(err, jwkset.ErrUnsupportedKey) {
 		t.Fatalf("Symmetric key should be unsupported for given options. %s", err)
 	}
 
@@ -381,7 +381,7 @@ func TestUnmarshalOct(t *testing.T) {
 
 	options := jwkset.KeyUnmarshalOptions{}
 	meta, err := jwkset.KeyUnmarshal[any](jwk, options)
-	if !errors.Is(err, jwkset.ErrUnsupportedKeyType) {
+	if !errors.Is(err, jwkset.ErrUnsupportedKey) {
 		t.Fatalf("Symmetric key should be unsupported for given options. %s", err)
 	}
 
@@ -720,7 +720,7 @@ func TestMarshalUnsupported(t *testing.T) {
 
 	options := jwkset.KeyMarshalOptions{}
 	_, err := jwkset.KeyMarshal(meta, options)
-	if !errors.Is(err, jwkset.ErrUnsupportedKeyType) {
+	if !errors.Is(err, jwkset.ErrUnsupportedKey) {
 		t.Fatalf("Unsupported key type should be unsupported for given options. %s", err)
 	}
 }
@@ -732,8 +732,8 @@ func TestUnmarshalUnsupported(t *testing.T) {
 
 	options := jwkset.KeyUnmarshalOptions{}
 	_, err := jwkset.KeyUnmarshal[any](jwk, options)
-	if !errors.Is(err, jwkset.ErrUnsupportedKeyType) {
-		t.Fatalf("Unsupported key type should return ErrUnsupportedKeyType. %s", err)
+	if !errors.Is(err, jwkset.ErrUnsupportedKey) {
+		t.Fatalf("Unsupported key type should return ErrUnsupportedKey. %s", err)
 	}
 }
 

@@ -9,10 +9,14 @@ import (
 
 // KeyWithMeta is holds a Key and its metadata.
 type KeyWithMeta[CustomKeyMeta any] struct {
-	ALG    ALG
-	Custom CustomKeyMeta
-	Key    interface{}
-	KeyID  string
+	ALG     ALG
+	Custom  CustomKeyMeta
+	Key     interface{}
+	KeyID   string
+	X5U     string
+	X5C     []string
+	X5T     string
+	X5TS256 string
 }
 
 // NewKey creates a new KeyWithMeta.
@@ -61,7 +65,7 @@ func (j JWKSet[CustomKeyMeta]) JSONWithOptions(ctx context.Context, options KeyM
 	for _, meta := range keys {
 		jwk, err := KeyMarshal(meta, options)
 		if err != nil {
-			if errors.Is(err, ErrUnsupportedKeyType) {
+			if errors.Is(err, ErrUnsupportedKey) {
 				// Ignore the key.
 				continue
 			}
