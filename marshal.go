@@ -33,7 +33,7 @@ type OtherPrimes struct {
 // https://www.rfc-editor.org/rfc/rfc7517
 // https://www.rfc-editor.org/rfc/rfc7518
 // https://www.rfc-editor.org/rfc/rfc8037
-type JWKMarshal struct {
+type JWKMarshal struct { // TODO Remove "KeyWithMeta" and use a JSON ignored field to get the key that is unexported. Use method to get key.
 	// TODO Check that ALG field is utilized fully.
 	ALG ALG    `json:"alg,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.4 and https://www.rfc-editor.org/rfc/rfc7518#section-4.1
 	CRV CRV    `json:"crv,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
@@ -54,11 +54,14 @@ type JWKMarshal struct {
 	// TODO Use USE field.
 	// USE USE        `json:"use,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.2
 	X       string   `json:"x,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.2 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
-	X5U     string   `json:"x5u,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.6
 	X5C     []string `json:"x5c,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.7 TODO Needs to marshal to standard base64.
 	X5T     string   `json:"x5t,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.8 TODO Needs to marshal to base64url.
 	X5TS256 string   `json:"x5t#S256,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.9 TODO Needs to marshal to base64url.
+	X5U     string   `json:"x5u,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.6
 	Y       string   `json:"y,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.3
+
+	MarshalOptions KeyMarshalOptions // TODO Marshal this too?
+	key            any
 }
 
 // JWKSMarshal is used to marshal or unmarshal a JSON Web Key Set.
@@ -67,13 +70,13 @@ type JWKSMarshal struct {
 }
 
 // KeyMarshalOptions are used to specify options for marshaling a JSON Web Key.
-type KeyMarshalOptions struct {
+type KeyMarshalOptions struct { // TODO Rename?
 	AsymmetricPrivate bool
 	Symmetric         bool
 }
 
 // KeyMarshal transforms a KeyWithMeta into a JWKMarshal, which is used to marshal/unmarshal a JSON Web Key.
-func KeyMarshal[CustomKeyMeta any](meta KeyWithMeta[CustomKeyMeta], options KeyMarshalOptions) (JWKMarshal, error) {
+func KeyMarshal[CustomKeyMeta any](meta KeyWithMeta[CustomKeyMeta], options KeyMarshalOptions) (JWKMarshal, error) { // TODO Turn into method. And for reverse.
 	var jwk JWKMarshal
 	switch key := meta.Key.(type) {
 	case *ecdsa.PrivateKey:
@@ -145,6 +148,10 @@ func KeyMarshal[CustomKeyMeta any](meta KeyWithMeta[CustomKeyMeta], options KeyM
 		jwk.ALG = meta.ALG
 	}
 	jwk.KID = meta.KeyID
+	jwk.X5C = meta.X5C
+	jwk.X5T = meta.X5T
+	jwk.X5TS256 = meta.X5TS256
+	jwk.X5U = meta.X5U
 	return jwk, nil
 }
 

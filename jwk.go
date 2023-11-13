@@ -13,10 +13,10 @@ type KeyWithMeta[CustomKeyMeta any] struct {
 	Custom  CustomKeyMeta
 	Key     any
 	KeyID   string
-	X5U     string
 	X5C     []string
 	X5T     string
 	X5TS256 string
+	X5U     string
 }
 
 // NewKey creates a new KeyWithMeta.

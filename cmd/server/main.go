@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/pem"
 	"log/slog"
 	"os"
@@ -21,17 +22,21 @@ func main() {
 		return
 	}
 	chainBlock := make([]byte, 0)
+	x5c := make([]string, 0)
 	block, rest := pem.Decode(b)
-	for len(rest) != 0 { // TODO Make a server configuration data structure with JSON struct tags.
+	for { // TODO Make a server configuration data structure with JSON struct tags.
+		if block.Type == "CERTIFICATE" {
+			pemCert := base64.StdEncoding.EncodeToString(block.Bytes)
+			x5c = append(x5c, pemCert)
+			chainBlock = append(chainBlock, block.Bytes...)
+		}
+		if len(rest) == 0 {
+			break
+		}
 		block, rest = pem.Decode(rest)
 		if block == nil {
-			l.Error("Failed to decode PEM block",
-				"error", err,
-			)
+			l.Error("Failed to decode PEM block")
 			return
-		}
-		if block.Type == "CERTIFICATE" {
-			chainBlock = append(chainBlock, block.Bytes...)
 		}
 	}
 	pub, err := jwkset.LoadCertificates(chainBlock)
@@ -43,10 +48,14 @@ func main() {
 	}
 	j := jwkset.NewMemory[any]()
 	meta := jwkset.KeyWithMeta[any]{
-		ALG:    "",
-		Custom: nil,
-		Key:    pub[0].PublicKey,
-		KeyID:  uuid.Must(uuid.NewRandom()).String(),
+		ALG:     "",
+		Custom:  nil,
+		Key:     pub[0].PublicKey,
+		KeyID:   uuid.Must(uuid.NewRandom()).String(),
+		X5U:     "https://thing.com", // TODO
+		X5C:     x5c,
+		X5T:     "",
+		X5TS256: "",
 	}
 	ctx := context.Background()
 	err = j.Store.WriteKey(ctx, meta)
