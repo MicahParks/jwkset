@@ -83,7 +83,7 @@ func TestJSON(t *testing.T) {
 
 func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 	type jwksUnmarshal struct {
-		Keys []map[string]interface{} `json:"keys"`
+		Keys []map[string]any `json:"keys"`
 	}
 
 	var keys jwksUnmarshal
@@ -137,7 +137,7 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 				t.Fatal("HMAC keys should not have a JSON representation.")
 			}
 		}
-		var expectedMap map[string]interface{}
+		var expectedMap map[string]any
 		err = json.Unmarshal(expectedJSON, &expectedMap)
 		if err != nil {
 			t.Fatalf("Failed to unmarshal expected JSON. %s", err)

@@ -11,7 +11,7 @@ import (
 type KeyWithMeta[CustomKeyMeta any] struct {
 	ALG     ALG
 	Custom  CustomKeyMeta
-	Key     interface{}
+	Key     any
 	KeyID   string
 	X5U     string
 	X5C     []string
@@ -20,7 +20,7 @@ type KeyWithMeta[CustomKeyMeta any] struct {
 }
 
 // NewKey creates a new KeyWithMeta.
-func NewKey[CustomKeyMeta any](key interface{}, keyID string) KeyWithMeta[CustomKeyMeta] {
+func NewKey[CustomKeyMeta any](key any, keyID string) KeyWithMeta[CustomKeyMeta] {
 	return KeyWithMeta[CustomKeyMeta]{
 		Key:   key,
 		KeyID: keyID,
