@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rsa"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -27,6 +28,25 @@ type OtherPrimes struct {
 	D string `json:"d,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.2
 	R string `json:"r,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.1
 	T string `json:"t,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.3
+}
+
+type JWK interface {
+	Key() any
+	Marshal() *JWKMarshal
+}
+
+type jwk struct {
+	key            any
+	marshal        *JWKMarshal
+	marshalOptions JWKMarshalOptions
+}
+
+func (j *jwk) MarshalJSON() ([]byte, error) {
+	return json.Marshal(j.marshal) // TODO Manipulation needed.
+}
+
+func (j *jwk) UnmarshalJSON(bytes []byte) error {
+	return json.Unmarshal(bytes, j.marshal) // TODO Manipulation needed.
 }
 
 // JWKMarshal is used to marshal or unmarshal a JSON Web Key.
@@ -59,9 +79,6 @@ type JWKMarshal struct { // TODO Remove "KeyWithMeta" and use a JSON ignored fie
 	X5TS256 string   `json:"x5t#S256,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.9 TODO Needs to marshal to base64url.
 	X5U     string   `json:"x5u,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.6
 	Y       string   `json:"y,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.3
-
-	MarshalOptions KeyMarshalOptions // TODO Marshal this too?
-	key            any
 }
 
 // JWKSMarshal is used to marshal or unmarshal a JSON Web Key Set.
@@ -69,14 +86,14 @@ type JWKSMarshal struct {
 	Keys []JWKMarshal `json:"keys"`
 }
 
-// KeyMarshalOptions are used to specify options for marshaling a JSON Web Key.
-type KeyMarshalOptions struct { // TODO Rename?
+// JWKMarshalOptions are used to specify options for marshaling a JSON Web Key.
+type JWKMarshalOptions struct { // TODO Rename?
 	AsymmetricPrivate bool
 	Symmetric         bool
 }
 
 // KeyMarshal transforms a KeyWithMeta into a JWKMarshal, which is used to marshal/unmarshal a JSON Web Key.
-func KeyMarshal[CustomKeyMeta any](meta KeyWithMeta[CustomKeyMeta], options KeyMarshalOptions) (JWKMarshal, error) { // TODO Turn into method. And for reverse.
+func KeyMarshal[CustomKeyMeta any](meta KeyWithMeta[CustomKeyMeta], options JWKMarshalOptions) (JWKMarshal, error) { // TODO Turn into method. And for reverse.
 	var jwk JWKMarshal
 	switch key := meta.Key.(type) {
 	case *ecdsa.PrivateKey:

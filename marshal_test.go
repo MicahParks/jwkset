@@ -49,7 +49,7 @@ const (
 )
 
 func TestMarshalECDSA(t *testing.T) {
-	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.KeyMarshalOptions) {
+	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.JWKMarshalOptions) {
 		// TODO Check ALG.
 		if marshal.CRV != jwkset.CrvP256 {
 			t.Fatal(`Marshaled parameter "crv" does not match original key.`)
@@ -79,7 +79,7 @@ func TestMarshalECDSA(t *testing.T) {
 		Key: private,
 	}
 
-	options := jwkset.KeyMarshalOptions{}
+	options := jwkset.JWKMarshalOptions{}
 	marshal, err := jwkset.KeyMarshal(meta, options)
 	if err != nil {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
@@ -216,7 +216,7 @@ func TestUnmarshalECDSA(t *testing.T) {
 }
 
 func TestMarshalEdDSA(t *testing.T) {
-	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.KeyMarshalOptions) {
+	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.JWKMarshalOptions) {
 		if marshal.ALG != jwkset.AlgEdDSA {
 			t.Fatal(`Marshaled key parameter "alg" does not match original key.`)
 		}
@@ -245,7 +245,7 @@ func TestMarshalEdDSA(t *testing.T) {
 		Key: private,
 	}
 
-	options := jwkset.KeyMarshalOptions{}
+	options := jwkset.JWKMarshalOptions{}
 	marshal, err := jwkset.KeyMarshal(meta, options)
 	if err != nil {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
@@ -352,7 +352,7 @@ func TestMarshalOct(t *testing.T) {
 		Key: []byte(hmacSecret),
 	}
 
-	options := jwkset.KeyMarshalOptions{}
+	options := jwkset.JWKMarshalOptions{}
 	_, err := jwkset.KeyMarshal(meta, options)
 	if !errors.Is(err, jwkset.ErrUnsupportedKey) {
 		t.Fatalf("Symmetric key should be unsupported for given options. %s", err)
@@ -412,7 +412,7 @@ func TestUnmarshalOct(t *testing.T) {
 
 func TestMarshalRSA(t *testing.T) {
 	private := makeRSA(t)
-	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.KeyMarshalOptions) {
+	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.JWKMarshalOptions) {
 		// TODO Check ALG.
 		if marshal.E != rsa2048E {
 			t.Fatal(`Marshal parameter "e" does not match original key.`)
@@ -501,7 +501,7 @@ func TestMarshalRSA(t *testing.T) {
 		Key: private,
 	}
 
-	options := jwkset.KeyMarshalOptions{}
+	options := jwkset.JWKMarshalOptions{}
 	marshal, err := jwkset.KeyMarshal(meta, options)
 	if err != nil {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
@@ -718,7 +718,7 @@ func TestMarshalUnsupported(t *testing.T) {
 		Key: "unsupported",
 	}
 
-	options := jwkset.KeyMarshalOptions{}
+	options := jwkset.JWKMarshalOptions{}
 	_, err := jwkset.KeyMarshal(meta, options)
 	if !errors.Is(err, jwkset.ErrUnsupportedKey) {
 		t.Fatalf("Unsupported key type should be unsupported for given options. %s", err)

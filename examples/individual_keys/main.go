@@ -25,7 +25,7 @@ func main() {
 	meta := jwkset.NewKey[any](private, "my-key-id")
 
 	// Create the approrpiate options to include the private key material in the JSON representation.
-	options := jwkset.KeyMarshalOptions{
+	options := jwkset.JWKMarshalOptions{
 		AsymmetricPrivate: true,
 	}
 
