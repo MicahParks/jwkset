@@ -41,12 +41,12 @@ func NewMemory[CustomKeyMeta any]() JWKSet[CustomKeyMeta] {
 
 // JSONPublic creates the JSON representation of the public keys in JWKSet.
 func (j JWKSet[CustomKeyMeta]) JSONPublic(ctx context.Context) (json.RawMessage, error) {
-	return j.JSONWithOptions(ctx, JWKMarshalOptions{})
+	return j.JSONWithOptions(ctx, JWKOptions{})
 }
 
 // JSONPrivate creates the JSON representation of the JWKSet public and private key material.
 func (j JWKSet[CustomKeyMeta]) JSONPrivate(ctx context.Context) (json.RawMessage, error) {
-	options := JWKMarshalOptions{
+	options := JWKOptions{
 		AsymmetricPrivate: true,
 		Symmetric:         true,
 	}
@@ -54,7 +54,7 @@ func (j JWKSet[CustomKeyMeta]) JSONPrivate(ctx context.Context) (json.RawMessage
 }
 
 // JSONWithOptions creates the JSON representation of the JWKSet with the given options.
-func (j JWKSet[CustomKeyMeta]) JSONWithOptions(ctx context.Context, options JWKMarshalOptions) (json.RawMessage, error) {
+func (j JWKSet[CustomKeyMeta]) JSONWithOptions(ctx context.Context, options JWKOptions) (json.RawMessage, error) {
 	jwks := JWKSMarshal{}
 
 	keys, err := j.Store.SnapshotKeys(ctx)
