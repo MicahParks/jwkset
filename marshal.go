@@ -1,6 +1,7 @@
 package jwkset
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -9,10 +10,11 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
+	"net/url"
+	"reflect"
 	"strings"
 )
 
@@ -25,6 +27,10 @@ var (
 	ErrKeyUnmarshalParameter = errors.New("unable to unmarshal JWK due to invalid attributes")
 	// ErrUnsupportedKey indicates a key is not supported.
 	ErrUnsupportedKey = errors.New("unsupported key")
+	// ErrX509Mismatch indicates that the X.509 certificate does not match the key.
+	ErrX509Mismatch = errors.New("the X.509 certificate does not match Golang key type")
+	// ErrJWKValidation indicates that a JWK failed to validate.
+	ErrJWKValidation = errors.New("failed to validate JWK")
 )
 
 type JWK interface {
@@ -59,10 +65,17 @@ type JWKX509Options struct {
 	X5U string // https://www.rfc-editor.org/rfc/rfc7517#section-4.6
 }
 
+type JWKValidateOptions struct {
+	SkipAll bool
+	GetX5U  func(x5u *url.URL) ([]*x509.Certificate, error)
+}
+
 // JWKOptions are used to specify options for marshaling a JSON Web Key.
 type JWKOptions struct {
-	Marshal JWKMarshalOptions
-	X509    JWKX509Options
+	KID      string
+	Marshal  JWKMarshalOptions
+	Validate JWKValidateOptions
+	X509     JWKX509Options
 }
 
 type jwk struct {
@@ -71,9 +84,10 @@ type jwk struct {
 	options JWKOptions
 }
 
-func NewJWKFromKey(key any, options JWKMarshalOptions) (JWK, error) {
+// TODO Will not ignore X.509 certificates.
+func NewJWKFromKey(key any, options JWKOptions) (JWK, error) {
 	opts := JWKOptions{
-		Marshal: options,
+		Marshal: options.Marshal,
 	}
 	marshal, err := keyMarshal(key, opts)
 	if err != nil {
@@ -84,17 +98,24 @@ func NewJWKFromKey(key any, options JWKMarshalOptions) (JWK, error) {
 		marshal: marshal,
 		options: opts,
 	}
+	if !options.Validate.SkipAll {
+
+	}
+	// TODO Validate if options permit.
 	return j, nil
 }
 
+// TODO Will ignore X.509 certificates.
 func NewJWKFromMarshal(marshal *JWKMarshal, options JWKMarshalOptions) (JWK, error) {
 	j, err := keyUnmarshal(marshal, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON Web Key: %w", err)
 	}
+	// TODO Validate if options permit.
 	return j, nil
 }
 
+// TODO Will only use X.509 certificates.
 func NewJWKFromX509(options JWKOptions) (JWK, error) {
 	if len(options.X509.X5C) == 0 {
 		return nil, fmt.Errorf("%w: no X.509 certificates provided", ErrOptions)
@@ -108,6 +129,22 @@ func NewJWKFromX509(options JWKOptions) (JWK, error) {
 		marshal: marshal,
 		options: options,
 	}
+	// TODO Validate if options permit.
+	return j, nil
+}
+
+// TODO Will use given private key and X.509 certificates.
+func NewJWKFromX509WithPrivateKey(privateKey any, options JWKOptions) (JWK, error) {
+	marshal, err := keyMarshal(privateKey, options)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON Web Key: %w", err)
+	}
+	j := &jwk{
+		key:     privateKey,
+		marshal: marshal,
+		options: options,
+	}
+	// TODO Validate if options permit.
 	return j, nil
 }
 
@@ -120,11 +157,171 @@ func (j *jwk) Marshal() *JWKMarshal {
 func (j *jwk) X509() JWKX509Options { // TODO Remove?
 	return j.options.X509
 }
-func (j *jwk) MarshalJSON() ([]byte, error) {
-	return json.Marshal(j.marshal) // TODO Manipulation needed.
-}
-func (j *jwk) UnmarshalJSON(bytes []byte) error {
-	return json.Unmarshal(bytes, j.marshal) // TODO Manipulation needed.
+func (j *jwk) Validate() error {
+	if j.marshal == nil {
+		return fmt.Errorf("%w: marhsal is nil", ErrJWKValidation)
+	}
+	if len(j.options.X509.X5C) > 0 {
+		cert := j.options.X509.X5C[0]
+		i := cert.PublicKey
+		switch k := j.key.(type) {
+		case *ecdsa.PrivateKey:
+			pub, ok := i.(*ecdsa.PublicKey)
+			if !ok {
+				return fmt.Errorf("%w: Golang key is type *ecdsa.Private but X.509 public key was of type %T", errors.Join(ErrJWKValidation, ErrX509Mismatch), i)
+			}
+			if !k.PublicKey.Equal(pub) {
+				return fmt.Errorf("%w: Golang *ecdsa.PrivateKey's public key does not match the X.509 public key", errors.Join(ErrJWKValidation, ErrX509Mismatch))
+			}
+		case *ecdsa.PublicKey:
+			pub, ok := i.(*ecdsa.PublicKey)
+			if !ok {
+				return fmt.Errorf("%w: Golang key is type *ecdsa.Public but X.509 public key was of type %T", errors.Join(ErrJWKValidation, ErrX509Mismatch), i)
+			}
+			if !k.Equal(pub) {
+				return fmt.Errorf("%w: Golang *ecdsa.PublicKey does not match the X.509 public key", errors.Join(ErrJWKValidation, ErrX509Mismatch))
+			}
+		case ed25519.PrivateKey:
+			pub, ok := i.(ed25519.PublicKey)
+			if !ok {
+				return fmt.Errorf("%w: Golang key is type ed25519.PrivateKey but X.509 public key was of type %T", errors.Join(ErrJWKValidation, ErrX509Mismatch), i)
+			}
+			if !bytes.Equal(k.Public().(ed25519.PublicKey), pub) {
+				return fmt.Errorf("%w: Golang ed25519.PrivateKey's public key does not match the X.509 public key", errors.Join(ErrJWKValidation, ErrX509Mismatch))
+			}
+		case ed25519.PublicKey:
+			pub, ok := i.(ed25519.PublicKey)
+			if !ok {
+				return fmt.Errorf("%w: Golang key is type ed25519.PublicKey but X.509 public key was of type %T", errors.Join(ErrJWKValidation, ErrX509Mismatch), i)
+			}
+			if !bytes.Equal(k, pub) {
+				return fmt.Errorf("%w: Golang ed25519.PublicKey does not match the X.509 public key", errors.Join(ErrJWKValidation, ErrX509Mismatch))
+			}
+		case *rsa.PrivateKey:
+			pub, ok := i.(*rsa.PublicKey)
+			if !ok {
+				return fmt.Errorf("%w: Golang key is type *rsa.PrivateKey but X.509 public key was of type %T", errors.Join(ErrJWKValidation, ErrX509Mismatch), i)
+			}
+			if !k.PublicKey.Equal(pub) {
+				return fmt.Errorf("%w: Golang *rsa.PrivateKey's public key does not match the X.509 public key", errors.Join(ErrJWKValidation, ErrX509Mismatch))
+			}
+		case *rsa.PublicKey:
+			pub, ok := i.(*rsa.PublicKey)
+			if !ok {
+				return fmt.Errorf("%w: Golang key is type *rsa.PublicKey but X.509 public key was of type %T", errors.Join(ErrJWKValidation, ErrX509Mismatch), i)
+			}
+			if !k.Equal(pub) {
+				return fmt.Errorf("%w: Golang *rsa.PublicKey does not match the X.509 public key", errors.Join(ErrJWKValidation, ErrX509Mismatch))
+			}
+		case []byte:
+			return fmt.Errorf("%w: Golang key is type []byte, which is only used for symmectric key cryptography, but X.509 certificates were given, which are only used for public key cryptrography", errors.Join(ErrJWKValidation, ErrX509Mismatch))
+		default:
+			return fmt.Errorf("%w: Golang key is type %T, which is not supported, so it cannot be compared to given X.509 certificates", errors.Join(ErrJWKValidation, ErrUnsupportedKey, ErrX509Mismatch), j.key)
+		}
+		const badAlgoErrMsg = " %w: X.509 certificate signature algorithm does not match JWK algorithm %q"
+		switch cert.SignatureAlgorithm {
+		case x509.ECDSAWithSHA256:
+			if j.marshal.ALG != AlgES256 {
+				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
+			}
+		case x509.ECDSAWithSHA384:
+			if j.marshal.ALG != AlgES384 {
+				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
+			}
+		case x509.ECDSAWithSHA512:
+			if j.marshal.ALG != AlgES512 {
+				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
+			}
+		case x509.PureEd25519:
+			if j.marshal.ALG != AlgEdDSA {
+				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
+			}
+		case x509.SHA256WithRSA:
+			if j.marshal.ALG != AlgRS256 {
+				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
+			}
+		case x509.SHA384WithRSA:
+			if j.marshal.ALG != AlgRS384 {
+				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
+			}
+		case x509.SHA512WithRSA:
+			if j.marshal.ALG != AlgRS512 {
+				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
+			}
+		case x509.SHA256WithRSAPSS:
+			if j.marshal.ALG != AlgPS256 {
+				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
+			}
+		case x509.SHA384WithRSAPSS:
+			if j.marshal.ALG != AlgPS384 {
+				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
+			}
+		case x509.SHA512WithRSAPSS:
+			if j.marshal.ALG != AlgPS512 {
+				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
+			}
+		default:
+			return fmt.Errorf("%w: X.509 certificate signature algorithm %q is not supported", errors.Join(ErrJWKValidation, ErrX509Mismatch), cert.SignatureAlgorithm)
+		}
+		if j.marshal.X5T != "" {
+			h1 := sha1.Sum(cert.Raw)
+			if j.marshal.X5T != base64.RawURLEncoding.EncodeToString(h1[:]) {
+				return fmt.Errorf("%w: X5T does not match X.509 certificate", errors.Join(ErrJWKValidation, ErrX509Mismatch))
+			}
+		}
+		if j.marshal.X5TS256 != "" {
+			h256 := sha256.Sum256(cert.Raw)
+			if j.marshal.X5TS256 != base64.RawURLEncoding.EncodeToString(h256[:]) {
+				return fmt.Errorf("%w: X5TS256 does not match X.509 certificate", errors.Join(ErrJWKValidation, ErrX509Mismatch))
+			}
+		}
+		// TODO Confirm X.509 certificate is not expired?
+		// TODO Confirm key is used for signing or encryption?
+	}
+
+	marshal, err := keyMarshal(j.key, j.options)
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON Web Key: %w", errors.Join(ErrJWKValidation, err))
+	}
+	ok := reflect.DeepEqual(j.marshal, marshal)
+	if !ok {
+		return fmt.Errorf("%w: marshaled JWK does not match original JWK", ErrJWKValidation)
+	}
+
+	if j.marshal.X5U != "" || j.options.X509.X5U != "" {
+		if j.marshal.X5U != j.options.X509.X5U {
+			return fmt.Errorf("%w: X5U in marshal does not match X5U in options", errors.Join(ErrJWKValidation, ErrOptions))
+		}
+		u, err := url.ParseRequestURI(j.marshal.X5U)
+		if err != nil {
+			return fmt.Errorf("failed to parse X5U URI: %w", errors.Join(ErrJWKValidation, ErrOptions, err))
+		}
+		if u.Scheme != "https" {
+			return fmt.Errorf("%w: X5U URI scheme must be https", errors.Join(ErrJWKValidation, ErrOptions))
+		}
+		if j.options.Validate.GetX5U != nil {
+			certs, err := j.options.Validate.GetX5U(u)
+			if err != nil {
+				return fmt.Errorf("failed to get X5U URI: %w", errors.Join(ErrJWKValidation, ErrOptions, err))
+			}
+			if len(certs) == 0 {
+				return fmt.Errorf("%w: X5U URI did not return any certificates", errors.Join(ErrJWKValidation, ErrOptions))
+			}
+			larger := certs
+			smaller := j.options.X509.X5C
+			if len(j.options.X509.X5C) > len(certs) {
+				larger = j.options.X509.X5C
+				smaller = certs
+			}
+			for i, c := range smaller {
+				if !c.Equal(larger[i]) {
+					return fmt.Errorf("%w: the X5C and X5U (remote resource) parameters are not a full or partial match", errors.Join(ErrJWKValidation, ErrOptions))
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // OtherPrimes is for RSA private keys that have more than 2 primes.
@@ -160,9 +357,9 @@ type JWKMarshal struct { // TODO Remove "KeyWithMeta" and use a JSON ignored fie
 	// TODO Use USE field.
 	// USE USE        `json:"use,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.2
 	X       string   `json:"x,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.2 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
-	X5C     []string `json:"x5c,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.7 TODO Needs to marshal to standard base64.
-	X5T     string   `json:"x5t,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.8 TODO Needs to marshal to base64url.
-	X5TS256 string   `json:"x5t#S256,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.9 TODO Needs to marshal to base64url.
+	X5C     []string `json:"x5c,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.7
+	X5T     string   `json:"x5t,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.8
+	X5TS256 string   `json:"x5t#S256,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.9
 	X5U     string   `json:"x5u,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.6
 	Y       string   `json:"y,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.3
 }
@@ -471,7 +668,7 @@ func keyUnmarshal(marshal *JWKMarshal, options JWKMarshalOptions) (*jwk, error) 
 	jwkX509 := JWKX509Options{
 		X5C: x5c,
 		X5U: marshal.X5U,
-	} // TODO Make a validate method so that the X.509 certificates match the key and thumbprints?
+	}
 	opts := JWKOptions{
 		Marshal: options,
 		X509:    jwkX509,
