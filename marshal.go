@@ -23,22 +23,25 @@ import (
 // TODO Implement https://datatracker.ietf.org/doc/html/rfc7517#section-7 JWK Set encryption?
 
 var (
-	// ErrOptions indicates that the given options caused an error.
-	ErrOptions = errors.New("the given options caused an error")
+	// ErrGetX5U indicates there was an error getting the X5U remote resource.
+	ErrGetX5U = errors.New("X5U URI timed out")
+	// ErrJWKValidation indicates that a JWK failed to validate.
+	ErrJWKValidation = errors.New("failed to validate JWK")
 	// ErrKeyUnmarshalParameter indicates that a JWK's attributes are invalid and cannot be unmarshaled.
 	ErrKeyUnmarshalParameter = errors.New("unable to unmarshal JWK due to invalid attributes")
+	// ErrOptions indicates that the given options caused an error.
+	ErrOptions = errors.New("the given options caused an error")
 	// ErrUnsupportedKey indicates a key is not supported.
 	ErrUnsupportedKey = errors.New("unsupported key")
 	// ErrX509Mismatch indicates that the X.509 certificate does not match the key.
 	ErrX509Mismatch = errors.New("the X.509 certificate does not match Golang key type")
-	// ErrJWKValidation indicates that a JWK failed to validate.
-	ErrJWKValidation = errors.New("failed to validate JWK")
 )
 
 type JWK interface {
 	Key() any
 	Marshal() *JWKMarshal
 	X509() JWKX509Options
+	Validate() error
 }
 
 // JWKMarshalOptions are used to specify options for JSON marshaling a JWK.
@@ -67,20 +70,33 @@ type JWKX509Options struct {
 	X5U string // https://www.rfc-editor.org/rfc/rfc7517#section-4.6
 }
 
+// JWKValidateOptions are used to specify options for validating a JWK.
 type JWKValidateOptions struct {
+	// CheckX509ValidTime is used to indicate that the X.509 certificate's valid time should be checked.
 	CheckX509ValidTime bool
-	GetX5U             func(x5u *url.URL) ([]*x509.Certificate, error)
-	SkipAll            bool
-	SkipKeyOps         bool
-	SkipMetadata       bool
-	SkipUse            bool
-	SkipX5UScheme      bool
+	// GetX5U is used to get and validate the X.509 certificate from the X5U URI. Use DefaultGetX5U for the default
+	// behavior.
+	GetX5U func(x5u *url.URL) ([]*x509.Certificate, error)
+	// SkipAll is used to skip all validation.
+	SkipAll bool
+	// SkipKeyOps is used to skip validation of the key operations (key_ops).
+	SkipKeyOps bool
+	// SkipMetadata skips checking if the JWKMetadataOptions match the JWKMarshal.
+	SkipMetadata bool
+	// SkipUse is used to skip validation of the key use (use).
+	SkipUse bool
+	// SkipX5UScheme is used to skip checking if the X5U URI scheme is https.
+	SkipX5UScheme bool
 }
 
+// JWKMetadataOptions are direct passthroughs into the JWKMarshal.
 type JWKMetadataOptions struct {
-	KID    string
+	// KID is the key ID (kid).
+	KID string
+	// KEYOPS is the key operations (key_ops).
 	KEYOPS []KEYOPS
-	USE    USE
+	// USE is the key use (use).
+	USE USE
 }
 
 // JWKOptions are used to specify options for marshaling a JSON Web Key.
@@ -155,9 +171,6 @@ func (j *jwk) Key() any {
 }
 func (j *jwk) Marshal() *JWKMarshal {
 	return j.marshal
-}
-func (j *jwk) Metadata() JWKMetadataOptions {
-	return j.options.Metadata
 }
 func (j *jwk) X509() JWKX509Options {
 	return j.options.X509

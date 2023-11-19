@@ -2,9 +2,14 @@ package jwkset
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"time"
 )
 
 // KeyWithMeta is holds a Key and its metadata.
@@ -75,4 +80,31 @@ func (j JWKSet[CustomKeyMeta]) JSONWithOptions(ctx context.Context, options JWKO
 	}
 
 	return json.Marshal(jwks)
+}
+
+func DefaultGetX5U(u *url.URL) ([]*x509.Certificate, error) {
+	timeout := time.Minute
+	ctx, cancel := context.WithTimeoutCause(context.Background(), timeout, fmt.Errorf("%w: timeout of %s reached", ErrGetX5U, timeout.String()))
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create X5U request: %w", errors.Join(ErrGetX5U, err))
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to do X5U request: %w", errors.Join(ErrGetX5U, err))
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%w: X5U request returned status code %d", ErrGetX5U, resp.StatusCode)
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read X5U response body: %w", errors.Join(ErrGetX5U, err))
+	}
+	certs, err := x509.ParseCertificates(b)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse X5U response body: %w", errors.Join(ErrGetX5U, err))
+	}
+	return certs, nil
 }
