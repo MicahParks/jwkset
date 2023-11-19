@@ -15,7 +15,9 @@ import (
 	"math/big"
 	"net/url"
 	"reflect"
+	"slices"
 	"strings"
+	"time"
 )
 
 // TODO Implement https://datatracker.ietf.org/doc/html/rfc7517#section-7 JWK Set encryption?
@@ -66,14 +68,25 @@ type JWKX509Options struct {
 }
 
 type JWKValidateOptions struct {
-	SkipAll bool
-	GetX5U  func(x5u *url.URL) ([]*x509.Certificate, error)
+	CheckX509ValidTime bool
+	GetX5U             func(x5u *url.URL) ([]*x509.Certificate, error)
+	SkipAll            bool
+	SkipKeyOps         bool
+	SkipMetadata       bool
+	SkipUse            bool
+	SkipX5UScheme      bool
+}
+
+type JWKMetadataOptions struct {
+	KID    string
+	KEYOPS []KEYOPS
+	USE    USE
 }
 
 // JWKOptions are used to specify options for marshaling a JSON Web Key.
 type JWKOptions struct {
-	KID      string
 	Marshal  JWKMarshalOptions
+	Metadata JWKMetadataOptions
 	Validate JWKValidateOptions
 	X509     JWKX509Options
 }
@@ -84,38 +97,39 @@ type jwk struct {
 	options JWKOptions
 }
 
-// TODO Will not ignore X.509 certificates.
+// NewJWKFromKey uses the given key and options to create a JWK. It is possible to provide a private key with an X.509
+// certificate, which will be validated to contain the correct public key.
 func NewJWKFromKey(key any, options JWKOptions) (JWK, error) {
-	opts := JWKOptions{
-		Marshal: options.Marshal,
-	}
-	marshal, err := keyMarshal(key, opts)
+	marshal, err := keyMarshal(key, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal JSON Web Key: %w", err)
 	}
 	j := &jwk{
 		key:     key,
 		marshal: marshal,
-		options: opts,
+		options: options,
 	}
-	if !options.Validate.SkipAll {
-
+	err = j.Validate()
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate JSON Web Key: %w", err)
 	}
-	// TODO Validate if options permit.
 	return j, nil
 }
 
-// TODO Will ignore X.509 certificates.
-func NewJWKFromMarshal(marshal *JWKMarshal, options JWKMarshalOptions) (JWK, error) {
-	j, err := keyUnmarshal(marshal, options)
+// NewJWKFromMarshal transforms a JWKMarshal into a JWK.
+func NewJWKFromMarshal(marshal *JWKMarshal, marshalOptions JWKMarshalOptions, validateOptions JWKValidateOptions) (JWK, error) {
+	j, err := keyUnmarshal(marshal, marshalOptions, validateOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON Web Key: %w", err)
 	}
-	// TODO Validate if options permit.
+	err = j.Validate()
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate JSON Web Key: %w", err)
+	}
 	return j, nil
 }
 
-// TODO Will only use X.509 certificates.
+// NewJWKFromX509 uses the X.509 information in the options to create a JWK.
 func NewJWKFromX509(options JWKOptions) (JWK, error) {
 	if len(options.X509.X5C) == 0 {
 		return nil, fmt.Errorf("%w: no X.509 certificates provided", ErrOptions)
@@ -129,22 +143,10 @@ func NewJWKFromX509(options JWKOptions) (JWK, error) {
 		marshal: marshal,
 		options: options,
 	}
-	// TODO Validate if options permit.
-	return j, nil
-}
-
-// TODO Will use given private key and X.509 certificates.
-func NewJWKFromX509WithPrivateKey(privateKey any, options JWKOptions) (JWK, error) {
-	marshal, err := keyMarshal(privateKey, options)
+	err = j.Validate()
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal JSON Web Key: %w", err)
+		return nil, fmt.Errorf("failed to validate JSON Web Key: %w", err)
 	}
-	j := &jwk{
-		key:     privateKey,
-		marshal: marshal,
-		options: options,
-	}
-	// TODO Validate if options permit.
 	return j, nil
 }
 
@@ -154,13 +156,44 @@ func (j *jwk) Key() any {
 func (j *jwk) Marshal() *JWKMarshal {
 	return j.marshal
 }
-func (j *jwk) X509() JWKX509Options { // TODO Remove?
+func (j *jwk) Metadata() JWKMetadataOptions {
+	return j.options.Metadata
+}
+func (j *jwk) X509() JWKX509Options {
 	return j.options.X509
 }
 func (j *jwk) Validate() error {
+	if j.options.Validate.SkipAll {
+		return nil
+	}
 	if j.marshal == nil {
 		return fmt.Errorf("%w: marhsal is nil", ErrJWKValidation)
 	}
+
+	if !j.options.Validate.SkipKeyOps {
+		for _, o := range j.marshal.KEYOPS {
+			if !o.valid() {
+				return fmt.Errorf("%w: invalid or unsupported key_opt %q", ErrJWKValidation, o)
+			}
+		}
+	}
+
+	if !j.options.Validate.SkipUse && !j.marshal.USE.valid() {
+		return fmt.Errorf("%w: invalid or unsupported key use %q", ErrJWKValidation, j.marshal.USE)
+	}
+
+	if !j.options.Validate.SkipMetadata {
+		if j.marshal.KID != j.options.Metadata.KID {
+			return fmt.Errorf("%w: KID in marshal does not match KID in options", errors.Join(ErrJWKValidation, ErrOptions))
+		}
+		if !slices.Equal(j.marshal.KEYOPS, j.options.Metadata.KEYOPS) {
+			return fmt.Errorf("%w: KEYOPS in marshal does not match KEYOPS in options", errors.Join(ErrJWKValidation, ErrOptions))
+		}
+		if j.marshal.USE != j.options.Metadata.USE {
+			return fmt.Errorf("%w: USE in marshal does not match USE in options", errors.Join(ErrJWKValidation, ErrOptions))
+		}
+	}
+
 	if len(j.options.X509.X5C) > 0 {
 		cert := j.options.X509.X5C[0]
 		i := cert.PublicKey
@@ -263,20 +296,19 @@ func (j *jwk) Validate() error {
 		default:
 			return fmt.Errorf("%w: X.509 certificate signature algorithm %q is not supported", errors.Join(ErrJWKValidation, ErrX509Mismatch), cert.SignatureAlgorithm)
 		}
-		if j.marshal.X5T != "" {
-			h1 := sha1.Sum(cert.Raw)
-			if j.marshal.X5T != base64.RawURLEncoding.EncodeToString(h1[:]) {
-				return fmt.Errorf("%w: X5T does not match X.509 certificate", errors.Join(ErrJWKValidation, ErrX509Mismatch))
+		if j.options.Validate.CheckX509ValidTime {
+			now := time.Now()
+			if now.Before(cert.NotBefore) {
+				return fmt.Errorf("%w: X.509 certificate is not yet valid", ErrJWKValidation)
+			}
+			if now.After(cert.NotAfter) {
+				return fmt.Errorf("%w: X.509 certificate is expired", ErrJWKValidation)
 			}
 		}
-		if j.marshal.X5TS256 != "" {
-			h256 := sha256.Sum256(cert.Raw)
-			if j.marshal.X5TS256 != base64.RawURLEncoding.EncodeToString(h256[:]) {
-				return fmt.Errorf("%w: X5TS256 does not match X.509 certificate", errors.Join(ErrJWKValidation, ErrX509Mismatch))
-			}
-		}
-		// TODO Confirm X.509 certificate is not expired?
-		// TODO Confirm key is used for signing or encryption?
+		/*
+			Intentionally does not check if cert is used for signing or encryption.
+			Please open a GitHub issue if you think this should be an option.
+		*/
 	}
 
 	marshal, err := keyMarshal(j.key, j.options)
@@ -296,7 +328,7 @@ func (j *jwk) Validate() error {
 		if err != nil {
 			return fmt.Errorf("failed to parse X5U URI: %w", errors.Join(ErrJWKValidation, ErrOptions, err))
 		}
-		if u.Scheme != "https" {
+		if !j.options.Validate.SkipX5UScheme && u.Scheme != "https" {
 			return fmt.Errorf("%w: X5U URI scheme must be https", errors.Join(ErrJWKValidation, ErrOptions))
 		}
 		if j.options.Validate.GetX5U != nil {
@@ -336,8 +368,7 @@ type OtherPrimes struct {
 // https://www.rfc-editor.org/rfc/rfc7517
 // https://www.rfc-editor.org/rfc/rfc7518
 // https://www.rfc-editor.org/rfc/rfc8037
-type JWKMarshal struct { // TODO Remove "KeyWithMeta" and use a JSON ignored field to get the key that is unexported. Use method to get key.
-	// TODO Check that ALG field is utilized fully.
+type JWKMarshal struct {
 	ALG     ALG           `json:"alg,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.4 and https://www.rfc-editor.org/rfc/rfc7518#section-4.1
 	CRV     CRV           `json:"crv,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
 	D       string        `json:"d,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.1 and https://www.rfc-editor.org/rfc/rfc7518#section-6.2.2.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
@@ -365,24 +396,6 @@ type JWKMarshal struct { // TODO Remove "KeyWithMeta" and use a JSON ignored fie
 // JWKSMarshal is used to marshal or unmarshal a JSON Web Key Set.
 type JWKSMarshal struct {
 	Keys []JWKMarshal `json:"keys"`
-}
-
-// KeyMarshal transforms a KeyWithMeta into a JWKMarshal, which is used to marshal/unmarshal a JSON Web Key.
-func KeyMarshal[CustomKeyMeta any](meta KeyWithMeta[CustomKeyMeta], options JWKOptions) (JWKMarshal, error) { // TODO Turn into method. And for reverse.
-	var jwk JWKMarshal
-	marshal, err := keyMarshal(meta, options, jwk)
-	if err != nil {
-		return marshal, err
-	}
-	if meta.ALG != "" {
-		jwk.ALG = meta.ALG
-	}
-	jwk.KID = meta.KeyID
-	jwk.X5C = meta.X5C
-	jwk.X5T = meta.X5T
-	jwk.X5TS256 = meta.X5TS256
-	jwk.X5U = meta.X5U
-	return jwk, nil
 }
 
 func keyMarshal(key any, options JWKOptions) (*JWKMarshal, error) {
@@ -462,21 +475,14 @@ func keyMarshal(key any, options JWKOptions) (*JWKMarshal, error) {
 			m.X5TS256 = base64.RawURLEncoding.EncodeToString(h256[:])
 		}
 	}
+	m.KID = options.Metadata.KID
+	m.KEYOPS = options.Metadata.KEYOPS
+	m.USE = options.Metadata.USE
 	m.X5U = options.X509.X5U
 	return m, nil
 }
 
-// KeyUnmarshal transforms a JWKMarshal into a KeyWithMeta, which contains the correct Go type for the cryptographic
-// key.
-func KeyUnmarshal[CustomKeyMeta any](jwk JWKMarshal, options JWKMarshalOptions) (KeyWithMeta[CustomKeyMeta], error) {
-	var meta KeyWithMeta[CustomKeyMeta]
-	keyUnmarshal(&jwk, options, &meta)
-	meta.ALG = jwk.ALG
-	meta.KeyID = jwk.KID
-	return meta, nil
-}
-
-func keyUnmarshal(marshal *JWKMarshal, options JWKMarshalOptions) (*jwk, error) {
+func keyUnmarshal(marshal *JWKMarshal, options JWKMarshalOptions, validateOptions JWKValidateOptions) (*jwk, error) {
 	var key any
 	switch marshal.KTY {
 	case KtyEC:
@@ -667,9 +673,16 @@ func keyUnmarshal(marshal *JWKMarshal, options JWKMarshalOptions) (*jwk, error) 
 		X5C: x5c,
 		X5U: marshal.X5U,
 	}
+	metadata := JWKMetadataOptions{
+		KID:    marshal.KID,
+		KEYOPS: slices.Clone(marshal.KEYOPS),
+		USE:    marshal.USE,
+	}
 	opts := JWKOptions{
-		Marshal: options,
-		X509:    jwkX509,
+		Metadata: metadata,
+		Marshal:  options,
+		Validate: validateOptions,
+		X509:     jwkX509,
 	}
 	j := &jwk{
 		key:     key,

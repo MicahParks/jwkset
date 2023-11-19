@@ -99,6 +99,14 @@ func (keyopts KEYOPS) String() string {
 	return string(keyopts)
 }
 
+func (keyopts KEYOPS) valid() bool {
+	switch keyopts {
+	case KeyOpsSign, KeyOpsVerify, KeyOpsEncrypt, KeyOpsDecrypt, KeyOpsWrapKey, KeyOpsUnwrapKey, KeyOpsDeriveKey, KeyOpsDeriveBits:
+		return true
+	}
+	return false
+}
+
 // KTY is a set of "JSON Web Key Types" from https://www.iana.org/assignments/jose/jose.xhtml as mentioned in
 // https://www.rfc-editor.org/rfc/rfc7517#section-4.1
 type KTY string
@@ -113,4 +121,12 @@ type USE string
 
 func (use USE) String() string {
 	return string(use)
+}
+
+func (use USE) valid() bool {
+	switch use {
+	case UseEnc, UseSig:
+		return true
+	}
+	return false
 }
