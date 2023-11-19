@@ -30,6 +30,23 @@ const (
 	// AlgEdDSA is the EdDSA algorithm.
 	AlgEdDSA ALG = "EdDSA"
 
+	// KeyOpsSign is a key operation for signing.
+	KeyOpsSign = "sign"
+	// KeyOpsVerify is a key operation for verifying.
+	KeyOpsVerify = "verify"
+	// KeyOpsEncrypt is a key operation for encryption.
+	KeyOpsEncrypt = "encrypt"
+	// KeyOpsDecrypt is a key operation for decryption.
+	KeyOpsDecrypt = "decrypt"
+	// KeyOpsWrapKey is a key operation for wrapping a key.
+	KeyOpsWrapKey = "wrapKey"
+	// KeyOpsUnwrapKey is a key operation for unwrapping a key.
+	KeyOpsUnwrapKey = "unwrapKey"
+	// KeyOpsDeriveKey is a key operation for deriving a key.
+	KeyOpsDeriveKey = "deriveKey"
+	// KeyOpsDeriveBits is a key operation for deriving bits.
+	KeyOpsDeriveBits = "deriveBits"
+
 	// KtyEC is the key type for ECDSA.
 	KtyEC KTY = "EC"
 	// KtyOKP is the key type for EdDSA.
@@ -50,6 +67,11 @@ const (
 
 	// HeaderKID is a JWT header for the key ID.
 	HeaderKID = "kid"
+
+	// UseEnc indicates a JWK is for encryption.
+	UseEnc USE = "enc"
+	// UseSig indicates a JWK is for signing.
+	UseSig USE = "sig"
 )
 
 // ALG is a set of "JSON Web Signature and Encryption Algorithms" types from
@@ -62,11 +84,19 @@ func (alg ALG) String() string {
 }
 
 // CRV is a set of "JSON Web Key Elliptic Curve" types from https://www.iana.org/assignments/jose/jose.xhtml as
-// mentioned in https://www.rfc-editor.org/rfc/rfc7518.html#section-6.2.1.1.
+// mentioned in https://www.rfc-editor.org/rfc/rfc7518.html#section-6.2.1.1
 type CRV string
 
 func (crv CRV) String() string {
 	return string(crv)
+}
+
+// KEYOPS is a set of "JSON Web Key Operations" from https://www.iana.org/assignments/jose/jose.xhtml as mentioned in
+// https://www.rfc-editor.org/rfc/rfc7517#section-4.3
+type KEYOPS string
+
+func (keyopts KEYOPS) String() string {
+	return string(keyopts)
 }
 
 // KTY is a set of "JSON Web Key Types" from https://www.iana.org/assignments/jose/jose.xhtml as mentioned in
@@ -77,6 +107,10 @@ func (kty KTY) String() string {
 	return string(kty)
 }
 
-func ptr[T any](t T) *T {
-	return &t
+// USE is a set of "JSON Web Key Use" types from https://www.iana.org/assignments/jose/jose.xhtml as mentioned in
+// https://www.rfc-editor.org/rfc/rfc7517#section-4.2
+type USE string
+
+func (use USE) String() string {
+	return string(use)
 }

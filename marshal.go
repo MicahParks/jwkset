@@ -338,30 +338,28 @@ type OtherPrimes struct {
 // https://www.rfc-editor.org/rfc/rfc8037
 type JWKMarshal struct { // TODO Remove "KeyWithMeta" and use a JSON ignored field to get the key that is unexported. Use method to get key.
 	// TODO Check that ALG field is utilized fully.
-	ALG ALG    `json:"alg,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.4 and https://www.rfc-editor.org/rfc/rfc7518#section-4.1
-	CRV CRV    `json:"crv,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
-	D   string `json:"d,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.1 and https://www.rfc-editor.org/rfc/rfc7518#section-6.2.2.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
-	DP  string `json:"dp,omitempty"`  // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.4
-	DQ  string `json:"dq,omitempty"`  // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.5
-	E   string `json:"e,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.1.2
-	K   string `json:"k,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.4.1
-	// TODO Use KEYOPS field.
-	// KEYOPTS []string `json:"key_ops,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.3
-	KID string        `json:"kid,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.5
-	KTY KTY           `json:"kty,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.1
-	N   string        `json:"n,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.1.1
-	OTH []OtherPrimes `json:"oth,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7
-	P   string        `json:"p,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.2
-	Q   string        `json:"q,omitempty"`   // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.3
-	QI  string        `json:"qi,omitempty"`  // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.6
-	// TODO Use USE field.
-	// USE USE        `json:"use,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.2
-	X       string   `json:"x,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.2 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
-	X5C     []string `json:"x5c,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.7
-	X5T     string   `json:"x5t,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.8
-	X5TS256 string   `json:"x5t#S256,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.9
-	X5U     string   `json:"x5u,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.6
-	Y       string   `json:"y,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.3
+	ALG     ALG           `json:"alg,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.4 and https://www.rfc-editor.org/rfc/rfc7518#section-4.1
+	CRV     CRV           `json:"crv,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
+	D       string        `json:"d,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.1 and https://www.rfc-editor.org/rfc/rfc7518#section-6.2.2.1 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
+	DP      string        `json:"dp,omitempty"`       // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.4
+	DQ      string        `json:"dq,omitempty"`       // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.5
+	E       string        `json:"e,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.1.2
+	K       string        `json:"k,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.4.1
+	KEYOPS  []KEYOPS      `json:"key_ops,omitempty"`  // https://www.rfc-editor.org/rfc/rfc7517#section-4.3
+	KID     string        `json:"kid,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.5
+	KTY     KTY           `json:"kty,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.1
+	N       string        `json:"n,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.1.1
+	OTH     []OtherPrimes `json:"oth,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7
+	P       string        `json:"p,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.2
+	Q       string        `json:"q,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.3
+	QI      string        `json:"qi,omitempty"`       // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.6
+	USE     USE           `json:"use,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.2
+	X       string        `json:"x,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.2 and https://www.rfc-editor.org/rfc/rfc8037.html#section-2
+	X5C     []string      `json:"x5c,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.7
+	X5T     string        `json:"x5t,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.8
+	X5TS256 string        `json:"x5t#S256,omitempty"` // https://www.rfc-editor.org/rfc/rfc7517#section-4.9
+	X5U     string        `json:"x5u,omitempty"`      // https://www.rfc-editor.org/rfc/rfc7517#section-4.6
+	Y       string        `json:"y,omitempty"`        // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1.3
 }
 
 // JWKSMarshal is used to marshal or unmarshal a JSON Web Key Set.
