@@ -131,7 +131,7 @@ func NewJWKFromKey(key any, options JWKOptions) (JWK, error) {
 }
 
 // NewJWKFromMarshal transforms a JWKMarshal into a JWK.
-func NewJWKFromMarshal(marshal *JWKMarshal, marshalOptions JWKMarshalOptions, validateOptions JWKValidateOptions) (JWK, error) {
+func NewJWKFromMarshal(marshal JWKMarshal, marshalOptions JWKMarshalOptions, validateOptions JWKValidateOptions) (JWK, error) {
 	j, err := keyUnmarshal(marshal, marshalOptions, validateOptions)
 	if err != nil {
 		return JWK{}, fmt.Errorf("failed to unmarshal JSON Web Key: %w", err)
