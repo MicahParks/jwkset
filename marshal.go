@@ -37,11 +37,11 @@ var (
 	ErrX509Mismatch = errors.New("the X.509 certificate does not match Golang key type")
 )
 
-type JWK interface {
-	Key() any
-	Marshal() *JWKMarshal
-	X509() JWKX509Options
-	Validate() error
+// JWK TODO
+type JWK struct {
+	key     any
+	marshal JWKMarshal
+	options JWKOptions
 }
 
 // JWKMarshalOptions are used to specify options for JSON marshaling a JWK.
@@ -72,6 +72,10 @@ type JWKX509Options struct {
 
 // JWKValidateOptions are used to specify options for validating a JWK.
 type JWKValidateOptions struct {
+	/*
+		This package intentionally does not confirm if certificate's usage or compare that to the JWK's use parameter.
+		Please open a GitHub issue if you think this should be an option.
+	*/
 	// CheckX509ValidTime is used to indicate that the X.509 certificate's valid time should be checked.
 	CheckX509ValidTime bool
 	// GetX5U is used to get and validate the X.509 certificate from the X5U URI. Use DefaultGetX5U for the default
@@ -107,27 +111,21 @@ type JWKOptions struct {
 	X509     JWKX509Options
 }
 
-type jwk struct {
-	key     any
-	marshal *JWKMarshal
-	options JWKOptions
-}
-
 // NewJWKFromKey uses the given key and options to create a JWK. It is possible to provide a private key with an X.509
 // certificate, which will be validated to contain the correct public key.
 func NewJWKFromKey(key any, options JWKOptions) (JWK, error) {
 	marshal, err := keyMarshal(key, options)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal JSON Web Key: %w", err)
+		return JWK{}, fmt.Errorf("failed to marshal JSON Web Key: %w", err)
 	}
-	j := &jwk{
+	j := JWK{
 		key:     key,
 		marshal: marshal,
 		options: options,
 	}
 	err = j.Validate()
 	if err != nil {
-		return nil, fmt.Errorf("failed to validate JSON Web Key: %w", err)
+		return JWK{}, fmt.Errorf("failed to validate JSON Web Key: %w", err)
 	}
 	return j, nil
 }
@@ -136,11 +134,11 @@ func NewJWKFromKey(key any, options JWKOptions) (JWK, error) {
 func NewJWKFromMarshal(marshal *JWKMarshal, marshalOptions JWKMarshalOptions, validateOptions JWKValidateOptions) (JWK, error) {
 	j, err := keyUnmarshal(marshal, marshalOptions, validateOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON Web Key: %w", err)
+		return JWK{}, fmt.Errorf("failed to unmarshal JSON Web Key: %w", err)
 	}
 	err = j.Validate()
 	if err != nil {
-		return nil, fmt.Errorf("failed to validate JSON Web Key: %w", err)
+		return JWK{}, fmt.Errorf("failed to validate JSON Web Key: %w", err)
 	}
 	return j, nil
 }
@@ -148,38 +146,38 @@ func NewJWKFromMarshal(marshal *JWKMarshal, marshalOptions JWKMarshalOptions, va
 // NewJWKFromX509 uses the X.509 information in the options to create a JWK.
 func NewJWKFromX509(options JWKOptions) (JWK, error) {
 	if len(options.X509.X5C) == 0 {
-		return nil, fmt.Errorf("%w: no X.509 certificates provided", ErrOptions)
+		return JWK{}, fmt.Errorf("%w: no X.509 certificates provided", ErrOptions)
 	}
 	marshal, err := keyMarshal(options.X509.X5C[0].PublicKey, options)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal JSON Web Key: %w", err)
+		return JWK{}, fmt.Errorf("failed to marshal JSON Web Key: %w", err)
 	}
-	j := &jwk{
+	j := JWK{
 		key:     options.X509.X5C[0].PublicKey,
 		marshal: marshal,
 		options: options,
 	}
 	err = j.Validate()
 	if err != nil {
-		return nil, fmt.Errorf("failed to validate JSON Web Key: %w", err)
+		return JWK{}, fmt.Errorf("failed to validate JSON Web Key: %w", err)
 	}
 	return j, nil
 }
 
-func (j *jwk) Key() any {
+func (j JWK) Key() any {
 	return j.key
 }
-func (j *jwk) Marshal() *JWKMarshal {
+func (j JWK) Marshal() JWKMarshal {
 	return j.marshal
 }
-func (j *jwk) X509() JWKX509Options {
+func (j JWK) X509() JWKX509Options {
 	return j.options.X509
 }
-func (j *jwk) Validate() error {
+func (j JWK) Validate() error {
 	if j.options.Validate.SkipAll {
 		return nil
 	}
-	if j.marshal == nil {
+	if j.marshal == (JWKMarshal{}) {
 		return fmt.Errorf("%w: marhsal is nil", ErrJWKValidation)
 	}
 
@@ -318,10 +316,6 @@ func (j *jwk) Validate() error {
 				return fmt.Errorf("%w: X.509 certificate is expired", ErrJWKValidation)
 			}
 		}
-		/*
-			Intentionally does not check if cert is used for signing or encryption.
-			Please open a GitHub issue if you think this should be an option.
-		*/
 	}
 
 	marshal, err := keyMarshal(j.key, j.options)
@@ -411,8 +405,8 @@ type JWKSMarshal struct {
 	Keys []JWKMarshal `json:"keys"`
 }
 
-func keyMarshal(key any, options JWKOptions) (*JWKMarshal, error) {
-	m := &JWKMarshal{}
+func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
+	m := JWKMarshal{}
 	switch key := key.(type) {
 	case *ecdsa.PrivateKey:
 		pub := key.PublicKey
@@ -474,10 +468,10 @@ func keyMarshal(key any, options JWKOptions) (*JWKMarshal, error) {
 			m.KTY = KtyOct
 			m.K = base64.RawURLEncoding.EncodeToString(key)
 		} else {
-			return nil, fmt.Errorf("%w: incorrect options to marshal symmetric key (oct)", ErrOptions)
+			return JWKMarshal{}, fmt.Errorf("%w: incorrect options to marshal symmetric key (oct)", ErrOptions)
 		}
 	default:
-		return nil, fmt.Errorf("%w: %T", ErrUnsupportedKey, key)
+		return JWKMarshal{}, fmt.Errorf("%w: %T", ErrUnsupportedKey, key)
 	}
 	for i, cert := range options.X509.X5C {
 		m.X5C = append(m.X5C, base64.StdEncoding.EncodeToString(cert.Raw))
@@ -495,20 +489,20 @@ func keyMarshal(key any, options JWKOptions) (*JWKMarshal, error) {
 	return m, nil
 }
 
-func keyUnmarshal(marshal *JWKMarshal, options JWKMarshalOptions, validateOptions JWKValidateOptions) (*jwk, error) {
+func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions JWKValidateOptions) (JWK, error) {
 	var key any
 	switch marshal.KTY {
 	case KtyEC:
 		if marshal.CRV == "" || marshal.X == "" || marshal.Y == "" {
-			return nil, fmt.Errorf(`%w: %s requires parameters "crv", "x", and "y"`, ErrKeyUnmarshalParameter, KtyEC)
+			return JWK{}, fmt.Errorf(`%w: %s requires parameters "crv", "x", and "y"`, ErrKeyUnmarshalParameter, KtyEC)
 		}
 		x, err := base64urlTrailingPadding(marshal.X)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to decode %s key parameter "x": %w`, KtyEC, err)
+			return JWK{}, fmt.Errorf(`failed to decode %s key parameter "x": %w`, KtyEC, err)
 		}
 		y, err := base64urlTrailingPadding(marshal.Y)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to decode %s key parameter "y": %w`, KtyEC, err)
+			return JWK{}, fmt.Errorf(`failed to decode %s key parameter "y": %w`, KtyEC, err)
 		}
 		publicKey := &ecdsa.PublicKey{
 			X: new(big.Int).SetBytes(x),
@@ -522,12 +516,12 @@ func keyUnmarshal(marshal *JWKMarshal, options JWKMarshalOptions, validateOption
 		case CrvP521:
 			publicKey.Curve = elliptic.P521()
 		default:
-			return nil, fmt.Errorf("%w: unsupported curve type %q", ErrKeyUnmarshalParameter, marshal.CRV)
+			return JWK{}, fmt.Errorf("%w: unsupported curve type %q", ErrKeyUnmarshalParameter, marshal.CRV)
 		}
 		if options.UnmarshalAsymmetricPrivate && marshal.D != "" {
 			d, err := base64urlTrailingPadding(marshal.D)
 			if err != nil {
-				return nil, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyEC, err)
+				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyEC, err)
 			}
 			privateKey := &ecdsa.PrivateKey{
 				PublicKey: *publicKey,
@@ -539,26 +533,26 @@ func keyUnmarshal(marshal *JWKMarshal, options JWKMarshalOptions, validateOption
 		}
 	case KtyOKP:
 		if marshal.CRV != CrvEd25519 {
-			return nil, fmt.Errorf("%w: %s key type should have %q curve", ErrKeyUnmarshalParameter, KtyOKP, CrvEd25519)
+			return JWK{}, fmt.Errorf("%w: %s key type should have %q curve", ErrKeyUnmarshalParameter, KtyOKP, CrvEd25519)
 		}
 		if marshal.X == "" {
-			return nil, fmt.Errorf(`%w: %s requires parameter "x"`, ErrKeyUnmarshalParameter, KtyOKP)
+			return JWK{}, fmt.Errorf(`%w: %s requires parameter "x"`, ErrKeyUnmarshalParameter, KtyOKP)
 		}
 		public, err := base64urlTrailingPadding(marshal.X)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to decode %s key parameter "x": %w`, KtyOKP, err)
+			return JWK{}, fmt.Errorf(`failed to decode %s key parameter "x": %w`, KtyOKP, err)
 		}
 		if len(public) != ed25519.PublicKeySize {
-			return nil, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, ed25519.PublicKeySize)
+			return JWK{}, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, ed25519.PublicKeySize)
 		}
 		if options.UnmarshalAsymmetricPrivate && marshal.D != "" {
 			private, err := base64urlTrailingPadding(marshal.D)
 			if err != nil {
-				return nil, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyOKP, err)
+				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyOKP, err)
 			}
 			private = append(private, public...)
 			if len(private) != ed25519.PrivateKeySize {
-				return nil, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, ed25519.PrivateKeySize)
+				return JWK{}, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, ed25519.PrivateKeySize)
 			}
 			key = ed25519.PrivateKey(private)
 		} else {
@@ -566,15 +560,15 @@ func keyUnmarshal(marshal *JWKMarshal, options JWKMarshalOptions, validateOption
 		}
 	case KtyRSA:
 		if marshal.N == "" || marshal.E == "" {
-			return nil, fmt.Errorf(`%w: %s requires parameters "n" and "e"`, ErrKeyUnmarshalParameter, KtyRSA)
+			return JWK{}, fmt.Errorf(`%w: %s requires parameters "n" and "e"`, ErrKeyUnmarshalParameter, KtyRSA)
 		}
 		n, err := base64urlTrailingPadding(marshal.N)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to decode %s key parameter "n": %w`, KtyRSA, err)
+			return JWK{}, fmt.Errorf(`failed to decode %s key parameter "n": %w`, KtyRSA, err)
 		}
 		e, err := base64urlTrailingPadding(marshal.E)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to decode %s key parameter "e": %w`, KtyRSA, err)
+			return JWK{}, fmt.Errorf(`failed to decode %s key parameter "e": %w`, KtyRSA, err)
 		}
 		publicKey := rsa.PublicKey{
 			N: new(big.Int).SetBytes(n),
@@ -583,27 +577,27 @@ func keyUnmarshal(marshal *JWKMarshal, options JWKMarshalOptions, validateOption
 		if options.UnmarshalAsymmetricPrivate && marshal.D != "" && marshal.P != "" && marshal.Q != "" && marshal.DP != "" && marshal.DQ != "" && marshal.QI != "" { // TODO Only "d" is required, but if one of the others is present, they all must be.
 			d, err := base64urlTrailingPadding(marshal.D)
 			if err != nil {
-				return nil, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyRSA, err)
+				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyRSA, err)
 			}
 			p, err := base64urlTrailingPadding(marshal.P)
 			if err != nil {
-				return nil, fmt.Errorf(`failed to decode %s key parameter "p": %w`, KtyRSA, err)
+				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "p": %w`, KtyRSA, err)
 			}
 			q, err := base64urlTrailingPadding(marshal.Q)
 			if err != nil {
-				return nil, fmt.Errorf(`failed to decode %s key parameter "q": %w`, KtyRSA, err)
+				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "q": %w`, KtyRSA, err)
 			}
 			dp, err := base64urlTrailingPadding(marshal.DP)
 			if err != nil {
-				return nil, fmt.Errorf(`failed to decode %s key parameter "dp": %w`, KtyRSA, err)
+				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "dp": %w`, KtyRSA, err)
 			}
 			dq, err := base64urlTrailingPadding(marshal.DQ)
 			if err != nil {
-				return nil, fmt.Errorf(`failed to decode %s key parameter "dq": %w`, KtyRSA, err)
+				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "dq": %w`, KtyRSA, err)
 			}
 			qi, err := base64urlTrailingPadding(marshal.QI)
 			if err != nil {
-				return nil, fmt.Errorf(`failed to decode %s key parameter "qi": %w`, KtyRSA, err)
+				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "qi": %w`, KtyRSA, err)
 			}
 			var oth []rsa.CRTValue
 			primes := []*big.Int{
@@ -614,19 +608,19 @@ func keyUnmarshal(marshal *JWKMarshal, options JWKMarshalOptions, validateOption
 				oth = make([]rsa.CRTValue, len(marshal.OTH))
 				for i, otherPrimes := range marshal.OTH {
 					if otherPrimes.R == "" || otherPrimes.D == "" || otherPrimes.T == "" {
-						return nil, fmt.Errorf(`%w: %s requires parameters "r", "d", and "t" for each "oth"`, ErrKeyUnmarshalParameter, KtyRSA)
+						return JWK{}, fmt.Errorf(`%w: %s requires parameters "r", "d", and "t" for each "oth"`, ErrKeyUnmarshalParameter, KtyRSA)
 					}
 					othD, err := base64urlTrailingPadding(otherPrimes.D)
 					if err != nil {
-						return nil, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyRSA, err)
+						return JWK{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyRSA, err)
 					}
 					othT, err := base64urlTrailingPadding(otherPrimes.T)
 					if err != nil {
-						return nil, fmt.Errorf(`failed to decode %s key parameter "t": %w`, KtyRSA, err)
+						return JWK{}, fmt.Errorf(`failed to decode %s key parameter "t": %w`, KtyRSA, err)
 					}
 					othR, err := base64urlTrailingPadding(otherPrimes.R)
 					if err != nil {
-						return nil, fmt.Errorf(`failed to decode %s key parameter "r": %w`, KtyRSA, err)
+						return JWK{}, fmt.Errorf(`failed to decode %s key parameter "r": %w`, KtyRSA, err)
 					}
 					primes = append(primes, new(big.Int).SetBytes(othR))
 					oth[i] = rsa.CRTValue{
@@ -649,7 +643,7 @@ func keyUnmarshal(marshal *JWKMarshal, options JWKMarshalOptions, validateOption
 			}
 			err = privateKey.Validate()
 			if err != nil {
-				return nil, fmt.Errorf(`failed to validate %s key: %w`, KtyRSA, err)
+				return JWK{}, fmt.Errorf(`failed to validate %s key: %w`, KtyRSA, err)
 			}
 			key = privateKey
 		} else if !options.UnmarshalAsymmetricPrivate {
@@ -658,28 +652,28 @@ func keyUnmarshal(marshal *JWKMarshal, options JWKMarshalOptions, validateOption
 	case KtyOct:
 		if options.UnmarshalSymmetric {
 			if marshal.K == "" {
-				return nil, fmt.Errorf(`%w: %s requires parameter "k"`, ErrKeyUnmarshalParameter, KtyOct)
+				return JWK{}, fmt.Errorf(`%w: %s requires parameter "k"`, ErrKeyUnmarshalParameter, KtyOct)
 			}
 			k, err := base64urlTrailingPadding(marshal.K)
 			if err != nil {
-				return nil, fmt.Errorf(`failed to decode %s key parameter "k": %w`, KtyOct, err)
+				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "k": %w`, KtyOct, err)
 			}
 			key = k
 		} else {
-			return nil, fmt.Errorf("%w: incorrect options to unmarshal symmetric key (%s)", ErrOptions, KtyOct)
+			return JWK{}, fmt.Errorf("%w: incorrect options to unmarshal symmetric key (%s)", ErrOptions, KtyOct)
 		}
 	default:
-		return nil, fmt.Errorf("%w: %s", ErrUnsupportedKey, marshal.KTY)
+		return JWK{}, fmt.Errorf("%w: %s", ErrUnsupportedKey, marshal.KTY)
 	}
 	x5c := make([]*x509.Certificate, len(marshal.X5C))
 	for i, cert := range marshal.X5C {
 		raw, err := base64.StdEncoding.DecodeString(cert)
 		if err != nil {
-			return nil, fmt.Errorf("failed to Base64 decode X.509 certificate: %w", err)
+			return JWK{}, fmt.Errorf("failed to Base64 decode X.509 certificate: %w", err)
 		}
 		x5c[i], err = x509.ParseCertificate(raw)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse X.509 certificate: %w", err)
+			return JWK{}, fmt.Errorf("failed to parse X.509 certificate: %w", err)
 		}
 	}
 	jwkX509 := JWKX509Options{
@@ -697,7 +691,7 @@ func keyUnmarshal(marshal *JWKMarshal, options JWKMarshalOptions, validateOption
 		Validate: validateOptions,
 		X509:     jwkX509,
 	}
-	j := &jwk{
+	j := JWK{
 		key:     key,
 		marshal: marshal,
 		options: opts,
