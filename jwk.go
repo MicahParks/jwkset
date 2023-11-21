@@ -29,7 +29,7 @@ func (j JWKSet) JSONPublic(ctx context.Context) (json.RawMessage, error) {
 	return j.JSONWithOptions(ctx, JWKMarshalOptions{}, JWKValidateOptions{})
 }
 
-// JSONPrivate creates the JSON representation of the JWKSet public and private key material.
+// JSONPrivate creates the JSON representation of the JWKSet public and private Key material.
 func (j JWKSet) JSONPrivate(ctx context.Context) (json.RawMessage, error) {
 	marshalOptions := JWKMarshalOptions{
 		MarshalAsymmetricPrivate: true,
@@ -38,7 +38,7 @@ func (j JWKSet) JSONPrivate(ctx context.Context) (json.RawMessage, error) {
 	return j.JSONWithOptions(ctx, marshalOptions, JWKValidateOptions{})
 }
 
-// JSONWithOptions creates the JSON representation of the JWKSet with the given options.
+// JSONWithOptions creates the JSON representation of the JWKSet with the given Options.
 func (j JWKSet) JSONWithOptions(ctx context.Context, marshalOptions JWKMarshalOptions, validationOptions JWKValidateOptions) (json.RawMessage, error) {
 	jwks := JWKSMarshal{}
 
@@ -51,9 +51,9 @@ func (j JWKSet) JSONWithOptions(ctx context.Context, marshalOptions JWKMarshalOp
 		options := key.options
 		options.Marshal = marshalOptions
 		options.Validate = validationOptions
-		marshal, err := keyMarshal(key.Key(), options)
+		marshal, err := keyMarshal(key.key, options)
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal key: %w", err)
+			return nil, fmt.Errorf("failed to marshal Key: %w", err)
 		}
 		jwks.Keys = append(jwks.Keys, marshal)
 	}

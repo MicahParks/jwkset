@@ -21,46 +21,53 @@ func main() {
 		logger.Fatalf(logFmt, "Failed to generate EdDSA key.", err)
 	}
 
-	// Wrap the key in the appropriate Go type.
-	meta := jwkset.NewKey[any](private, "my-key-id")
+	// Give this EdDSA key a key ID.
+	metadata := jwkset.JWKMetadataOptions{
+		KID: "my-key-id",
+	}
 
-	// Create the approrpiate options to include the private key material in the JSON representation.
+	// Specify options for marshalling and unmarshalling this key from JSON.
+	marshalOptions := jwkset.JWKMarshalOptions{
+		MarshalAsymmetricPrivate:   true, // Required to marshal the EdDSA private key.
+		MarshalSymmetric:           true, // Unused in this example, EdDSA is asymmetric.
+		UnmarshalAsymmetricPrivate: true, // Required to unmarshal the EdDSA private key.
+		UnmarshalSymmetric:         true, // Unused in this example, EdDSA is asymmetric.
+	}
+
+	// Create the JWK from the key and provided options.
 	options := jwkset.JWKOptions{
-		AsymmetricPrivate: true,
+		Marshal:  marshalOptions,
+		Metadata: metadata,
 	}
-
-	// Marshal the key to a different Go type that can be serialized to JSON.
-	marshal, err := jwkset.KeyMarshal(meta, options)
+	jwk, err := jwkset.NewJWKFromKey(private, options)
 	if err != nil {
-		logger.Fatalf(logFmt, "Failed to marshal key.", err)
+		logger.Fatalf(logFmt, "Failed to create JWK.", err)
 	}
 
-	// Marshal the new type to JSON.
-	j, err := json.MarshalIndent(marshal, "", "  ")
+	// Marshal the JWK to JSON.
+	raw, err := json.MarshalIndent(jwk.Marshal(), "", "  ")
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to marshal JSON.", err)
 	}
-	println(string(j))
+	println(string(raw))
 
-	// Unmarshal the raw JSON into a Go type that can be deserialized into a key.
-	err = json.Unmarshal(j, &marshal)
+	// Unmarshal the raw JSON into the jwkset.JWKMarshal type.
+	var marshal jwkset.JWKMarshal
+	err = json.Unmarshal(raw, &marshal)
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to unmarshal JSON.", err)
 	}
 
-	// Create the appropriate options to include the private key material in the deserialization.
+	// Use the jwkset.JWKMarshal type to create a JWK.
 	//
-	// If this option is not provided, the resulting key will be of the type ed25519.PublicKey.
-	unmarshalOptions := jwkset.JWKMarshalOptions{
-		AsymmetricPrivate: true,
-	}
-
-	// Convert the Go type back into a key with metadata.
-	meta, err = jwkset.KeyUnmarshal[any](marshal, unmarshalOptions)
+	// The options for JSON marshalling and unmarshalling are copied from earlier in the example.
+	// The default validation options have been used.
+	options.Marshal.UnmarshalAsymmetricPrivate = false
+	jwk, err = jwkset.NewJWKFromMarshal(marshal, options.Marshal, jwkset.JWKValidateOptions{})
 	if err != nil {
-		logger.Fatalf(logFmt, "Failed to unmarshal key.", err)
+		logger.Fatalf(logFmt, "Failed to create JWK.", err)
 	}
 
 	// Print the key ID.
-	println(meta.KeyID)
+	println(jwk.Marshal().KID)
 }

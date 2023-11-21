@@ -17,8 +17,8 @@ const (
 )
 
 var (
-	hmacKey1 = []byte("hamc key 1")
-	hmacKey2 = []byte("hamc key 2")
+	hmacKey1 = []byte("hamc Key 1")
+	hmacKey2 = []byte("hamc Key 2")
 )
 
 type storageTestParams[CustomKeyMeta any] struct {
@@ -34,23 +34,23 @@ func TestMemoryDeleteKey(t *testing.T) {
 
 	err := store.WriteKey(params.ctx, jwkset.NewKey[any](hmacKey1, kidWritten))
 	if err != nil {
-		t.Fatalf("Failed to write key. %s", err)
+		t.Fatalf("Failed to write Key. %s", err)
 	}
 
 	ok, err := store.DeleteKey(params.ctx, kidMissing)
 	if err != nil {
-		t.Fatalf("Failed to delete missing key. %s", err)
+		t.Fatalf("Failed to delete missing Key. %s", err)
 	}
 	if ok {
-		t.Fatalf("Deleted missing key.")
+		t.Fatalf("Deleted missing Key.")
 	}
 
 	ok, err = store.DeleteKey(params.ctx, kidWritten)
 	if err != nil {
-		t.Fatalf("Failed to delete written key. %s", err)
+		t.Fatalf("Failed to delete written Key. %s", err)
 	}
 	if !ok {
-		t.Fatalf("Failed to delete written key.")
+		t.Fatalf("Failed to delete written Key.")
 	}
 }
 
@@ -61,45 +61,45 @@ func TestMemoryReadKey(t *testing.T) {
 
 	err := store.WriteKey(params.ctx, jwkset.NewKey[any](hmacKey1, kidWritten))
 	if err != nil {
-		t.Fatalf("Failed to write key. %s", err)
+		t.Fatalf("Failed to write Key. %s", err)
 	}
 
 	_, err = store.ReadKey(params.ctx, kidMissing)
 	if !errors.Is(err, jwkset.ErrKeyNotFound) {
-		t.Fatalf("Should have specific error when reading missing key.\n  Actual: %s\n  Expected: %s", err, jwkset.ErrKeyNotFound)
+		t.Fatalf("Should have specific error when reading missing Key.\n  Actual: %s\n  Expected: %s", err, jwkset.ErrKeyNotFound)
 	}
 
 	key, err := store.ReadKey(params.ctx, kidWritten)
 	if err != nil {
-		t.Fatalf("Failed to read written key. %s", err)
+		t.Fatalf("Failed to read written Key. %s", err)
 	}
 
-	if !bytes.Equal(key.Key.([]byte), hmacKey1) {
-		t.Fatalf("Read key does not match written key.")
+	if !bytes.Equal(key.key.([]byte), hmacKey1) {
+		t.Fatalf("Read Key does not match written Key.")
 	}
 
 	err = store.WriteKey(params.ctx, jwkset.NewKey[any](hmacKey2, kidWritten))
 	if err != nil {
-		t.Fatalf("Failed to overwrite key. %s", err)
+		t.Fatalf("Failed to overwrite Key. %s", err)
 	}
 
 	key, err = store.ReadKey(params.ctx, kidWritten)
 	if err != nil {
-		t.Fatalf("Failed to read written key. %s", err)
+		t.Fatalf("Failed to read written Key. %s", err)
 	}
 
-	if !bytes.Equal(key.Key.([]byte), hmacKey2) {
-		t.Fatalf("Read key does not match written key.")
+	if !bytes.Equal(key.key.([]byte), hmacKey2) {
+		t.Fatalf("Read Key does not match written Key.")
 	}
 
 	_, err = store.DeleteKey(params.ctx, kidWritten)
 	if err != nil {
-		t.Fatalf("Failed to delete written key. %s", err)
+		t.Fatalf("Failed to delete written Key. %s", err)
 	}
 
 	_, err = store.ReadKey(params.ctx, kidWritten)
 	if !errors.Is(err, jwkset.ErrKeyNotFound) {
-		t.Fatalf("Should have specific error when reading missing key.\n  Actual: %s\n  Expected: %s", err, jwkset.ErrKeyNotFound)
+		t.Fatalf("Should have specific error when reading missing Key.\n  Actual: %s\n  Expected: %s", err, jwkset.ErrKeyNotFound)
 	}
 }
 
@@ -110,12 +110,12 @@ func TestMemorySnapshotKeys(t *testing.T) {
 
 	err := store.WriteKey(params.ctx, jwkset.NewKey[any](hmacKey1, kidWritten))
 	if err != nil {
-		t.Fatalf("Failed to write key 1. %s", err)
+		t.Fatalf("Failed to write Key 1. %s", err)
 	}
 
 	err = store.WriteKey(params.ctx, jwkset.NewKey[any](hmacKey2, kidWritten2))
 	if err != nil {
-		t.Fatalf("Failed to write key 2. %s", err)
+		t.Fatalf("Failed to write Key 2. %s", err)
 	}
 
 	meta, err := store.SnapshotKeys(params.ctx)
@@ -131,16 +131,16 @@ func TestMemorySnapshotKeys(t *testing.T) {
 	for _, m := range meta {
 		if !kid1Found && m.KeyID == kidWritten {
 			kid1Found = true
-			if !bytes.Equal(m.Key.([]byte), hmacKey1) {
-				t.Fatalf("Snapshot key does not match written key.")
+			if !bytes.Equal(m.key.([]byte), hmacKey1) {
+				t.Fatalf("Snapshot Key does not match written Key.")
 			}
 		} else if !kid2Found && m.KeyID == kidWritten2 {
 			kid2Found = true
-			if !bytes.Equal(m.Key.([]byte), hmacKey2) {
-				t.Fatalf("Snapshot key does not match written key.")
+			if !bytes.Equal(m.key.([]byte), hmacKey2) {
+				t.Fatalf("Snapshot Key does not match written Key.")
 			}
 		} else {
-			t.Fatalf("Snapshot key has unexpected key ID.")
+			t.Fatalf("Snapshot Key has unexpected Key ID.")
 		}
 	}
 }
@@ -152,12 +152,12 @@ func TestMemoryWriteKey(t *testing.T) {
 
 	err := store.WriteKey(params.ctx, jwkset.NewKey[any](hmacKey1, kidWritten))
 	if err != nil {
-		t.Fatalf("Failed to write key. %s", err)
+		t.Fatalf("Failed to write Key. %s", err)
 	}
 
 	err = store.WriteKey(params.ctx, jwkset.NewKey[any](hmacKey2, kidWritten))
 	if err != nil {
-		t.Fatalf("Failed to overwrite key. %s", err)
+		t.Fatalf("Failed to overwrite Key. %s", err)
 	}
 }
 

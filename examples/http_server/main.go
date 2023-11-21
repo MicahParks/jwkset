@@ -19,14 +19,24 @@ func main() {
 	ctx := context.Background()
 	logger := log.New(os.Stdout, "", 0)
 
-	jwkSet := jwkset.NewMemory[any]()
+	jwkSet := jwkset.NewMemory()
 
 	key, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to generate RSA key.", err)
 	}
 
-	err = jwkSet.Store.WriteKey(ctx, jwkset.NewKey[any](key, "my-key-id"))
+	metadata := jwkset.JWKMetadataOptions{
+		KID: "my-key-id",
+	}
+	options := jwkset.JWKOptions{
+		Metadata: metadata,
+	}
+	jwk, err := jwkset.NewJWKFromKey(key, options)
+	if err != nil {
+		logger.Fatalf(logFmt, "Failed to create JWK.", err)
+	}
+	err = jwkSet.Store.WriteKey(ctx, jwk)
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to store RSA key.", err)
 	}

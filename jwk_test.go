@@ -24,38 +24,38 @@ func TestJSON(t *testing.T) {
 	block, _ := pem.Decode([]byte(ecPrivateKey))
 	eKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
-		t.Fatalf("Failed to parse EC private key. %s", err)
+		t.Fatalf("Failed to parse EC private Key. %s", err)
 	}
 	const eID = "myECKey"
 	err = jwks.Store.WriteKey(ctx, jwkset.NewKey[any](eKey.(*ecdsa.PrivateKey), eID))
 	if err != nil {
-		t.Fatalf("Failed to write EC key. %s", err)
+		t.Fatalf("Failed to write EC Key. %s", err)
 	}
 
 	edPriv, err := base64.RawURLEncoding.DecodeString(edPrivateKey)
 	if err != nil {
-		t.Fatalf("Failed to decode EdDSA private key. %s", err)
+		t.Fatalf("Failed to decode EdDSA private Key. %s", err)
 	}
 	edPub, err := base64.RawURLEncoding.DecodeString(edPublicKey)
 	if err != nil {
-		t.Fatalf("Failed to decode EdDSA public key. %s", err)
+		t.Fatalf("Failed to decode EdDSA public Key. %s", err)
 	}
 	ed := ed25519.PrivateKey(append(edPriv, edPub...))
 	const edID = "myEdDSAKey"
 	err = jwks.Store.WriteKey(ctx, jwkset.NewKey[any](ed, edID))
 	if err != nil {
-		t.Fatalf("Failed to write EdDSA key. %s", err)
+		t.Fatalf("Failed to write EdDSA Key. %s", err)
 	}
 
 	block, _ = pem.Decode([]byte(rsaPrivateKey))
 	rKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
-		t.Fatalf("Failed to parse RSA private key. %s", err)
+		t.Fatalf("Failed to parse RSA private Key. %s", err)
 	}
 	const rID = "myRSAKey"
 	err = jwks.Store.WriteKey(ctx, jwkset.NewKey[any](rKey.(*rsa.PrivateKey), rID))
 	if err != nil {
-		t.Fatalf("Failed to write RSA key. %s", err)
+		t.Fatalf("Failed to write RSA Key. %s", err)
 	}
 
 	hKey := []byte(hmacSecret)
@@ -65,7 +65,7 @@ func TestJSON(t *testing.T) {
 		KeyID: hID,
 	})
 	if err != nil {
-		t.Fatalf("Failed to write HMAC key. %s", err)
+		t.Fatalf("Failed to write HMAC Key. %s", err)
 	}
 
 	jsonRepresentation, err := jwks.JSONPublic(ctx)
@@ -105,7 +105,7 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 	for _, key := range keys.Keys {
 		kty, ok := key["kty"].(string)
 		if !ok {
-			t.Fatal("Failed to get key type.")
+			t.Fatal("Failed to get Key type.")
 		}
 
 		var expectedJSON json.RawMessage
