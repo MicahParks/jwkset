@@ -53,6 +53,9 @@ func (j JWKSet) JSONWithOptions(ctx context.Context, marshalOptions JWKMarshalOp
 		options.Validate = validationOptions
 		marshal, err := keyMarshal(key.Key(), options)
 		if err != nil {
+			if errors.Is(err, ErrOptions) {
+				continue
+			}
 			return nil, fmt.Errorf("failed to marshal key: %w", err)
 		}
 		jwks.Keys = append(jwks.Keys, marshal)

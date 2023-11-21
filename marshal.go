@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -130,7 +131,16 @@ func NewJWKFromKey(key any, options JWKOptions) (JWK, error) {
 	return j, nil
 }
 
-// NewJWKFromMarshal transforms a JWKMarshal into a JWK.
+func NewJWKFromRawJSON(j json.RawMessage, options JWKMarshalOptions, validateOptions JWKValidateOptions) (JWK, error) {
+	marshal := JWKMarshal{}
+	err := json.Unmarshal(j, &marshal)
+	if err != nil {
+		return JWK{}, fmt.Errorf("failed to unmarshal JSON Web Key: %w", err)
+	}
+	return NewJWKFromMarshal(marshal, options, validateOptions)
+}
+
+// NewJWKFromMarshal transforms a JWKMarshal into a JWK. TODO Remove?
 func NewJWKFromMarshal(marshal JWKMarshal, marshalOptions JWKMarshalOptions, validateOptions JWKValidateOptions) (JWK, error) {
 	j, err := keyUnmarshal(marshal, marshalOptions, validateOptions)
 	if err != nil {
@@ -177,8 +187,8 @@ func (j JWK) Validate() error {
 	if j.options.Validate.SkipAll {
 		return nil
 	}
-	if j.marshal == (JWKMarshal{}) {
-		return fmt.Errorf("%w: marhsal is nil", ErrJWKValidation)
+	if !j.marshal.KTY.valid() {
+		return fmt.Errorf("%w: invalid or unsupported key type %q", ErrJWKValidation, j.marshal.KTY)
 	}
 
 	if !j.options.Validate.SkipKeyOps {
@@ -318,11 +328,11 @@ func (j JWK) Validate() error {
 		}
 	}
 
-	marshal, err := keyMarshal(j.key, j.options)
+	marshalled, err := keyMarshal(j.key, j.options)
 	if err != nil {
 		return fmt.Errorf("failed to marshal JSON Web Key: %w", errors.Join(ErrJWKValidation, err))
 	}
-	ok := reflect.DeepEqual(j.marshal, marshal)
+	ok := reflect.DeepEqual(j.marshal, marshalled)
 	if !ok {
 		return fmt.Errorf("%w: marshaled JWK does not match original JWK", ErrJWKValidation)
 	}

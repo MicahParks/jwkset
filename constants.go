@@ -98,7 +98,6 @@ type KEYOPS string
 func (keyopts KEYOPS) String() string {
 	return string(keyopts)
 }
-
 func (keyopts KEYOPS) valid() bool {
 	switch keyopts {
 	case KeyOpsSign, KeyOpsVerify, KeyOpsEncrypt, KeyOpsDecrypt, KeyOpsWrapKey, KeyOpsUnwrapKey, KeyOpsDeriveKey, KeyOpsDeriveBits:
@@ -114,6 +113,13 @@ type KTY string
 func (kty KTY) String() string {
 	return string(kty)
 }
+func (kty KTY) valid() bool {
+	switch kty {
+	case KtyEC, KtyOKP, KtyRSA, KtyOct:
+		return true
+	}
+	return false
+}
 
 // USE is a set of "JSON Web Key Use" types from https://www.iana.org/assignments/jose/jose.xhtml as mentioned in
 // https://www.rfc-editor.org/rfc/rfc7517#section-4.2
@@ -122,10 +128,9 @@ type USE string
 func (use USE) String() string {
 	return string(use)
 }
-
 func (use USE) valid() bool {
 	switch use {
-	case UseEnc, UseSig:
+	case UseEnc, UseSig, "":
 		return true
 	}
 	return false

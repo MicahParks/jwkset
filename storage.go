@@ -25,7 +25,7 @@ type Storage interface {
 
 	// WriteKey writes a key to the storage. If the key already exists, it will be overwritten. After writing a key,
 	// any pointers written should be considered owned by the underlying storage.
-	WriteKey(ctx context.Context, k JWK) error
+	WriteKey(ctx context.Context, jwk JWK) error
 }
 
 var _ Storage = &memoryJWKSet{}
@@ -47,8 +47,8 @@ func (m *memoryJWKSet) SnapshotKeys(_ context.Context) ([]JWK, error) {
 	defer m.mux.RUnlock()
 	cpy := make([]JWK, len(m.m))
 	i := 0
-	for _, k := range m.m {
-		cpy[i] = k
+	for _, jwk := range m.m {
+		cpy[i] = jwk
 		i++
 	}
 	return cpy, nil
@@ -69,9 +69,9 @@ func (m *memoryJWKSet) ReadKey(_ context.Context, keyID string) (JWK, error) {
 	}
 	return k, nil
 }
-func (m *memoryJWKSet) WriteKey(_ context.Context, k JWK) error {
+func (m *memoryJWKSet) WriteKey(_ context.Context, jwk JWK) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	m.m[k.Marshal().KID] = k
+	m.m[jwk.Marshal().KID] = jwk
 	return nil
 }

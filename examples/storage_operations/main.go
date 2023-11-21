@@ -23,7 +23,7 @@ func main() {
 	logger := log.New(os.Stdout, "", 0)
 
 	// Create a new JWK Set using memory-backed storage.
-	jwkSet := jwkset.NewMemory[any]()
+	jwkSet := jwkset.NewMemory()
 
 	// Create a new ECDSA key and store it in the JWK Set.
 	ec, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -31,7 +31,11 @@ func main() {
 		logger.Fatalf(logFmt, "Failed to generate ECDSA key.", err)
 	}
 	ecID := uuid.NewString()
-	err = jwkSet.Store.WriteKey(ctx, jwkset.NewKey[any](ec, ecID))
+	jwk, err := newKeyDefaultOptions(ec, ecID)
+	if err != nil {
+		logger.Fatalf(logFmt, "Failed to create JWK from ECDSA key.", err)
+	}
+	err = jwkSet.Store.WriteKey(ctx, jwk)
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to store ECDSA key.", err)
 	}
@@ -42,7 +46,11 @@ func main() {
 		logger.Fatalf(logFmt, "Failed to generate EdDSA key.", err)
 	}
 	edID := uuid.NewString()
-	err = jwkSet.Store.WriteKey(ctx, jwkset.NewKey[any](ed, edID))
+	jwk, err = newKeyDefaultOptions(ed, edID)
+	if err != nil {
+		logger.Fatalf(logFmt, "Failed to create JWK from EdDSA key.", err)
+	}
+	err = jwkSet.Store.WriteKey(ctx, jwk)
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to store EdDSA key.", err)
 	}
@@ -53,7 +61,11 @@ func main() {
 		logger.Fatalf(logFmt, "Failed to generate RSA key.", err)
 	}
 	rID := uuid.NewString()
-	err = jwkSet.Store.WriteKey(ctx, jwkset.NewKey[any](r, rID))
+	jwk, err = newKeyDefaultOptions(r, rID)
+	if err != nil {
+		logger.Fatalf(logFmt, "Failed to create JWK from RSA key.", err)
+	}
+	err = jwkSet.Store.WriteKey(ctx, jwk)
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to store RSA key.", err)
 	}
@@ -61,10 +73,14 @@ func main() {
 	// Create a new HMAC key and store it in the JWK Set.
 	hmacSecret := []byte("my_hmac_secret")
 	hid := uuid.NewString()
-	err = jwkSet.Store.WriteKey(ctx, jwkset.KeyWithMeta[any]{
-		Key:   hmacSecret,
-		KeyID: hid,
-	})
+	jwk, err = newKeyDefaultOptions(hmacSecret, hid)
+	if err != nil {
+		logger.Fatalf(logFmt, "Failed to create JWK from HMAC key.", err)
+	}
+	err = jwkSet.Store.WriteKey(ctx, jwk)
+	if err != nil {
+		logger.Fatalf(logFmt, "Failed to store HMAC key.", err)
+	}
 
 	// Print the JSON representation of the JWK Set.
 	jsonRepresentation, err := jwkSet.JSONPublic(ctx)
@@ -95,7 +111,11 @@ func main() {
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to generate ECDSA key.", err)
 	}
-	err = jwkSet.Store.WriteKey(ctx, jwkset.NewKey[any](ec, uuid.NewString()))
+	jwk, err = newKeyDefaultOptions(ec, uuid.NewString())
+	if err != nil {
+		logger.Fatalf(logFmt, "Failed to create JWK from ECDSA key.", err)
+	}
+	err = jwkSet.Store.WriteKey(ctx, jwk)
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to store ECDSA key.", err)
 	}
@@ -107,24 +127,39 @@ func main() {
 	logger.Println(string(jsonRepresentation))
 
 	// Read the previously added EdDSA key from the JWK Set, the print its private key.
-	meta, err := jwkSet.Store.ReadKey(ctx, edID)
+	jwk, err = jwkSet.Store.ReadKey(ctx, edID)
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to read EdDSA key.", err)
 	}
-	edKey, ok := meta.Key.(ed25519.PrivateKey)
+	edKey, ok := jwk.Key().(ed25519.PrivateKey)
 	if !ok {
 		logger.Fatalf(logFmt, "Failed to cast EdDSA key.", err)
 	}
 	logger.Printf("Retrieved EdDSA private key Base64RawURL: %s", base64.RawURLEncoding.EncodeToString(edKey))
 
 	// Read the previously added HMAC key from the JWK Set, the print it.
-	meta, err = jwkSet.Store.ReadKey(ctx, hid)
+	jwk, err = jwkSet.Store.ReadKey(ctx, hid)
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to read HMAC key.", err)
 	}
-	hKey, ok := meta.Key.([]byte)
+	hKey, ok := jwk.Key().([]byte)
 	if !ok {
 		logger.Fatalf(logFmt, "Failed to cast HMAC key.", err)
 	}
 	logger.Printf("Retrieved HMAC secret: %s", hKey)
+}
+
+func newKeyDefaultOptions(key any, keyID string) (jwkset.JWK, error) {
+	marshal := jwkset.JWKMarshalOptions{
+		MarshalAsymmetricPrivate: true,
+		MarshalSymmetric:         true,
+	}
+	metadata := jwkset.JWKMetadataOptions{
+		KID: keyID,
+	}
+	options := jwkset.JWKOptions{
+		Marshal:  marshal,
+		Metadata: metadata,
+	}
+	return jwkset.NewJWKFromKey(key, options)
 }
