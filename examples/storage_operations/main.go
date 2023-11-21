@@ -111,7 +111,7 @@ func main() {
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to read EdDSA key.", err)
 	}
-	edKey, ok := meta.key.(ed25519.PrivateKey)
+	edKey, ok := meta.Key.(ed25519.PrivateKey)
 	if !ok {
 		logger.Fatalf(logFmt, "Failed to cast EdDSA key.", err)
 	}
@@ -122,7 +122,7 @@ func main() {
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to read HMAC key.", err)
 	}
-	hKey, ok := meta.key.([]byte)
+	hKey, ok := meta.Key.([]byte)
 	if !ok {
 		logger.Fatalf(logFmt, "Failed to cast HMAC key.", err)
 	}

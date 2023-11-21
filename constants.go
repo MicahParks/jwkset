@@ -30,30 +30,30 @@ const (
 	// AlgEdDSA is the EdDSA algorithm.
 	AlgEdDSA ALG = "EdDSA"
 
-	// KeyOpsSign is a Key operation for signing.
+	// KeyOpsSign is a key operation for signing.
 	KeyOpsSign = "sign"
-	// KeyOpsVerify is a Key operation for verifying.
+	// KeyOpsVerify is a key operation for verifying.
 	KeyOpsVerify = "verify"
-	// KeyOpsEncrypt is a Key operation for encryption.
+	// KeyOpsEncrypt is a key operation for encryption.
 	KeyOpsEncrypt = "encrypt"
-	// KeyOpsDecrypt is a Key operation for decryption.
+	// KeyOpsDecrypt is a key operation for decryption.
 	KeyOpsDecrypt = "decrypt"
-	// KeyOpsWrapKey is a Key operation for wrapping a Key.
+	// KeyOpsWrapKey is a key operation for wrapping a key.
 	KeyOpsWrapKey = "wrapKey"
-	// KeyOpsUnwrapKey is a Key operation for unwrapping a Key.
+	// KeyOpsUnwrapKey is a key operation for unwrapping a key.
 	KeyOpsUnwrapKey = "unwrapKey"
-	// KeyOpsDeriveKey is a Key operation for deriving a Key.
+	// KeyOpsDeriveKey is a key operation for deriving a key.
 	KeyOpsDeriveKey = "deriveKey"
-	// KeyOpsDeriveBits is a Key operation for deriving bits.
+	// KeyOpsDeriveBits is a key operation for deriving bits.
 	KeyOpsDeriveBits = "deriveBits"
 
-	// KtyEC is the Key type for ECDSA.
+	// KtyEC is the key type for ECDSA.
 	KtyEC KTY = "EC"
-	// KtyOKP is the Key type for EdDSA.
+	// KtyOKP is the key type for EdDSA.
 	KtyOKP KTY = "OKP"
-	// KtyRSA is the Key type for RSA.
+	// KtyRSA is the key type for RSA.
 	KtyRSA KTY = "RSA"
-	// KtyOct is the Key type for octet sequences, such as HMAC.
+	// KtyOct is the key type for octet sequences, such as HMAC.
 	KtyOct KTY = "oct"
 
 	// CrvEd25519 is a curve for EdDSA.
@@ -65,7 +65,7 @@ const (
 	// CrvP521 is a curve for ECDSA.
 	CrvP521 CRV = "P-521"
 
-	// HeaderKID is a JWT header for the Key ID.
+	// HeaderKID is a JWT header for the key ID.
 	HeaderKID = "kid"
 
 	// UseEnc indicates a JWK is for encryption.
@@ -115,14 +115,6 @@ func (kty KTY) String() string {
 	return string(kty)
 }
 
-func (kty KTY) valid() bool {
-	switch kty {
-	case KtyEC, KtyOKP, KtyRSA, KtyOct:
-		return true
-	}
-	return false
-}
-
 // USE is a set of "JSON Web Key Use" types from https://www.iana.org/assignments/jose/jose.xhtml as mentioned in
 // https://www.rfc-editor.org/rfc/rfc7517#section-4.2
 type USE string
@@ -133,7 +125,7 @@ func (use USE) String() string {
 
 func (use USE) valid() bool {
 	switch use {
-	case UseEnc, UseSig, "":
+	case UseEnc, UseSig:
 		return true
 	}
 	return false
