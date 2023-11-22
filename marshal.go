@@ -96,6 +96,8 @@ type JWKValidateOptions struct {
 
 // JWKMetadataOptions are direct passthroughs into the JWKMarshal.
 type JWKMetadataOptions struct {
+	// ALG is the algorithm (alg).
+	ALG ALG
 	// KID is the key ID (kid).
 	KID string
 	// KEYOPS is the key operations (key_ops).
@@ -205,6 +207,9 @@ func (j JWK) Validate() error {
 	}
 
 	if !j.options.Validate.SkipMetadata {
+		if j.marshal.ALG != j.options.Metadata.ALG {
+			return fmt.Errorf("%w: ALG in marshal does not match ALG in options", errors.Join(ErrJWKValidation, ErrOptions))
+		}
 		if j.marshal.KID != j.options.Metadata.KID {
 			return fmt.Errorf("%w: KID in marshal does not match KID in options", errors.Join(ErrJWKValidation, ErrOptions))
 		}
@@ -333,7 +338,7 @@ func (j JWK) Validate() error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal JSON Web Key: %w", errors.Join(ErrJWKValidation, err))
 	}
-	ok := reflect.DeepEqual(j.marshal, marshalled)
+	ok := reflect.DeepEqual(j.marshal, marshalled) // TODO Remove and replace with something that checks if it's public vs private.
 	if !ok {
 		return fmt.Errorf("%w: marshaled JWK does not match original JWK", ErrJWKValidation)
 	}
@@ -493,6 +498,7 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 			m.X5TS256 = base64.RawURLEncoding.EncodeToString(h256[:])
 		}
 	}
+	m.ALG = options.Metadata.ALG
 	m.KID = options.Metadata.KID
 	m.KEYOPS = options.Metadata.KEYOPS
 	m.USE = options.Metadata.USE
@@ -692,6 +698,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 		X5U: marshal.X5U,
 	}
 	metadata := JWKMetadataOptions{
+		ALG:    marshal.ALG,
 		KID:    marshal.KID,
 		KEYOPS: slices.Clone(marshal.KEYOPS),
 		USE:    marshal.USE,

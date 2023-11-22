@@ -82,6 +82,13 @@ type ALG string
 func (alg ALG) String() string {
 	return string(alg)
 }
+func (alg ALG) valid() bool {
+	switch alg {
+	case AlgHS256, AlgHS384, AlgHS512, AlgRS256, AlgRS384, AlgRS512, AlgES256, AlgES384, AlgES512, AlgPS256, AlgPS384, AlgPS512, AlgNone, AlgEdDSA:
+		return true
+	}
+	return false
+}
 
 // CRV is a set of "JSON Web Key Elliptic Curve" types from https://www.iana.org/assignments/jose/jose.xhtml as
 // mentioned in https://www.rfc-editor.org/rfc/rfc7518.html#section-6.2.1.1
