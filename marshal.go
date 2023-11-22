@@ -131,13 +131,14 @@ func NewJWKFromKey(key any, options JWKOptions) (JWK, error) {
 	return j, nil
 }
 
-func NewJWKFromRawJSON(j json.RawMessage, options JWKMarshalOptions, validateOptions JWKValidateOptions) (JWK, error) {
+// NewJWKFromRawJSON uses the given raw JSON to create a JWK.
+func NewJWKFromRawJSON(j json.RawMessage, marshalOptions JWKMarshalOptions, validateOptions JWKValidateOptions) (JWK, error) {
 	marshal := JWKMarshal{}
 	err := json.Unmarshal(j, &marshal)
 	if err != nil {
 		return JWK{}, fmt.Errorf("failed to unmarshal JSON Web Key: %w", err)
 	}
-	return NewJWKFromMarshal(marshal, options, validateOptions)
+	return NewJWKFromMarshal(marshal, marshalOptions, validateOptions)
 }
 
 // NewJWKFromMarshal transforms a JWKMarshal into a JWK. TODO Remove?

@@ -19,7 +19,7 @@ func TestJSON(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	jwks := jwkset.NewMemory[any]()
+	jwks := jwkset.NewMemory()
 
 	block, _ := pem.Decode([]byte(ecPrivateKey))
 	eKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
