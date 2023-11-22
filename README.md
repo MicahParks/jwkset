@@ -1,5 +1,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/MicahParks/jwkset)](https://goreportcard.com/report/github.com/MicahParks/jwkset) [![Go Reference](https://pkg.go.dev/badge/github.com/MicahParks/jwkset.svg)](https://pkg.go.dev/github.com/MicahParks/jwkset)
+
 # JWK Set
+
 This is a JWK Set (JWKS or jwks) implementation. For a JWK Set client,
 see [`github.com/MicahParks/keyfunc`](https://github.com/MicahParks/keyfunc). Cryptographic keys can be added, deleted,
 and read from the JWK Set. A JSON representation of the JWK Set can be created for hosting via HTTPS. This project
@@ -21,6 +23,7 @@ Only the Go types listed in this table have a JSON representation. If you would 
 please open an issue on GitHub.
 
 # Example HTTP server
+
 ```go
 package main
 
@@ -74,6 +77,7 @@ func main() {
 ```
 
 # Example for marshalling a single key to a JSON Web Key
+
 ```go
 package main
 
@@ -143,7 +147,16 @@ func main() {
 }
 ```
 
+# Notes:
+
+* RFC 7518 specifies that `Base64urlUInt` must use the "minimum number of octets" to represent the number. This can lead
+  to a problem with parsing JWK made by other projects that may contain leading zeros in the
+  non-compliant `Base64urlUInt` encoding. This error happens during JWK validation and will look
+  like: `failed to validate JWK: marshaled JWK does not match original JWK`. To work around this, please modify the
+  JWK's JSON to remove the leading zeros from the `Base64urlUInt` encoding. TODO make tool that can do this.
+
 # Test coverage
+
 Test coverage is currently `99%`.
 
 ```
@@ -154,9 +167,12 @@ ok      github.com/MicahParks/jwkset    0.031s
 ```
 
 # References
+
 This project was built and tested using various RFCs and services. The services are listed below:
+
 * [mkjwk.org](https://github.com/mitreid-connect/mkjwk.org)
 
 See also:
+
 * [`github.com/MicahParks/keyfunc`](https://github.com/MicahParks/keyfunc)
 * [`github.com/golang-jwt/jwt/v4`](https://github.com/golang-jwt/jwt)
