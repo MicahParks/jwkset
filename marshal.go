@@ -47,15 +47,12 @@ type JWK struct {
 
 // JWKMarshalOptions are used to specify options for JSON marshaling a JWK.
 type JWKMarshalOptions struct {
-	// MarshalAsymmetricPrivate is used to indicate that the JWK's asymmetric private key should be JSON marshaled.
+	// MarshalAsymmetricPrivate is used to indicate that the JWK's asymmetric private key should be JSON marshaled and
+	// unmarshalled.
 	MarshalAsymmetricPrivate bool
-	// MarshalSymmetric is used to indicate that the JWK's symmetric (private) key should be JSON marshaled.
+	// MarshalSymmetric is used to indicate that the JWK's symmetric (private) key should be JSON marshaled and
+	// unmarshalled.
 	MarshalSymmetric bool
-
-	// UnmarshalAsymmetricPrivate is used to indicate that the JWK's asymmetric private key should be JSON unmarshalled.
-	UnmarshalAsymmetricPrivate bool
-	// UnmarshalSymmetric is used to indicate that the JWK's symmetric (private) key should be JSON unmarshalled.
-	UnmarshalSymmetric bool
 }
 
 // JWKX509Options holds the X.509 certificate information for a JWK. This data structure is not used for JSON marshaling.
@@ -338,7 +335,8 @@ func (j JWK) Validate() error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal JSON Web Key: %w", errors.Join(ErrJWKValidation, err))
 	}
-	ok := reflect.DeepEqual(j.marshal, marshalled) // TODO Remove and replace with something that checks if it's public vs private.
+
+	ok := reflect.DeepEqual(j.marshal, marshalled)
 	if !ok {
 		return fmt.Errorf("%w: marshaled JWK does not match original JWK", ErrJWKValidation)
 	}
@@ -507,6 +505,7 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 }
 
 func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions JWKValidateOptions) (JWK, error) {
+	marshalCopy := JWKMarshal{}
 	var key any
 	switch marshal.KTY {
 	case KtyEC:
@@ -535,7 +534,10 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 		default:
 			return JWK{}, fmt.Errorf("%w: unsupported curve type %q", ErrKeyUnmarshalParameter, marshal.CRV)
 		}
-		if options.UnmarshalAsymmetricPrivate && marshal.D != "" {
+		marshalCopy.CRV = marshal.CRV
+		marshalCopy.X = marshal.X
+		marshalCopy.Y = marshal.Y
+		if options.MarshalAsymmetricPrivate && marshal.D != "" {
 			d, err := base64urlTrailingPadding(marshal.D)
 			if err != nil {
 				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyEC, err)
@@ -545,6 +547,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 				D:         new(big.Int).SetBytes(d),
 			}
 			key = privateKey
+			marshalCopy.D = marshal.D
 		} else {
 			key = publicKey
 		}
@@ -562,7 +565,9 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 		if len(public) != ed25519.PublicKeySize {
 			return JWK{}, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, ed25519.PublicKeySize)
 		}
-		if options.UnmarshalAsymmetricPrivate && marshal.D != "" {
+		marshalCopy.CRV = marshal.CRV
+		marshalCopy.X = marshal.X
+		if options.MarshalAsymmetricPrivate && marshal.D != "" {
 			private, err := base64urlTrailingPadding(marshal.D)
 			if err != nil {
 				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyOKP, err)
@@ -572,6 +577,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 				return JWK{}, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, ed25519.PrivateKeySize)
 			}
 			key = ed25519.PrivateKey(private)
+			marshalCopy.D = marshal.D
 		} else {
 			key = ed25519.PublicKey(public)
 		}
@@ -591,7 +597,9 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 			N: new(big.Int).SetBytes(n),
 			E: int(new(big.Int).SetBytes(e).Uint64()),
 		}
-		if options.UnmarshalAsymmetricPrivate && marshal.D != "" && marshal.P != "" && marshal.Q != "" && marshal.DP != "" && marshal.DQ != "" && marshal.QI != "" { // TODO Only "d" is required, but if one of the others is present, they all must be.
+		marshalCopy.N = marshal.N
+		marshalCopy.E = marshal.E
+		if options.MarshalAsymmetricPrivate && marshal.D != "" && marshal.P != "" && marshal.Q != "" && marshal.DP != "" && marshal.DQ != "" && marshal.QI != "" { // TODO Only "d" is required, but if one of the others is present, they all must be.
 			d, err := base64urlTrailingPadding(marshal.D)
 			if err != nil {
 				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyRSA, err)
@@ -663,11 +671,18 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 				return JWK{}, fmt.Errorf(`failed to validate %s key: %w`, KtyRSA, err)
 			}
 			key = privateKey
-		} else if !options.UnmarshalAsymmetricPrivate {
+			marshalCopy.D = marshal.D
+			marshalCopy.P = marshal.P
+			marshalCopy.Q = marshal.Q
+			marshalCopy.DP = marshal.DP
+			marshalCopy.DQ = marshal.DQ
+			marshalCopy.QI = marshal.QI
+			marshalCopy.OTH = slices.Clone(marshal.OTH)
+		} else if !options.MarshalAsymmetricPrivate {
 			key = &publicKey
 		}
 	case KtyOct:
-		if options.UnmarshalSymmetric {
+		if options.MarshalSymmetric {
 			if marshal.K == "" {
 				return JWK{}, fmt.Errorf(`%w: %s requires parameter "k"`, ErrKeyUnmarshalParameter, KtyOct)
 			}
@@ -676,12 +691,14 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "k": %w`, KtyOct, err)
 			}
 			key = k
+			marshalCopy.K = marshal.K
 		} else {
 			return JWK{}, fmt.Errorf("%w: incorrect options to unmarshal symmetric key (%s)", ErrOptions, KtyOct)
 		}
 	default:
 		return JWK{}, fmt.Errorf("%w: %s", ErrUnsupportedKey, marshal.KTY)
 	}
+	marshalCopy.KTY = marshal.KTY
 	x5c := make([]*x509.Certificate, len(marshal.X5C))
 	for i, cert := range marshal.X5C {
 		raw, err := base64.StdEncoding.DecodeString(cert)
@@ -697,12 +714,20 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 		X5C: x5c,
 		X5U: marshal.X5U,
 	}
+	marshalCopy.X5C = slices.Clone(marshal.X5C)
+	marshalCopy.X5T = marshal.X5T
+	marshalCopy.X5TS256 = marshal.X5TS256
+	marshalCopy.X5U = marshal.X5U
 	metadata := JWKMetadataOptions{
 		ALG:    marshal.ALG,
 		KID:    marshal.KID,
 		KEYOPS: slices.Clone(marshal.KEYOPS),
 		USE:    marshal.USE,
 	}
+	marshalCopy.ALG = marshal.ALG
+	marshalCopy.KID = marshal.KID
+	marshalCopy.KEYOPS = slices.Clone(marshal.KEYOPS)
+	marshalCopy.USE = marshal.USE
 	opts := JWKOptions{
 		Metadata: metadata,
 		Marshal:  options,
@@ -711,7 +736,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 	}
 	j := JWK{
 		key:     key,
-		marshal: marshal,
+		marshal: marshalCopy,
 		options: opts,
 	}
 	return j, nil

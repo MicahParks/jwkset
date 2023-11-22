@@ -145,7 +145,7 @@ func TestUnmarshalECDSA(t *testing.T) {
 	jwk := newJWKFromMarshal(t, marshal, marshalOptions)
 	checkUnmarshal(jwk, marshalOptions, key)
 
-	marshalOptions.UnmarshalAsymmetricPrivate = true
+	marshalOptions.MarshalAsymmetricPrivate = true
 	jwk = newJWKFromMarshal(t, marshal, marshalOptions)
 	checkUnmarshal(jwk, marshalOptions, key)
 
