@@ -21,18 +21,19 @@ var (
 	hmacKey2 = []byte("hamc key 2")
 )
 
-type storageTestParams[CustomKeyMeta any] struct {
+type storageTestParams struct {
 	ctx    context.Context
 	cancel context.CancelFunc
-	jwks   jwkset.JWKSet[CustomKeyMeta]
+	jwks   jwkset.JWKSet
 }
 
 func TestMemoryDeleteKey(t *testing.T) {
-	params := setupMemory[any]()
+	params := setupMemory()
 	defer params.cancel()
 	store := params.jwks.Store
 
-	err := store.WriteKey(params.ctx, jwkset.NewKey[any](hmacKey1, kidWritten))
+	jwk := newStorageTestJWK(t, hmacKey1, kidWritten)
+	err := store.WriteKey(params.ctx, jwk)
 	if err != nil {
 		t.Fatalf("Failed to write key. %s", err)
 	}
@@ -55,11 +56,12 @@ func TestMemoryDeleteKey(t *testing.T) {
 }
 
 func TestMemoryReadKey(t *testing.T) {
-	params := setupMemory[any]()
+	params := setupMemory()
 	defer params.cancel()
 	store := params.jwks.Store
 
-	err := store.WriteKey(params.ctx, jwkset.NewKey[any](hmacKey1, kidWritten))
+	jwk := newStorageTestJWK(t, hmacKey1, kidWritten)
+	err := store.WriteKey(params.ctx, jwk)
 	if err != nil {
 		t.Fatalf("Failed to write key. %s", err)
 	}
@@ -74,11 +76,12 @@ func TestMemoryReadKey(t *testing.T) {
 		t.Fatalf("Failed to read written key. %s", err)
 	}
 
-	if !bytes.Equal(key.Key.([]byte), hmacKey1) {
+	if !bytes.Equal(key.Key().([]byte), hmacKey1) {
 		t.Fatalf("Read key does not match written key.")
 	}
 
-	err = store.WriteKey(params.ctx, jwkset.NewKey[any](hmacKey2, kidWritten))
+	jwk = newStorageTestJWK(t, hmacKey2, kidWritten)
+	err = store.WriteKey(params.ctx, jwk)
 	if err != nil {
 		t.Fatalf("Failed to overwrite key. %s", err)
 	}
@@ -88,7 +91,7 @@ func TestMemoryReadKey(t *testing.T) {
 		t.Fatalf("Failed to read written key. %s", err)
 	}
 
-	if !bytes.Equal(key.Key.([]byte), hmacKey2) {
+	if !bytes.Equal(key.Key().([]byte), hmacKey2) {
 		t.Fatalf("Read key does not match written key.")
 	}
 
@@ -104,16 +107,18 @@ func TestMemoryReadKey(t *testing.T) {
 }
 
 func TestMemorySnapshotKeys(t *testing.T) {
-	params := setupMemory[any]()
+	params := setupMemory()
 	defer params.cancel()
 	store := params.jwks.Store
 
-	err := store.WriteKey(params.ctx, jwkset.NewKey[any](hmacKey1, kidWritten))
+	jwk := newStorageTestJWK(t, hmacKey1, kidWritten)
+	err := store.WriteKey(params.ctx, jwk)
 	if err != nil {
 		t.Fatalf("Failed to write key 1. %s", err)
 	}
 
-	err = store.WriteKey(params.ctx, jwkset.NewKey[any](hmacKey2, kidWritten2))
+	jwk = newStorageTestJWK(t, hmacKey2, kidWritten2)
+	err = store.WriteKey(params.ctx, jwk)
 	if err != nil {
 		t.Fatalf("Failed to write key 2. %s", err)
 	}
@@ -129,14 +134,14 @@ func TestMemorySnapshotKeys(t *testing.T) {
 	kid1Found := false
 	kid2Found := false
 	for _, m := range meta {
-		if !kid1Found && m.KeyID == kidWritten {
+		if !kid1Found && m.Marshal().KID == kidWritten {
 			kid1Found = true
-			if !bytes.Equal(m.Key.([]byte), hmacKey1) {
+			if !bytes.Equal(m.Key().([]byte), hmacKey1) {
 				t.Fatalf("Snapshot key does not match written key.")
 			}
-		} else if !kid2Found && m.KeyID == kidWritten2 {
+		} else if !kid2Found && m.Marshal().KID == kidWritten2 {
 			kid2Found = true
-			if !bytes.Equal(m.Key.([]byte), hmacKey2) {
+			if !bytes.Equal(m.Key().([]byte), hmacKey2) {
 				t.Fatalf("Snapshot key does not match written key.")
 			}
 		} else {
@@ -146,28 +151,51 @@ func TestMemorySnapshotKeys(t *testing.T) {
 }
 
 func TestMemoryWriteKey(t *testing.T) {
-	params := setupMemory[any]()
+	params := setupMemory()
 	defer params.cancel()
 	store := params.jwks.Store
 
-	err := store.WriteKey(params.ctx, jwkset.NewKey[any](hmacKey1, kidWritten))
+	jwk := newStorageTestJWK(t, hmacKey1, kidWritten)
+	err := store.WriteKey(params.ctx, jwk)
 	if err != nil {
 		t.Fatalf("Failed to write key. %s", err)
 	}
 
-	err = store.WriteKey(params.ctx, jwkset.NewKey[any](hmacKey2, kidWritten))
+	jwk = newStorageTestJWK(t, hmacKey2, kidWritten)
+	err = store.WriteKey(params.ctx, jwk)
 	if err != nil {
 		t.Fatalf("Failed to overwrite key. %s", err)
 	}
 }
 
-func setupMemory[CustomKeyMeta any]() (params storageTestParams[CustomKeyMeta]) {
-	jwkSet := jwkset.NewMemory[CustomKeyMeta]()
+func setupMemory() (params storageTestParams) {
+	jwkSet := jwkset.NewMemory()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	params = storageTestParams[CustomKeyMeta]{
+	params = storageTestParams{
 		ctx:    ctx,
 		cancel: cancel,
 		jwks:   jwkSet,
 	}
 	return params
+}
+
+func newStorageTestJWK(t *testing.T, key any, keyID string) jwkset.JWK {
+	marshal := jwkset.JWKMarshalOptions{
+		MarshalAsymmetricPrivate:   true,
+		MarshalSymmetric:           true,
+		UnmarshalAsymmetricPrivate: true,
+		UnmarshalSymmetric:         true,
+	}
+	metadata := jwkset.JWKMetadataOptions{
+		KID: keyID,
+	}
+	options := jwkset.JWKOptions{
+		Marshal:  marshal,
+		Metadata: metadata,
+	}
+	jwk, err := jwkset.NewJWKFromKey(key, options)
+	if err != nil {
+		t.Fatalf("Failed to create JWK. %s", err)
+	}
+	return jwk
 }

@@ -46,8 +46,8 @@ func main() {
 		)
 		return
 	}
-	j := jwkset.NewMemory[any]()
-	meta := jwkset.KeyWithMeta[any]{
+	j := jwkset.NewMemory()
+	meta := jwkset.KeyWithMeta{
 		ALG:     "",
 		Custom:  nil,
 		Key:     pub[0].PublicKey,

@@ -2,9 +2,7 @@ package jwkset_test
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -27,10 +25,7 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to parse EC private key. %s", err)
 	}
 	const eID = "myECKey"
-	err = jwks.Store.WriteKey(ctx, jwkset.NewKey[any](eKey.(*ecdsa.PrivateKey), eID))
-	if err != nil {
-		t.Fatalf("Failed to write EC key. %s", err)
-	}
+	writeKey(ctx, t, jwks, eKey, eID)
 
 	edPriv, err := base64.RawURLEncoding.DecodeString(edPrivateKey)
 	if err != nil {
@@ -42,10 +37,7 @@ func TestJSON(t *testing.T) {
 	}
 	ed := ed25519.PrivateKey(append(edPriv, edPub...))
 	const edID = "myEdDSAKey"
-	err = jwks.Store.WriteKey(ctx, jwkset.NewKey[any](ed, edID))
-	if err != nil {
-		t.Fatalf("Failed to write EdDSA key. %s", err)
-	}
+	writeKey(ctx, t, jwks, ed, edID)
 
 	block, _ = pem.Decode([]byte(rsaPrivateKey))
 	rKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
@@ -53,20 +45,11 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to parse RSA private key. %s", err)
 	}
 	const rID = "myRSAKey"
-	err = jwks.Store.WriteKey(ctx, jwkset.NewKey[any](rKey.(*rsa.PrivateKey), rID))
-	if err != nil {
-		t.Fatalf("Failed to write RSA key. %s", err)
-	}
+	writeKey(ctx, t, jwks, rKey, rID)
 
 	hKey := []byte(hmacSecret)
 	const hID = "myHMACKey"
-	err = jwks.Store.WriteKey(ctx, jwkset.KeyWithMeta[any]{
-		Key:   hKey,
-		KeyID: hID,
-	})
-	if err != nil {
-		t.Fatalf("Failed to write HMAC key. %s", err)
-	}
+	writeKey(ctx, t, jwks, hKey, hID)
 
 	jsonRepresentation, err := jwks.JSONPublic(ctx)
 	if err != nil {
@@ -156,6 +139,23 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 				t.Fatalf("Attribute %s does not match.\n  Actual: %q\n  Expected: %q", attribute, actualAttr, expectedAttr)
 			}
 		}
+	}
+}
+
+func writeKey(ctx context.Context, t *testing.T, jwks jwkset.JWKSet, key any, keyID string) {
+	metadata := jwkset.JWKMetadataOptions{
+		KID: keyID,
+	}
+	options := jwkset.JWKOptions{
+		Metadata: metadata,
+	}
+	jwk, err := jwkset.NewJWKFromKey(key, options)
+	if err != nil {
+		t.Fatalf("Failed to create JWK from key ID %q. %s", keyID, err)
+	}
+	err = jwks.Store.WriteKey(ctx, jwk)
+	if err != nil {
+		t.Fatalf("Failed to write key ID %q. %s", keyID, err)
 	}
 }
 
