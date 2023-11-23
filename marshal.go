@@ -118,6 +118,14 @@ func NewJWKFromKey(key any, options JWKOptions) (JWK, error) {
 	if err != nil {
 		return JWK{}, fmt.Errorf("failed to marshal JSON Web Key: %w", err)
 	}
+	switch key.(type) {
+	case ed25519.PrivateKey, ed25519.PublicKey:
+		if options.Metadata.ALG == "" {
+			options.Metadata.ALG = AlgEdDSA
+		} else if options.Metadata.ALG != AlgEdDSA {
+			return JWK{}, fmt.Errorf("%w: invalid ALG for Ed25519 key: %q", ErrOptions, options.Metadata.ALG)
+		}
+	}
 	j := JWK{
 		key:     key,
 		marshal: marshal,
@@ -421,6 +429,7 @@ type JWKSMarshal struct {
 
 func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 	m := JWKMarshal{}
+	m.ALG = options.Metadata.ALG
 	switch key := key.(type) {
 	case *ecdsa.PrivateKey:
 		pub := key.PublicKey
@@ -496,7 +505,6 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 			m.X5TS256 = base64.RawURLEncoding.EncodeToString(h256[:])
 		}
 	}
-	m.ALG = options.Metadata.ALG
 	m.KID = options.Metadata.KID
 	m.KEYOPS = options.Metadata.KEYOPS
 	m.USE = options.Metadata.USE

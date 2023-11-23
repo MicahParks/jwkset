@@ -143,10 +143,15 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 }
 
 func writeKey(ctx context.Context, t *testing.T, jwks jwkset.JWKSet, key any, keyID string) {
+	marshal := jwkset.JWKMarshalOptions{
+		MarshalAsymmetricPrivate: true,
+		MarshalSymmetric:         true,
+	}
 	metadata := jwkset.JWKMetadataOptions{
 		KID: keyID,
 	}
 	options := jwkset.JWKOptions{
+		Marshal:  marshal,
 		Metadata: metadata,
 	}
 	jwk, err := jwkset.NewJWKFromKey(key, options)

@@ -38,17 +38,17 @@ const (
 	AlgA192GCM          ALG = "A192GCM"
 	AlgA256GCM          ALG = "A256GCM"
 	AlgEdDSA            ALG = "EdDSA"
-	// AlgRS1              ALG = "RS1" // Prohibited.
-	AlgRSAOAEP384 ALG = "RSA-OAEP-384"
-	AlgRSAOAEP512 ALG = "RSA-OAEP-512"
-	// AlgA128CBC          ALG = "A128CBC" // Prohibited.
-	// AlgA192CBC          ALG = "A192CBC" // Prohibited.
-	// AlgA256CBC          ALG = "A256CBC" // Prohibited.
-	// AlgA128CTR          ALG = "A128CTR" // Prohibited.
-	// AlgA192CTR          ALG = "A192CTR" // Prohibited.
-	// AlgA256CTR          ALG = "A256CTR" // Prohibited.
-	// AlgHS1              ALG = "HS1"     // Prohibited.
-	AlgES256K ALG = "ES256K"
+	AlgRS1              ALG = "RS1" // Prohibited.
+	AlgRSAOAEP384       ALG = "RSA-OAEP-384"
+	AlgRSAOAEP512       ALG = "RSA-OAEP-512"
+	AlgA128CBC          ALG = "A128CBC" // Prohibited.
+	AlgA192CBC          ALG = "A192CBC" // Prohibited.
+	AlgA256CBC          ALG = "A256CBC" // Prohibited.
+	AlgA128CTR          ALG = "A128CTR" // Prohibited.
+	AlgA192CTR          ALG = "A192CTR" // Prohibited.
+	AlgA256CTR          ALG = "A256CTR" // Prohibited.
+	AlgHS1              ALG = "HS1"     // Prohibited.
+	AlgES256K           ALG = "ES256K"
 
 	// KeyOpsSign is a key operation for signing.
 	KeyOpsSign = "sign"
@@ -110,6 +110,8 @@ func (alg ALG) valid() bool {
 		AlgPBES2HS256A128KW, AlgPBES2HS384A192KW, AlgPBES2HS512A256KW, AlgA128CBCHS256, AlgA192CBCHS384,
 		AlgA256CBCHS512, AlgA128GCM, AlgA192GCM, AlgA256GCM, AlgEdDSA, AlgRSAOAEP384, AlgRSAOAEP512, AlgES256K, "":
 		return true
+	case AlgRS1, AlgA128CBC, AlgA192CBC, AlgA256CBC, AlgA128CTR, AlgA192CTR, AlgA256CTR, AlgHS1:
+		return false // These algorithms are prohibited.
 	}
 	return false
 }

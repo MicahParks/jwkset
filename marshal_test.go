@@ -1,6 +1,7 @@
 package jwkset_test
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -200,201 +201,192 @@ func TestUnmarshalECDSA(t *testing.T) {
 	marshal.Y = ecdsaP521Y
 }
 
-// func TestMarshalEdDSA(t *testing.T) {
-// 	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.JWKOptions) {
-// 		if marshal.ALG != jwkset.AlgEdDSA {
-// 			t.Fatal(`Marshaled key parameter "alg" does not match original key.`)
-// 		}
-// 		if marshal.CRV != jwkset.CrvEd25519 {
-// 			t.Fatal(`Marshaled key parameter "crv" does not match original key.`)
-// 		}
-// 		if options.AsymmetricPrivate {
-// 			if marshal.D != eddsaPrivate {
-// 				t.Fatal(`Marshaled key parameter "d" does not match original key.`)
-// 			}
-// 		} else {
-// 			if marshal.D != "" {
-// 				t.Fatalf("Asymmetric private key should be unsupported for given options.")
-// 			}
-// 		}
-// 		if marshal.KTY != jwkset.KtyOKP {
-// 			t.Fatal(`Marshaled key parameter "kty" does not match original key.`)
-// 		}
-// 		if marshal.X != eddsaPublic {
-// 			t.Fatal(`Marshaled key parameter "x" does not match original key.`)
-// 		}
-// 	}
-// 	private := makeEdDSA(t)
-//
-// 	meta := jwkset.KeyWithMeta{
-// 		Key: private,
-// 	}
-//
-// 	options := jwkset.JWKOptions{}
-// 	marshal, err := jwkset.KeyMarshal(meta, options)
-// 	if err != nil {
-// 		t.Fatalf("Failed to marshal key with correct options. %s", err)
-// 	}
-// 	checkMarshal(marshal, options)
-//
-// 	options.AsymmetricPrivate = true
-// 	marshal, err = jwkset.KeyMarshal(meta, options)
-// 	if err != nil {
-// 		t.Fatalf("Failed to marshal key with correct options. %s", err)
-// 	}
-// 	checkMarshal(marshal, options)
-//
-// 	publicMeta := jwkset.KeyWithMeta{
-// 		Key: private.Public(),
-// 	}
-// 	options.AsymmetricPrivate = false
-// 	marshal, err = jwkset.KeyMarshal(publicMeta, options)
-// 	if err != nil {
-// 		t.Fatalf("Failed to marshal key with correct options. %s", err)
-// 	}
-// 	checkMarshal(marshal, options)
-// }
-//
-// func TestUnmarshalEdDSA(t *testing.T) {
-// 	private := makeEdDSA(t)
-//
-// 	jwk := jwkset.JWKMarshal{
-// 		ALG: jwkset.AlgEdDSA,
-// 		CRV: jwkset.CrvEd25519,
-// 		D:   eddsaPrivate,
-// 		KID: myKeyID,
-// 		KTY: jwkset.KtyOKP,
-// 		X:   eddsaPublic,
-// 	}
-//
-// 	options := jwkset.JWKMarshalOptions{}
-// 	meta, err := jwkset.KeyUnmarshal(jwk, options)
-// 	if err != nil {
-// 		t.Fatalf("Failed to unmarshal key with correct options. %s", err)
-// 	}
-// 	switch meta.Key.(type) {
-// 	case ed25519.PublicKey:
-// 		// Do nothing.
-// 	default:
-// 		t.Fatal("Key type should be public key.")
-// 	}
-//
-// 	options.AsymmetricPrivate = true
-// 	meta, err = jwkset.KeyUnmarshal(jwk, options)
-// 	if err != nil {
-// 		t.Fatalf("Failed to unmarshal key with correct options. %s", err)
-// 	}
-// 	if !bytes.Equal(private, meta.Key.(ed25519.PrivateKey)) {
-// 		t.Fatalf("Unmarshaled key does not match original key.")
-// 	}
-// 	if meta.KeyID != myKeyID {
-// 		t.Fatalf("Unmarshaled key ID does not match original key ID.")
-// 	}
-//
-// 	jwk.D = invalidB64URL
-// 	_, err = jwkset.KeyUnmarshal(jwk, options)
-// 	if err == nil {
-// 		t.Fatalf(`Should get error when parameter "d" is invalid raw Base64URL. %s`, err)
-// 	}
-//
-// 	jwk.X = ""
-// 	_, err = jwkset.KeyUnmarshal(jwk, options)
-// 	if !errors.Is(err, jwkset.ErrKeyUnmarshalParameter) {
-// 		t.Fatalf(`Should get ErrKeyUnmarshalParameter when parameter "x" is empty. %s`, err)
-// 	}
-//
-// 	jwk.X = invalidB64URL
-// 	_, err = jwkset.KeyUnmarshal(jwk, options)
-// 	if err == nil {
-// 		t.Fatalf(`Should get error when parameter "x" is invalid raw Base64URL. %s`, err)
-// 	}
-//
-// 	jwk.CRV = ""
-// 	_, err = jwkset.KeyUnmarshal(jwk, options)
-// 	if !errors.Is(err, jwkset.ErrKeyUnmarshalParameter) {
-// 		t.Fatalf(`Should get ErrKeyUnmarshalParameter when parameter "crv" is empty. %s`, err)
-// 	}
-// 	jwk.CRV = jwkset.CrvEd25519
-//
-// 	invalidSize := base64.RawURLEncoding.EncodeToString([]byte("invalidSize"))
-// 	jwk.X = invalidSize
-// 	jwk.D = eddsaPrivate
-// 	_, err = jwkset.KeyUnmarshal(jwk, options)
-// 	if !errors.Is(err, jwkset.ErrKeyUnmarshalParameter) {
-// 		t.Fatalf(`Should get ErrKeyUnmarshalParameter when parameter "x" is invalid size. %s`, err)
-// 	}
-// 	jwk.X = eddsaPublic
-//
-// 	jwk.D = invalidSize
-// 	_, err = jwkset.KeyUnmarshal(jwk, options)
-// 	if !errors.Is(err, jwkset.ErrKeyUnmarshalParameter) {
-// 		t.Fatalf(`Should get ErrKeyUnmarshalParameter when parameter "d" is invalid size. %s`, err)
-// 	}
-// }
-//
-// func TestMarshalOct(t *testing.T) {
-// 	meta := jwkset.KeyWithMeta{
-// 		Key: []byte(hmacSecret),
-// 	}
-//
-// 	options := jwkset.JWKOptions{}
-// 	_, err := jwkset.KeyMarshal(meta, options)
-// 	if !errors.Is(err, jwkset.ErrUnsupportedKey) {
-// 		t.Fatalf("Symmetric key should be unsupported for given options. %s", err)
-// 	}
-//
-// 	options.Symmetric = true
-// 	marshal, err := jwkset.KeyMarshal(meta, options)
-// 	if err != nil {
-// 		t.Fatalf("Failed to marshal key with correct options. %s", err)
-// 	}
-//
-// 	if marshal.K != base64.RawURLEncoding.EncodeToString(meta.Key.([]byte)) {
-// 		t.Fatalf("Unmarshaled key does not match original key.")
-// 	}
-// 	if marshal.KTY != jwkset.KtyOct {
-// 		t.Fatalf("Key type does not match original key.")
-// 	}
-// }
-//
-// func TestUnmarshalOct(t *testing.T) {
-// 	jwk := jwkset.JWKMarshal{
-// 		K:   base64.RawURLEncoding.EncodeToString([]byte(hmacSecret)),
-// 		KID: myKeyID,
-// 		KTY: jwkset.KtyOct,
-// 	}
-//
-// 	options := jwkset.JWKMarshalOptions{}
-// 	meta, err := jwkset.KeyUnmarshal(jwk, options)
-// 	if !errors.Is(err, jwkset.ErrUnsupportedKey) {
-// 		t.Fatalf("Symmetric key should be unsupported for given options. %s", err)
-// 	}
-//
-// 	options.Symmetric = true
-// 	meta, err = jwkset.KeyUnmarshal(jwk, options)
-// 	if err != nil {
-// 		t.Fatalf("Failed to unmarshal key with correct options. %s", err)
-// 	}
-// 	if !bytes.Equal([]byte(hmacSecret), meta.Key.([]byte)) {
-// 		t.Fatalf("Unmarshaled key does not match original key.")
-// 	}
-// 	if meta.KeyID != myKeyID {
-// 		t.Fatalf("Unmarshaled key ID does not match original key ID.")
-// 	}
-//
-// 	jwk.K = ""
-// 	_, err = jwkset.KeyUnmarshal(jwk, options)
-// 	if !errors.Is(err, jwkset.ErrKeyUnmarshalParameter) {
-// 		t.Fatalf(`Should get ErrKeyUnmarshalParameter when parameter "k" is empty. %s`, err)
-// 	}
-//
-// 	jwk.K = invalidB64URL
-// 	_, err = jwkset.KeyUnmarshal(jwk, options)
-// 	if err == nil {
-// 		t.Fatalf(`Should get error when parameter "k" is invalid raw Base64URL. %s`, err)
-// 	}
-// }
-//
+func TestMarshalEdDSA(t *testing.T) {
+	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.JWKOptions) {
+		if marshal.ALG != jwkset.AlgEdDSA {
+			t.Fatal(`Marshaled key parameter "alg" does not match original key.`)
+		}
+		if marshal.CRV != jwkset.CrvEd25519 {
+			t.Fatal(`Marshaled key parameter "crv" does not match original key.`)
+		}
+		if options.Marshal.MarshalAsymmetricPrivate {
+			if marshal.D != eddsaPrivate {
+				t.Fatal(`Marshaled key parameter "d" does not match original key.`)
+			}
+		} else {
+			if marshal.D != "" {
+				t.Fatalf("Asymmetric private key should be unsupported for given options.")
+			}
+		}
+		if marshal.KTY != jwkset.KtyOKP {
+			t.Fatal(`Marshaled key parameter "kty" does not match original key.`)
+		}
+		if marshal.X != eddsaPublic {
+			t.Fatal(`Marshaled key parameter "x" does not match original key.`)
+		}
+	}
+	private := makeEdDSA(t)
+
+	options := jwkset.JWKOptions{}
+	jwk, err := jwkset.NewJWKFromKey(private, options)
+	if err != nil {
+		t.Fatalf("Failed to marshal key with correct options. %s", err)
+	}
+	checkMarshal(jwk.Marshal(), options)
+
+	options.Marshal.MarshalAsymmetricPrivate = true
+	jwk, err = jwkset.NewJWKFromKey(private, options)
+	if err != nil {
+		t.Fatalf("Failed to marshal key with correct options. %s", err)
+
+	}
+	checkMarshal(jwk.Marshal(), options)
+
+	options.Marshal.MarshalAsymmetricPrivate = false
+	jwk, err = jwkset.NewJWKFromKey(private.Public(), options)
+	if err != nil {
+		t.Fatalf("Failed to marshal key with correct options. %s", err)
+	}
+	checkMarshal(jwk.Marshal(), options)
+}
+
+func TestUnmarshalEdDSA(t *testing.T) {
+	private := makeEdDSA(t)
+
+	marshal := jwkset.JWKMarshal{
+		ALG: jwkset.AlgEdDSA,
+		CRV: jwkset.CrvEd25519,
+		D:   eddsaPrivate,
+		KID: myKeyID,
+		KTY: jwkset.KtyOKP,
+		X:   eddsaPublic,
+	}
+
+	marshalOptions := jwkset.JWKMarshalOptions{}
+	jwk, err := jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to unmarshal key with correct options. %s", err)
+	}
+	switch jwk.Key().(type) {
+	case ed25519.PublicKey:
+		// Do nothing.
+	default:
+		t.Fatal("Key type should be public key.")
+	}
+
+	marshalOptions.MarshalAsymmetricPrivate = true
+	jwk, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to unmarshal key with correct options. %s", err)
+	}
+	if !bytes.Equal(private, jwk.Key().(ed25519.PrivateKey)) {
+		t.Fatalf("Unmarshaled key does not match original key.")
+	}
+	if jwk.Marshal().KID != myKeyID {
+		t.Fatalf("Unmarshaled key ID does not match original key ID.")
+	}
+
+	marshal.D = invalidB64URL
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
+	if err == nil {
+		t.Fatalf(`Should get error when parameter "d" is invalid raw Base64URL. %s`, err)
+	}
+
+	marshal.X = ""
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
+	if !errors.Is(err, jwkset.ErrKeyUnmarshalParameter) {
+		t.Fatalf(`Should get ErrKeyUnmarshalParameter when parameter "x" is empty. %s`, err)
+	}
+
+	marshal.X = invalidB64URL
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
+	if err == nil {
+		t.Fatalf(`Should get error when parameter "x" is invalid raw Base64URL. %s`, err)
+	}
+
+	marshal.CRV = ""
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
+	if !errors.Is(err, jwkset.ErrKeyUnmarshalParameter) {
+		t.Fatalf(`Should get ErrKeyUnmarshalParameter when parameter "crv" is empty. %s`, err)
+	}
+	marshal.CRV = jwkset.CrvEd25519
+
+	invalidSize := base64.RawURLEncoding.EncodeToString([]byte("invalidSize"))
+	marshal.X = invalidSize
+	marshal.D = eddsaPrivate
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
+	if !errors.Is(err, jwkset.ErrKeyUnmarshalParameter) {
+		t.Fatalf(`Should get ErrKeyUnmarshalParameter when parameter "x" is invalid size. %s`, err)
+	}
+	marshal.X = eddsaPublic
+
+	marshal.D = invalidSize
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
+	if !errors.Is(err, jwkset.ErrKeyUnmarshalParameter) {
+		t.Fatalf(`Should get ErrKeyUnmarshalParameter when parameter "d" is invalid size. %s`, err)
+	}
+}
+
+func TestMarshalOct(t *testing.T) {
+	key := []byte(hmacSecret)
+	options := jwkset.JWKOptions{}
+	_, err := jwkset.NewJWKFromKey(key, options)
+	if !errors.Is(err, jwkset.ErrOptions) {
+		t.Fatalf("Symmetric key should be unsupported for given options. %s", err)
+	}
+
+	options.Marshal.MarshalSymmetric = true
+	jwk, err := jwkset.NewJWKFromKey(key, options)
+	if err != nil {
+		t.Fatalf("Failed to marshal key with correct options. %s", err)
+	}
+
+	if jwk.Marshal().K != base64.RawURLEncoding.EncodeToString(jwk.Key().([]byte)) {
+		t.Fatalf("Unmarshaled key does not match original key.")
+	}
+	if jwk.Marshal().KTY != jwkset.KtyOct {
+		t.Fatalf("Key type does not match original key.")
+	}
+}
+
+func TestUnmarshalOct(t *testing.T) {
+	marshal := jwkset.JWKMarshal{
+		K:   base64.RawURLEncoding.EncodeToString([]byte(hmacSecret)),
+		KID: myKeyID,
+		KTY: jwkset.KtyOct,
+	}
+
+	options := jwkset.JWKMarshalOptions{}
+	jwk, err := jwkset.NewJWKFromMarshal(marshal, options, jwkset.JWKValidateOptions{})
+	if !errors.Is(err, jwkset.ErrOptions) {
+		t.Fatalf("Symmetric key should be unsupported for given options. %s", err)
+	}
+
+	options.MarshalSymmetric = true
+	jwk, err = jwkset.NewJWKFromMarshal(marshal, options, jwkset.JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to unmarshal key with correct options. %s", err)
+	}
+	if !bytes.Equal([]byte(hmacSecret), jwk.Key().([]byte)) {
+		t.Fatalf("Unmarshaled key does not match original key.")
+	}
+	if jwk.Marshal().KID != myKeyID {
+		t.Fatalf("Unmarshaled key ID does not match original key ID.")
+	}
+
+	marshal.K = ""
+	_, err = jwkset.NewJWKFromMarshal(marshal, options, jwkset.JWKValidateOptions{})
+	if !errors.Is(err, jwkset.ErrKeyUnmarshalParameter) {
+		t.Fatalf(`Should get ErrKeyUnmarshalParameter when parameter "k" is empty. %s`, err)
+	}
+
+	marshal.K = invalidB64URL
+	_, err = jwkset.NewJWKFromMarshal(marshal, options, jwkset.JWKValidateOptions{})
+	if err == nil {
+		t.Fatalf(`Should get error when parameter "k" is invalid raw Base64URL. %s`, err)
+	}
+}
+
 // func TestMarshalRSA(t *testing.T) {
 // 	private := makeRSA(t)
 // 	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.JWKOptions) {
