@@ -151,8 +151,8 @@ func main() {
 
 func newKeyDefaultOptions(key any, keyID string) (jwkset.JWK, error) {
 	marshal := jwkset.JWKMarshalOptions{
-		MarshalAsymmetricPrivate: true,
-		MarshalSymmetric:         true,
+		AsymmetricPrivate: true,
+		Symmetric:         true,
 	}
 	metadata := jwkset.JWKMetadataOptions{
 		KID: keyID,

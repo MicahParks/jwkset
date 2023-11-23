@@ -47,12 +47,11 @@ type JWK struct {
 
 // JWKMarshalOptions are used to specify options for JSON marshaling a JWK.
 type JWKMarshalOptions struct {
-	// MarshalAsymmetricPrivate is used to indicate that the JWK's asymmetric private key should be JSON marshaled and
+	// AsymmetricPrivate is used to indicate that the JWK's asymmetric private key should be JSON marshaled and
 	// unmarshalled.
-	MarshalAsymmetricPrivate bool
-	// MarshalSymmetric is used to indicate that the JWK's symmetric (private) key should be JSON marshaled and
-	// unmarshalled.
-	MarshalSymmetric bool
+	AsymmetricPrivate bool
+	// Symmetric is used to indicate that the JWK's symmetric (private) key should be JSON marshaled and unmarshalled.
+	Symmetric bool
 }
 
 // JWKX509Options holds the X.509 certificate information for a JWK. This data structure is not used for JSON marshaling.
@@ -437,7 +436,7 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 		m.X = bigIntToBase64RawURL(pub.X)
 		m.Y = bigIntToBase64RawURL(pub.Y)
 		m.KTY = KtyEC
-		if options.Marshal.MarshalAsymmetricPrivate {
+		if options.Marshal.AsymmetricPrivate {
 			m.D = bigIntToBase64RawURL(key.D)
 		}
 	case *ecdsa.PublicKey:
@@ -451,7 +450,7 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 		m.CRV = CrvEd25519
 		m.X = base64.RawURLEncoding.EncodeToString(pub)
 		m.KTY = KtyOKP
-		if options.Marshal.MarshalAsymmetricPrivate {
+		if options.Marshal.AsymmetricPrivate {
 			m.D = base64.RawURLEncoding.EncodeToString(key[:32])
 		}
 	case ed25519.PublicKey:
@@ -464,7 +463,7 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 		m.E = bigIntToBase64RawURL(big.NewInt(int64(pub.E)))
 		m.N = bigIntToBase64RawURL(pub.N)
 		m.KTY = KtyRSA
-		if options.Marshal.MarshalAsymmetricPrivate {
+		if options.Marshal.AsymmetricPrivate {
 			m.D = bigIntToBase64RawURL(key.D)
 			m.P = bigIntToBase64RawURL(key.Primes[0])
 			m.Q = bigIntToBase64RawURL(key.Primes[1])
@@ -487,7 +486,7 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 		m.N = bigIntToBase64RawURL(key.N)
 		m.KTY = KtyRSA
 	case []byte:
-		if options.Marshal.MarshalSymmetric {
+		if options.Marshal.Symmetric {
 			m.KTY = KtyOct
 			m.K = base64.RawURLEncoding.EncodeToString(key)
 		} else {
@@ -545,7 +544,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 		marshalCopy.CRV = marshal.CRV
 		marshalCopy.X = marshal.X
 		marshalCopy.Y = marshal.Y
-		if options.MarshalAsymmetricPrivate && marshal.D != "" {
+		if options.AsymmetricPrivate && marshal.D != "" {
 			d, err := base64urlTrailingPadding(marshal.D)
 			if err != nil {
 				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyEC, err)
@@ -575,7 +574,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 		}
 		marshalCopy.CRV = marshal.CRV
 		marshalCopy.X = marshal.X
-		if options.MarshalAsymmetricPrivate && marshal.D != "" {
+		if options.AsymmetricPrivate && marshal.D != "" {
 			private, err := base64urlTrailingPadding(marshal.D)
 			if err != nil {
 				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyOKP, err)
@@ -607,7 +606,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 		}
 		marshalCopy.N = marshal.N
 		marshalCopy.E = marshal.E
-		if options.MarshalAsymmetricPrivate && marshal.D != "" && marshal.P != "" && marshal.Q != "" && marshal.DP != "" && marshal.DQ != "" && marshal.QI != "" { // TODO Only "d" is required, but if one of the others is present, they all must be.
+		if options.AsymmetricPrivate && marshal.D != "" && marshal.P != "" && marshal.Q != "" && marshal.DP != "" && marshal.DQ != "" && marshal.QI != "" { // TODO Only "d" is required, but if one of the others is present, they all must be.
 			d, err := base64urlTrailingPadding(marshal.D)
 			if err != nil {
 				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyRSA, err)
@@ -686,11 +685,11 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 			marshalCopy.DQ = marshal.DQ
 			marshalCopy.QI = marshal.QI
 			marshalCopy.OTH = slices.Clone(marshal.OTH)
-		} else if !options.MarshalAsymmetricPrivate {
+		} else if !options.AsymmetricPrivate {
 			key = &publicKey
 		}
 	case KtyOct:
-		if options.MarshalSymmetric {
+		if options.Symmetric {
 			if marshal.K == "" {
 				return JWK{}, fmt.Errorf(`%w: %s requires parameter "k"`, ErrKeyUnmarshalParameter, KtyOct)
 			}

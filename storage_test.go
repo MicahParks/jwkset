@@ -181,8 +181,8 @@ func setupMemory() (params storageTestParams) {
 
 func newStorageTestJWK(t *testing.T, key any, keyID string) jwkset.JWK {
 	marshal := jwkset.JWKMarshalOptions{
-		MarshalAsymmetricPrivate: true,
-		MarshalSymmetric:         true,
+		AsymmetricPrivate: true,
+		Symmetric:         true,
 	}
 	metadata := jwkset.JWKMetadataOptions{
 		KID: keyID,

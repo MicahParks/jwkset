@@ -32,8 +32,8 @@ func (j JWKSet) JSONPublic(ctx context.Context) (json.RawMessage, error) {
 // JSONPrivate creates the JSON representation of the JWKSet public and private key material.
 func (j JWKSet) JSONPrivate(ctx context.Context) (json.RawMessage, error) {
 	marshalOptions := JWKMarshalOptions{
-		MarshalAsymmetricPrivate: true,
-		MarshalSymmetric:         true,
+		AsymmetricPrivate: true,
+		Symmetric:         true,
 	}
 	return j.JSONWithOptions(ctx, marshalOptions, JWKValidateOptions{})
 }
