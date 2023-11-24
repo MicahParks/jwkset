@@ -1,11 +1,11 @@
 package jwkset
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 )
@@ -14,32 +14,32 @@ var (
 	ErrX509Infer = errors.New("failed to infer X509 key type")
 )
 
-func LoadECPrivate(pemBlock []byte) (priv *ecdsa.PrivateKey, err error) {
-	priv, err = x509.ParseECPrivateKey(pemBlock)
+func LoadECPrivate(pemBlock *pem.Block) (priv *ecdsa.PrivateKey, err error) {
+	priv, err = x509.ParseECPrivateKey(pemBlock.Bytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse EC private key: %w", err)
 	}
 	return priv, nil
 }
 
-func LoadPKCS1Public(pemBlock []byte) (pub *rsa.PublicKey, err error) {
-	pub, err = x509.ParsePKCS1PublicKey(pemBlock)
+func LoadPKCS1Public(pemBlock *pem.Block) (pub *rsa.PublicKey, err error) {
+	pub, err = x509.ParsePKCS1PublicKey(pemBlock.Bytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse PKCS1 public key: %w", err)
 	}
 	return pub, nil
 }
 
-func LoadPKCS1Private(pemBlock []byte) (priv *rsa.PrivateKey, err error) {
-	priv, err = x509.ParsePKCS1PrivateKey(pemBlock)
+func LoadPKCS1Private(pemBlock *pem.Block) (priv *rsa.PrivateKey, err error) {
+	priv, err = x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse PKCS1 private key: %w", err)
 	}
 	return priv, nil
 }
 
-func LoadPKCS8Private(pemBlock []byte) (priv any, err error) {
-	priv, err = x509.ParsePKCS8PrivateKey(pemBlock)
+func LoadPKCS8Private(pemBlock *pem.Block) (priv any, err error) {
+	priv, err = x509.ParsePKCS8PrivateKey(pemBlock.Bytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse PKCS8 private key: %w", err)
 	}
@@ -51,8 +51,8 @@ func LoadPKCS8Private(pemBlock []byte) (priv any, err error) {
 	return priv, nil
 }
 
-func LoadPKIXPublic(pemBlock []byte) (pub any, err error) {
-	pub, err = x509.ParsePKIXPublicKey(pemBlock)
+func LoadPKIXPublic(pemBlock *pem.Block) (pub any, err error) {
+	pub, err = x509.ParsePKIXPublicKey(pemBlock.Bytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse PKIX public key: %w", err)
 	}
@@ -64,8 +64,20 @@ func LoadPKIXPublic(pemBlock []byte) (pub any, err error) {
 	return pub, nil
 }
 
-func LoadCertificates(pemBlock []byte) ([]*x509.Certificate, error) {
-	certs, err := x509.ParseCertificates(pemBlock)
+func LoadCertificates(rawX509 []byte) ([]*x509.Certificate, error) {
+	var b []byte
+	for {
+		var block *pem.Block
+		block, rest := pem.Decode(rawX509)
+		if block == nil {
+			break
+		}
+		rawX509 = rest
+		if block.Type == "CERTIFICATE" {
+			b = append(b, block.Bytes...)
+		}
+	}
+	certs, err := x509.ParseCertificates(b)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse certificates: %w", err)
 	}
@@ -79,17 +91,17 @@ func LoadCertificates(pemBlock []byte) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-func LoadX509KeyInfer(pemBlock []byte) (key any, err error) {
-	switch {
-	case bytes.Contains(pemBlock, []byte("EC PRIVATE KEY")):
+func LoadX509KeyInfer(pemBlock *pem.Block) (key any, err error) { // TODO With won't work with PEM encoding.
+	switch pemBlock.Type {
+	case "EC PRIVATE KEY":
 		key, err = LoadECPrivate(pemBlock)
-	case bytes.Contains(pemBlock, []byte("RSA PRIVATE KEY")):
+	case "RSA PRIVATE KEY":
 		key, err = LoadPKCS1Private(pemBlock)
-	case bytes.Contains(pemBlock, []byte("RSA PUBLIC KEY")):
+	case "RSA PUBLIC KEY":
 		key, err = LoadPKCS1Public(pemBlock)
-	case bytes.Contains(pemBlock, []byte("PRIVATE KEY")):
+	case "PRIVATE KEY":
 		key, err = LoadPKCS8Private(pemBlock)
-	case bytes.Contains(pemBlock, []byte("PUBLIC KEY")):
+	case "PUBLIC KEY":
 		key, err = LoadPKIXPublic(pemBlock)
 	default:
 		return nil, ErrX509Infer

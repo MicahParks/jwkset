@@ -1,13 +1,26 @@
 package jwkset_test
 
 import (
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
 	"testing"
 
 	"github.com/MicahParks/jwkset"
 )
 
-func TestLoadECPrivate(t *testing.T) {
-	jwkset.LoadECPrivate()
+func TestLoadCertificates(t *testing.T) {
+	b := append(append([]byte(ec521Cert), []byte(ed25519Cert)...), []byte(rsa4096Cert)...)
+	certs, err := jwkset.LoadCertificates(b)
+	if err != nil {
+		t.Fatal("Failed to load certificates:", err)
+	}
+	if len(certs) != 3 {
+		t.Fatal("Wrong number of certificates loaded:", len(certs))
+	}
+	_ = certs[0].PublicKey.(*ecdsa.PublicKey)
+	_ = certs[1].PublicKey.(ed25519.PublicKey)
+	_ = certs[2].PublicKey.(*rsa.PublicKey)
 }
 
 const (
@@ -28,8 +41,7 @@ SDAPBgNVHRMBAf8EBTADAQH/MAoGCCqGSM49BAMCA4GMADCBiAJCARNYjIrrRbub
 jF2D/I0Auw7sFQMvV3ImKp+L42kYpoFMXvnmKcuDt6n/OZCDAWpky/Uj/gLbvR2M
 fsCNJ+9mbi+4AkIBB0L6Ue7Mxl5cNGprGKSy5c0mlXWezB3GhUKxNrOMUo3+Lt3G
 slfqg3TSRlKC1YH863YkRGsE0XWwt9Myj2N6cVI=
------END CERTIFICATE-----
-`
+-----END CERTIFICATE-----`
 	ec521Priv = `
 -----BEGIN PRIVATE KEY-----
 MIHuAgEAMBAGByqGSM49AgEGBSuBBAAjBIHWMIHTAgEBBEIBK1phZlyXggGSevAh
@@ -38,16 +50,14 @@ DvW6mOehgYkDgYYABAG1bYX4w+09w363li1hyrx2W5UGKZwndzBNP8equWzSIfOk
 9UA0AVEaqG9mc5vivPtuHdtGpKbNE1dP2VEmGDTuAgDyfaPztWDmvYU3CVF8Pl4w
 03eD6jrYdSwH2wF+kyIa8umGC/KDsy25vuh/h4E2mEdMG+HcZT5L1MQe9M0/clrR
 pQ==
------END PRIVATE KEY-----
-`
+-----END PRIVATE KEY-----`
 	ec521Pub = `
 -----BEGIN PUBLIC KEY-----
 MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQBtW2F+MPtPcN+t5YtYcq8dluVBimc
 J3cwTT/Hqrls0iHzpPVANAFRGqhvZnOb4rz7bh3bRqSmzRNXT9lRJhg07gIA8n2j
 87Vg5r2FNwlRfD5eMNN3g+o62HUsB9sBfpMiGvLphgvyg7Mtub7of4eBNphHTBvh
 3GU+S9TEHvTNP3Ja0aU=
------END PUBLIC KEY-----
-`
+-----END PUBLIC KEY-----`
 	ed25519Cert = `
 -----BEGIN CERTIFICATE-----
 MIIB8TCCAaOgAwIBAgIUV1qgafWZ5a/PVYZiwTZIyCfiF6gwBQYDK2VwMG4xCzAJ
@@ -61,18 +71,15 @@ dt4PAu7oo1MwUTAdBgNVHQ4EFgQUoblrsByGUQ2+Ttthwnm/Vwe+yB8wHwYDVR0j
 BBgwFoAUoblrsByGUQ2+Ttthwnm/Vwe+yB8wDwYDVR0TAQH/BAUwAwEB/zAFBgMr
 ZXADQQB89PtKOOmgALNTe14oSxMEeFXxGgns7ZiTsuQ+nRtlvkkCJVJKDEJxBXnZ
 RqPHwMhPvj2Jw4lYx85CSr47R7cM
------END CERTIFICATE-----
-`
+-----END CERTIFICATE-----`
 	ed25519Priv = `
 -----BEGIN PRIVATE KEY-----
 MC4CAQAwBQYDK2VwBCIEIOC6YxHKyd+kPJo6N0lpdiGQLrre5P5W1GKDPwMN0Hxj
------END PRIVATE KEY-----
-`
+-----END PRIVATE KEY-----`
 	ed25519Pub = `
 -----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAV12dT8/uFZQfN2WNxdOx8o3lB991hKKSpSh23g8C7ug=
------END PUBLIC KEY-----
-`
+-----END PUBLIC KEY-----`
 	rsa4096Cert = `
 -----BEGIN CERTIFICATE-----
 MIIFvTCCA6WgAwIBAgIUZNBtI415mo2zhbfEo3i9YeSocy8wDQYJKoZIhvcNAQEL
@@ -106,8 +113,7 @@ YckvHj/LGWRyTzb00CWQMvmRZmUsVEThSThY+aTlcRiXu6OATMYii/w/hv+7sVwr
 NcMXVckh2/bpHjlZM03LJoabhDp+6c16U+NvOxoVsaPT7y4avoGZZ/IU30i3QpDf
 qx5NKPcC4HDK28Daw6zBdO+fkodKFcgsL4jUqP+Q6QCWBH88PlmlXx80XoPQu++W
 VhA/xoU82uODjoUbY6FzMW49ESHddZfuFg9fXHm1z31q
------END CERTIFICATE-----
-`
+-----END CERTIFICATE-----`
 	rsa4096Priv = `
 -----BEGIN PRIVATE KEY-----
 MIIJQgIBADANBgkqhkiG9w0BAQEFAASCCSwwggkoAgEAAoICAQDb0PvK0zNiGOHD
@@ -160,8 +166,7 @@ IydoeSfAe4vvQROfk6ol+v4iqTnba6JyHnSWaENcs5aRwNyKMRSYPlcMeHVvt4uM
 30SKCfNL9e85AuBuitQDVvKkCv//RAOtJ/pCrmwasobBWalBs5NId8eZkeLihCZE
 7J3VkHpbE11gnfOzIQfAU/e+ZkaOy5ChECPMP0f4KdHmLClA+2I0Mfu3dnSMMuTx
 NlwPSUy/6PKkQnZiQ0mW4LZqG/maLg==
------END PRIVATE KEY-----
-`
+-----END PRIVATE KEY-----`
 	rsa4096Pub = `
 -----BEGIN PUBLIC KEY-----
 MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA29D7ytMzYhjhw8eweNA7
@@ -176,6 +181,5 @@ pz7z5Ru0EyMLDTazOvzQ/aNGl0IYMxs5Ske+cpiJXG0+dVe441TlRgwOeUKBg09v
 rWZoIaD8s7KiziRlrxfHSxJCgPMKCm0lMYQpaXAIbDMVWr4a1O+WZy0z7R7e9QiF
 vSoy1ocL9m+5UwiOmS2Z/Oj9HZP+ZT+A/H0Z/hQwnN7zpbsNms4LGgrneCOc7VaK
 Yq+jeWIsoQ8Bq9aZwsTnH58CAwEAAQ==
------END PUBLIC KEY-----
-`
+-----END PUBLIC KEY-----`
 )
