@@ -1,48 +1,39 @@
 package jwkset
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
+	"errors"
 	"fmt"
 )
 
-func LoadECPrivate(pemBlock []byte) (priv any, err error) {
+var (
+	ErrX509Infer = errors.New("failed to infer X509 key type")
+)
+
+func LoadECPrivate(pemBlock []byte) (priv *ecdsa.PrivateKey, err error) {
 	priv, err = x509.ParseECPrivateKey(pemBlock)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse EC private key: %w", err)
 	}
-	switch priv.(type) {
-	case *ecdsa.PrivateKey:
-	default:
-		return nil, fmt.Errorf("%w: %T", ErrUnsupportedKey, priv)
-	}
 	return priv, nil
 }
 
-func LoadPKCS1Public(pemBlock []byte) (pub any, err error) {
+func LoadPKCS1Public(pemBlock []byte) (pub *rsa.PublicKey, err error) {
 	pub, err = x509.ParsePKCS1PublicKey(pemBlock)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse PKCS1 public key: %w", err)
 	}
-	switch pub.(type) {
-	case *rsa.PublicKey:
-	default:
-		return nil, fmt.Errorf("%w: %T", ErrUnsupportedKey, pub)
-	}
 	return pub, nil
 }
 
-func LoadPKCS1Private(pemBlock []byte) (priv any, err error) {
+func LoadPKCS1Private(pemBlock []byte) (priv *rsa.PrivateKey, err error) {
 	priv, err = x509.ParsePKCS1PrivateKey(pemBlock)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse PKCS1 private key: %w", err)
-	}
-	switch priv.(type) {
-	case *rsa.PrivateKey:
-	default:
-		return nil, fmt.Errorf("%w: %T", ErrUnsupportedKey, priv)
 	}
 	return priv, nil
 }
@@ -86,4 +77,25 @@ func LoadCertificates(pemBlock []byte) ([]*x509.Certificate, error) {
 		}
 	}
 	return certs, nil
+}
+
+func LoadX509KeyInfer(pemBlock []byte) (key any, err error) {
+	switch {
+	case bytes.Contains(pemBlock, []byte("EC PRIVATE KEY")):
+		key, err = LoadECPrivate(pemBlock)
+	case bytes.Contains(pemBlock, []byte("RSA PRIVATE KEY")):
+		key, err = LoadPKCS1Private(pemBlock)
+	case bytes.Contains(pemBlock, []byte("RSA PUBLIC KEY")):
+		key, err = LoadPKCS1Public(pemBlock)
+	case bytes.Contains(pemBlock, []byte("PRIVATE KEY")):
+		key, err = LoadPKCS8Private(pemBlock)
+	case bytes.Contains(pemBlock, []byte("PUBLIC KEY")):
+		key, err = LoadPKIXPublic(pemBlock)
+	default:
+		return nil, ErrX509Infer
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to load key from inferred format %q: %w", key, err)
+	}
+	return key, nil
 }
