@@ -154,6 +154,8 @@ func main() {
   non-compliant `Base64urlUInt` encoding. This error happens during JWK validation and will look
   like: `failed to validate JWK: marshaled JWK does not match original JWK`. To work around this, please modify the
   JWK's JSON to remove the leading zeros from the `Base64urlUInt` encoding. TODO make tool that can do this.
+* JWK key type `OKP` with `crv` parameter value `X25519` is only supported in marshalling operations. This is because
+  the Go standard library does not support unmarshalling this key type at the time of writing this package.
 * RFC 8037 adds support for `Ed448`, but there is no Golang standard library support for this key type.
 * There is no RFC that supports DSA keys in JWK format that I know of.
 

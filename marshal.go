@@ -210,6 +210,9 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 			key = publicKey
 		}
 	case KtyOKP:
+		if marshal.CRV == CrvX25519 {
+			return JWK{}, fmt.Errorf("%w: no suitable Golang type to unmarshal to", ErrUnsupportedKey)
+		}
 		if marshal.CRV != CrvEd25519 {
 			return JWK{}, fmt.Errorf("%w: %s key type should have %q curve", ErrKeyUnmarshalParameter, KtyOKP, CrvEd25519)
 		}

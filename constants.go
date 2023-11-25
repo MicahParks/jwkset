@@ -55,14 +55,14 @@ const (
 	AlgHS1              ALG = "HS1"     // Prohibited.
 	AlgES256K           ALG = "ES256K"
 
-	CrvP256    CRV = "P-256"
-	CrvP384    CRV = "P-384"
-	CrvP521    CRV = "P-521"
-	CrvEd25519 CRV = "Ed25519"
-	CrvEd448   CRV = "Ed448"
-	X25519     CRV = "X25519"
-	X448       CRV = "X448"
-	SECP256K1  CRV = "secp256k1"
+	CrvP256      CRV = "P-256"
+	CrvP384      CRV = "P-384"
+	CrvP521      CRV = "P-521"
+	CrvEd25519   CRV = "Ed25519"
+	CrvEd448     CRV = "Ed448"
+	CrvX25519    CRV = "X25519"
+	CrvX448      CRV = "X448"
+	CrvSECP256K1 CRV = "secp256k1"
 
 	KeyOpsSign       KEYOPS = "sign"
 	KeyOpsVerify     KEYOPS = "verify"

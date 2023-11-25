@@ -1,6 +1,7 @@
 package jwkset
 
 import (
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -45,7 +46,7 @@ func LoadPKCS8Private(pemBlock *pem.Block) (priv any, err error) {
 		return nil, fmt.Errorf("failed to parse PKCS8 private key: %w", err)
 	}
 	switch priv.(type) {
-	case *ecdsa.PrivateKey, ed25519.PrivateKey, *rsa.PrivateKey:
+	case *ecdh.PrivateKey, *ecdsa.PrivateKey, ed25519.PrivateKey, *rsa.PrivateKey:
 	default:
 		return nil, fmt.Errorf("%w: %T", ErrUnsupportedKey, priv)
 	}
@@ -58,7 +59,7 @@ func LoadPKIXPublic(pemBlock *pem.Block) (pub any, err error) {
 		return nil, fmt.Errorf("failed to parse PKIX public key: %w", err)
 	}
 	switch pub.(type) {
-	case *ecdsa.PublicKey, ed25519.PublicKey, *rsa.PublicKey:
+	case *ecdh.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey, *rsa.PublicKey:
 	default:
 		return nil, fmt.Errorf("%w: %T", ErrUnsupportedKey, pub)
 	}
@@ -84,7 +85,7 @@ func LoadCertificates(rawPEM []byte) ([]*x509.Certificate, error) {
 	}
 	for _, cert := range certs {
 		switch cert.PublicKey.(type) {
-		case *ecdsa.PublicKey, ed25519.PublicKey, *rsa.PublicKey:
+		case *ecdh.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey, *rsa.PublicKey:
 		default:
 			return nil, fmt.Errorf("%w: %T", ErrUnsupportedKey, cert.PublicKey)
 		}

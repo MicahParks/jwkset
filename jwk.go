@@ -3,6 +3,7 @@ package jwkset
 import (
 	"bytes"
 	"context"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -209,6 +210,22 @@ func (j JWK) Validate() error {
 		cert := j.options.X509.X5C[0]
 		i := cert.PublicKey
 		switch k := j.key.(type) {
+		case *ecdh.PrivateKey:
+			pub, ok := i.(*ecdh.PublicKey)
+			if !ok {
+				return fmt.Errorf("%w: Golang key is type *ecdh.PrivateKey but X.509 public key was of type %T", errors.Join(ErrJWKValidation, ErrX509Mismatch), i)
+			}
+			if !k.PublicKey().Equal(pub) {
+				return fmt.Errorf("%w: Golang *ecdh.PrivateKey's public key does not match the X.509 public key", errors.Join(ErrJWKValidation, ErrX509Mismatch))
+			}
+		case *ecdh.PublicKey:
+			pub, ok := i.(*ecdh.PublicKey)
+			if !ok {
+				return fmt.Errorf("%w: Golang key is type *ecdh.PublicKey but X.509 public key was of type %T", errors.Join(ErrJWKValidation, ErrX509Mismatch), i)
+			}
+			if !k.Equal(pub) {
+				return fmt.Errorf("%w: Golang *ecdh.PublicKey does not match the X.509 public key", errors.Join(ErrJWKValidation, ErrX509Mismatch))
+			}
 		case *ecdsa.PrivateKey:
 			pub, ok := i.(*ecdsa.PublicKey)
 			if !ok {
