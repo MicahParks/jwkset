@@ -23,6 +23,50 @@ func TestLoadCertificates(t *testing.T) {
 	_ = certs[2].PublicKey.(*rsa.PublicKey)
 }
 
+func TestLoadX509KeyInfer(t *testing.T) {
+	b := []byte(ec521Pub)
+	key, err := jwkset.LoadX509KeyInfer(b)
+	if err != nil {
+		t.Fatal("Failed to load public EC 521 X509 key:", err)
+	}
+	_ = key.(*ecdsa.PublicKey)
+
+	b = []byte(ed25519Pub)
+	key, err = jwkset.LoadX509KeyInfer(b)
+	if err != nil {
+		t.Fatal("Failed to load public EdDSA X509 key:", err)
+	}
+	_ = key.(ed25519.PublicKey)
+
+	b = []byte(rsa4096Pub)
+	key, err = jwkset.LoadX509KeyInfer(b)
+	if err != nil {
+		t.Fatal("Failed to load public RSA 4096 X509 key:", err)
+	}
+	_ = key.(*rsa.PublicKey)
+
+	b = []byte(ec521Priv)
+	key, err = jwkset.LoadX509KeyInfer(b)
+	if err != nil {
+		t.Fatal("Failed to load private EC 521 X509 key:", err)
+	}
+	_ = key.(*ecdsa.PrivateKey)
+
+	b = []byte(ed25519Priv)
+	key, err = jwkset.LoadX509KeyInfer(b)
+	if err != nil {
+		t.Fatal("Failed to load private EdDSA X509 key:", err)
+	}
+	_ = key.(ed25519.PrivateKey)
+
+	b = []byte(rsa4096Priv)
+	key, err = jwkset.LoadX509KeyInfer(b)
+	if err != nil {
+		t.Fatal("Failed to load private RSA 4096 X509 key:", err)
+	}
+	_ = key.(*rsa.PrivateKey)
+}
+
 const (
 	ec521Cert = `
 -----BEGIN CERTIFICATE-----

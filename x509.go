@@ -64,15 +64,15 @@ func LoadPKIXPublic(pemBlock *pem.Block) (pub any, err error) {
 	return pub, nil
 }
 
-func LoadCertificates(rawX509 []byte) ([]*x509.Certificate, error) {
+func LoadCertificates(rawPEM []byte) ([]*x509.Certificate, error) {
 	var b []byte
 	for {
 		var block *pem.Block
-		block, rest := pem.Decode(rawX509)
+		block, rest := pem.Decode(rawPEM)
 		if block == nil {
 			break
 		}
-		rawX509 = rest
+		rawPEM = rest
 		if block.Type == "CERTIFICATE" {
 			b = append(b, block.Bytes...)
 		}
@@ -91,18 +91,22 @@ func LoadCertificates(rawX509 []byte) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-func LoadX509KeyInfer(pemBlock *pem.Block) (key any, err error) { // TODO With won't work with PEM encoding.
-	switch pemBlock.Type {
+func LoadX509KeyInfer(rawPEM []byte) (key any, err error) { // TODO Won't work with PEM encoding.
+	block, _ := pem.Decode(rawPEM)
+	if block == nil {
+		// TODO
+	}
+	switch block.Type {
 	case "EC PRIVATE KEY":
-		key, err = LoadECPrivate(pemBlock)
+		key, err = LoadECPrivate(block)
 	case "RSA PRIVATE KEY":
-		key, err = LoadPKCS1Private(pemBlock)
+		key, err = LoadPKCS1Private(block)
 	case "RSA PUBLIC KEY":
-		key, err = LoadPKCS1Public(pemBlock)
+		key, err = LoadPKCS1Public(block)
 	case "PRIVATE KEY":
-		key, err = LoadPKCS8Private(pemBlock)
+		key, err = LoadPKCS8Private(block)
 	case "PUBLIC KEY":
-		key, err = LoadPKIXPublic(pemBlock)
+		key, err = LoadPKIXPublic(block)
 	default:
 		return nil, ErrX509Infer
 	}
