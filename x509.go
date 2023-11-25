@@ -91,22 +91,18 @@ func LoadCertificates(rawPEM []byte) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-func LoadX509KeyInfer(rawPEM []byte) (key any, err error) { // TODO Won't work with PEM encoding.
-	block, _ := pem.Decode(rawPEM)
-	if block == nil {
-		// TODO
-	}
-	switch block.Type {
+func LoadX509KeyInfer(pemBlock *pem.Block) (key any, err error) { // TODO Won't work with PEM encoding.
+	switch pemBlock.Type {
 	case "EC PRIVATE KEY":
-		key, err = LoadECPrivate(block)
+		key, err = LoadECPrivate(pemBlock)
 	case "RSA PRIVATE KEY":
-		key, err = LoadPKCS1Private(block)
+		key, err = LoadPKCS1Private(pemBlock)
 	case "RSA PUBLIC KEY":
-		key, err = LoadPKCS1Public(block)
+		key, err = LoadPKCS1Public(pemBlock)
 	case "PRIVATE KEY":
-		key, err = LoadPKCS8Private(block)
+		key, err = LoadPKCS8Private(pemBlock)
 	case "PUBLIC KEY":
-		key, err = LoadPKIXPublic(block)
+		key, err = LoadPKIXPublic(pemBlock)
 	default:
 		return nil, ErrX509Infer
 	}

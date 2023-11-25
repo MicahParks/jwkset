@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
+	"encoding/pem"
 	"testing"
 
 	"github.com/MicahParks/jwkset"
@@ -24,47 +25,55 @@ func TestLoadCertificates(t *testing.T) {
 }
 
 func TestLoadX509KeyInfer(t *testing.T) {
-	b := []byte(ec521Pub)
+	b := loadPEM(t, ec521Pub)
 	key, err := jwkset.LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load public EC 521 X509 key:", err)
 	}
 	_ = key.(*ecdsa.PublicKey)
 
-	b = []byte(ed25519Pub)
+	b = loadPEM(t, ed25519Pub)
 	key, err = jwkset.LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load public EdDSA X509 key:", err)
 	}
 	_ = key.(ed25519.PublicKey)
 
-	b = []byte(rsa4096Pub)
+	b = loadPEM(t, rsa4096Pub)
 	key, err = jwkset.LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load public RSA 4096 X509 key:", err)
 	}
 	_ = key.(*rsa.PublicKey)
 
-	b = []byte(ec521Priv)
+	b = loadPEM(t, ec521Priv)
 	key, err = jwkset.LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load private EC 521 X509 key:", err)
 	}
 	_ = key.(*ecdsa.PrivateKey)
 
-	b = []byte(ed25519Priv)
+	b = loadPEM(t, ed25519Priv)
 	key, err = jwkset.LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load private EdDSA X509 key:", err)
 	}
 	_ = key.(ed25519.PrivateKey)
 
-	b = []byte(rsa4096Priv)
+	b = loadPEM(t, rsa4096Priv)
 	key, err = jwkset.LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load private RSA 4096 X509 key:", err)
 	}
 	_ = key.(*rsa.PrivateKey)
+}
+
+func loadPEM(t *testing.T, rawPem string) *pem.Block {
+	b, _ := pem.Decode([]byte(rawPem))
+	if b == nil {
+		t.Fatal("Failed to decode PEM.")
+	}
+	return b
 }
 
 const (
