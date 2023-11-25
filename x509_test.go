@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"encoding/pem"
+	"strings"
 	"testing"
 
 	"github.com/MicahParks/jwkset"
@@ -68,7 +69,24 @@ func TestLoadX509KeyInfer(t *testing.T) {
 	_ = key.(*rsa.PrivateKey)
 }
 
+func TestLoadPKCS1Private(t *testing.T) {
+	b := loadPEM(t, pkcs1Priv)
+	_, err := jwkset.LoadPKCS1Private(b)
+	if err != nil {
+		t.Fatal("Failed to load private PKCS1 key:", err)
+	}
+}
+
+func TestLoadPKCS1Public(t *testing.T) {
+	b := loadPEM(t, pkcs1Pub)
+	_, err := jwkset.LoadPKCS1Public(b)
+	if err != nil {
+		t.Fatal("Failed to load public PKCS1 key:", err)
+	}
+}
+
 func loadPEM(t *testing.T, rawPem string) *pem.Block {
+	rawPem = strings.TrimSpace(rawPem)
 	b, _ := pem.Decode([]byte(rawPem))
 	if b == nil {
 		t.Fatal("Failed to decode PEM.")
@@ -235,4 +253,41 @@ rWZoIaD8s7KiziRlrxfHSxJCgPMKCm0lMYQpaXAIbDMVWr4a1O+WZy0z7R7e9QiF
 vSoy1ocL9m+5UwiOmS2Z/Oj9HZP+ZT+A/H0Z/hQwnN7zpbsNms4LGgrneCOc7VaK
 Yq+jeWIsoQ8Bq9aZwsTnH58CAwEAAQ==
 -----END PUBLIC KEY-----`
+	pkcs1Priv = `
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpgIBAAKCAQEA4v/3tBv7bKZgVyC8+Kjb82edPJmiEO2nJmTi/pAGK6bWEqOk
+nsl9Qx5Ih1Z374mnIPWpeM/D4g/CC8E4NWWy6htGzZx8b5tcO08XJ7uGEWfG1Nyq
+ACsQ18V6dPk3Wz8SvgqCxeZ5e+/wxHmPrhTRi1yKQBRfm/RqpaHgfFjM7ZTXG6MH
+BUWUQD6I00o1hirs0oCka/Rlfy/OhikzvkiGDcS6VC+KFwP6wXx91TIwMLy+ncJ6
+hZJHHXbQN5oVkga1ZAtid4xeYvC9Ma5ytIfeRG61cUetc173vdxBtcHPXfrSDvjC
+G8vFTrtIkY4rE6zx9qrTXrYniSgrBKsn+HoWcQIDAQABAoIBAQCJXdKc6I4GmswU
+DZitdSndKueI44OicN5Eqqp+19MUGVrUXrjg6hdmRW4okBf2GbvMgzzyAfCM3XJU
+wLFuBsP1TVpUVI0s0LxIm7zsa1tfLwiwiXRKs8T2fedz39gy3IFQBXZLogQEDxgJ
+HXLoKmr/xZlX27xb2NWss7/wH6CrZ9GD0YShN6Xo4G1qZsDSf8MrJ6dKNYm4Fej8
+5ZsxtVvPi18lY6VO4bjJBq6VoPyJQYAacundyQ9Hifgg743+PTGBdcKP8SPb8X0u
+yZEypAIVw3BXVJ3Shh8NN5iRfLaEvqMNhIzKiJxma7+J303icQJEurduSOM+to/7
+5u9kUTvRAoGBAP0yyDd4RT2jBHnOxKabOFBygtWJBvbHRSXt9s9P6fNxoWquKhxt
+b1oesKAljffRsbrJeI8G3vzElofMmcKsohDwv83Qc7J1Ph7S+hr4COnt3gVlsxaH
+CDL/VaPESXTYXF8N/U6Ewz1FsYVxzs20MMFcoro9D2FJVLz1SKOZH6eNAoGBAOWC
++Yv0lv92IGKXj0p/0PaBz3vmxpl49o+o9OukgRJMJwmlMJn/pTF4Eu6QYe60dKsm
+f/jnahBsHe/f/OCV1W0iDO85o+8Fg7jXGUyqIvCVMehmLVItHZLBGoqzRIUJzC2P
+RDyHLVuV9PiHZ0SgRLroqRKZVQSe0cDp8jk3Bk91AoGBAM1AyGunFMJFj1BLHMFO
+nRUh7wu5XCrbGSQJRwWB685MdCTt8PdAg38T1+zK5M5bb+9SeWfAky1nE/wcER1u
+IqcG8wWeENw/DM+iCduo7FjuWggYDFibuDrXIA51BXMyHZd02L45A6h9Ac6ClrnM
+c6WcOdItw3UDJC1Vzb/JVo7VAoGBAM5Gly6YmBXl/1ldSmX01sSXCvobAifxtfiM
+LASWB4OAeh2LIFFomPoLJ0jO75XxDmK86Yu1wXgdFBMBx2+6euXpEqL3tUUgObEp
+cg2bZGfCT+bF3rna3peFgutiD5Vapu3Ts8qK29NSxaeRWtktCljKvxp+QRE0BOVT
+3mZZ9Av5AoGBAIqukzaeOWXsnpJI1E4MpaRiAkFsHtzPwxMZJURRYyg3C0ZFiqkF
+txxRdz/fj2HNEkEconBHVRwyr/f7vy2qmmo9Xd1fnvvSjOcuuZLL4WxXrhSYvK9e
+cbf0IYk6FVqTwLdW1PFAR9PsMPnb9OKQ2MBKZIuamw5GEhL0KoNjVsUc
+-----END RSA PRIVATE KEY-----`
+	pkcs1Pub = `
+-----BEGIN RSA PUBLIC KEY-----
+MIIBCgKCAQEA4v/3tBv7bKZgVyC8+Kjb82edPJmiEO2nJmTi/pAGK6bWEqOknsl9
+Qx5Ih1Z374mnIPWpeM/D4g/CC8E4NWWy6htGzZx8b5tcO08XJ7uGEWfG1NyqACsQ
+18V6dPk3Wz8SvgqCxeZ5e+/wxHmPrhTRi1yKQBRfm/RqpaHgfFjM7ZTXG6MHBUWU
+QD6I00o1hirs0oCka/Rlfy/OhikzvkiGDcS6VC+KFwP6wXx91TIwMLy+ncJ6hZJH
+HXbQN5oVkga1ZAtid4xeYvC9Ma5ytIfeRG61cUetc173vdxBtcHPXfrSDvjCG8vF
+TrtIkY4rE6zx9qrTXrYniSgrBKsn+HoWcQIDAQAB
+-----END RSA PUBLIC KEY-----`
 )

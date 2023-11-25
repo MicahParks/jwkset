@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	// ErrX509Infer is returned when the key type cannot be inferred from the PEM block type.
 	ErrX509Infer = errors.New("failed to infer X509 key type")
 )
 
