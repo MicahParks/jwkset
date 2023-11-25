@@ -1,6 +1,11 @@
 package jwkset
 
 const (
+	// HeaderKID is a JWT header for the key ID.
+	HeaderKID = "kid"
+)
+
+const (
 	AlgHS256            ALG = "HS256"
 	AlgHS384            ALG = "HS384"
 	AlgHS512            ALG = "HS512"
@@ -50,47 +55,30 @@ const (
 	AlgHS1              ALG = "HS1"     // Prohibited.
 	AlgES256K           ALG = "ES256K"
 
-	// KeyOpsSign is a key operation for signing.
-	KeyOpsSign = "sign"
-	// KeyOpsVerify is a key operation for verifying.
-	KeyOpsVerify = "verify"
-	// KeyOpsEncrypt is a key operation for encryption.
-	KeyOpsEncrypt = "encrypt"
-	// KeyOpsDecrypt is a key operation for decryption.
-	KeyOpsDecrypt = "decrypt"
-	// KeyOpsWrapKey is a key operation for wrapping a key.
-	KeyOpsWrapKey = "wrapKey"
-	// KeyOpsUnwrapKey is a key operation for unwrapping a key.
-	KeyOpsUnwrapKey = "unwrapKey"
-	// KeyOpsDeriveKey is a key operation for deriving a key.
-	KeyOpsDeriveKey = "deriveKey"
-	// KeyOpsDeriveBits is a key operation for deriving bits.
-	KeyOpsDeriveBits = "deriveBits"
+	CrvP256    CRV = "P-256"
+	CrvP384    CRV = "P-384"
+	CrvP521    CRV = "P-521"
+	CrvEd25519 CRV = "Ed25519"
+	CrvEd448   CRV = "Ed448"
+	X25519     CRV = "X25519"
+	X448       CRV = "X448"
+	SECP256K1  CRV = "secp256k1"
 
-	// KtyEC is the key type for ECDSA.
-	KtyEC KTY = "EC"
-	// KtyOKP is the key type for EdDSA.
+	KeyOpsSign       KEYOPS = "sign"
+	KeyOpsVerify     KEYOPS = "verify"
+	KeyOpsEncrypt    KEYOPS = "encrypt"
+	KeyOpsDecrypt    KEYOPS = "decrypt"
+	KeyOpsWrapKey    KEYOPS = "wrapKey"
+	KeyOpsUnwrapKey  KEYOPS = "unwrapKey"
+	KeyOpsDeriveKey  KEYOPS = "deriveKey"
+	KeyOpsDeriveBits KEYOPS = "deriveBits"
+
+	KtyEC  KTY = "EC"
 	KtyOKP KTY = "OKP"
-	// KtyRSA is the key type for RSA.
 	KtyRSA KTY = "RSA"
-	// KtyOct is the key type for octet sequences, such as HMAC.
 	KtyOct KTY = "oct"
 
-	// CrvEd25519 is a curve for EdDSA.
-	CrvEd25519 CRV = "Ed25519"
-	// CrvP256 is a curve for ECDSA.
-	CrvP256 CRV = "P-256"
-	// CrvP384 is a curve for ECDSA.
-	CrvP384 CRV = "P-384"
-	// CrvP521 is a curve for ECDSA.
-	CrvP521 CRV = "P-521"
-
-	// HeaderKID is a JWT header for the key ID.
-	HeaderKID = "kid"
-
-	// UseEnc indicates a JWK is for encryption.
 	UseEnc USE = "enc"
-	// UseSig indicates a JWK is for signing.
 	UseSig USE = "sig"
 )
 
@@ -101,19 +89,6 @@ type ALG string
 
 func (alg ALG) String() string {
 	return string(alg)
-}
-func (alg ALG) valid() bool {
-	switch alg {
-	case AlgHS256, AlgHS384, AlgHS512, AlgRS256, AlgRS384, AlgRS512, AlgES256, AlgES384, AlgES512, AlgPS256, AlgPS384,
-		AlgPS512, AlgNone, AlgRSA1_5, AlgRSAOAEP, AlgRSAOAEP256, AlgA128KW, AlgA192KW, AlgA256KW, Algdir, AlgECDHES,
-		AlgECDHESA128KW, AlgECDHESA192KW, AlgECDHESA256KW, AlgA128GCMKW, AlgA192GCMKW, AlgA256GCMKW,
-		AlgPBES2HS256A128KW, AlgPBES2HS384A192KW, AlgPBES2HS512A256KW, AlgA128CBCHS256, AlgA192CBCHS384,
-		AlgA256CBCHS512, AlgA128GCM, AlgA192GCM, AlgA256GCM, AlgEdDSA, AlgRSAOAEP384, AlgRSAOAEP512, AlgES256K, "":
-		return true
-	case AlgRS1, AlgA128CBC, AlgA192CBC, AlgA256CBC, AlgA128CTR, AlgA192CTR, AlgA256CTR, AlgHS1:
-		return false // These algorithms are prohibited.
-	}
-	return false
 }
 
 // CRV is a set of "JSON Web Key Elliptic Curve" types from https://www.iana.org/assignments/jose/jose.xhtml as

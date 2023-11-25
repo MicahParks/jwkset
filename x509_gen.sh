@@ -9,3 +9,7 @@ openssl pkey -in rsa4096.pem -pubout -out rsa4096pub.pem
 
 # For the "RSA PRIVATE KEY" (PKCS#1) and "EC PRIVATE KEY" (SEC1) formats, the PEM files are generated using the
 # cmd/pkcs1_gen and cmd/ec_gen Golang programs, respectively.
+
+openssl dsaparam -out dsaparam.pem 2048
+openssl gendsa -out dsa.pem dsaparam.pem
+openssl dsa -in dsa.pem -pubout -out dsa_pub.pem

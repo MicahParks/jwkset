@@ -110,6 +110,12 @@ func TestLoadPKCS1Private(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed to load private PKCS1 key:", err)
 	}
+
+	b = &pem.Block{}
+	_, err = jwkset.LoadPKCS1Private(b)
+	if err == nil {
+		t.Fatal("Should have failed to load private PKCS1 key.")
+	}
 }
 
 func TestLoadPKCS1Public(t *testing.T) {
@@ -118,6 +124,12 @@ func TestLoadPKCS1Public(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed to load public PKCS1 key:", err)
 	}
+
+	b = &pem.Block{}
+	_, err = jwkset.LoadPKCS1Public(b)
+	if err == nil {
+		t.Fatal("Should have failed to load public PKCS1 key.")
+	}
 }
 
 func TestLoadECPrivate(t *testing.T) {
@@ -125,6 +137,33 @@ func TestLoadECPrivate(t *testing.T) {
 	_, err := jwkset.LoadECPrivate(b)
 	if err != nil {
 		t.Fatal("Failed to load private EC key:", err)
+	}
+	b = &pem.Block{}
+	_, err = jwkset.LoadECPrivate(b)
+	if err == nil {
+		t.Fatal("Should have failed to load private EC key.")
+	}
+}
+
+func TestLoadPKCS8PrivateUnsupportedKey(t *testing.T) {
+	b := &pem.Block{}
+	_, err := jwkset.LoadPKCS8Private(b)
+	if err == nil {
+		t.Fatal("Should have failed to load empty PEM block.")
+	}
+	// The x509.ParsePKCS8PrivateKey function does not support loading private DSA keys.
+}
+
+func TestLoadPKIXPublicUnsupportedKey(t *testing.T) {
+	b := &pem.Block{}
+	_, err := jwkset.LoadPKIXPublic(b)
+	if err == nil {
+		t.Fatal("Should have failed to load empty PEM block.")
+	}
+	b = loadPEM(t, dsa2048Pub)
+	_, err = jwkset.LoadPKIXPublic(b)
+	if !errors.Is(err, jwkset.ErrUnsupportedKey) {
+		t.Fatal("Should have failed to load unsupported DSA public key.")
 	}
 }
 
@@ -348,4 +387,45 @@ MHcCAQEEIPEHBaM5VfAK2Gss3HQcXg89UH/5+APhT+LeXv9QXJ5toAoGCCqGSM49
 AwEHoUQDQgAEpKijCjLFUcDsIjNAXkzQsk1/YnObl5dx1KR/CfDzKklOIDiCaU4H
 O6SocyslNS/EH5UqyZgShM3WhoHcdvdBSg==
 -----END EC PRIVATE KEY-----`
+)
+
+// DSA keys (unsupported by any JWK RFC I know of).
+const (
+	dsa2048Priv = `
+-----BEGIN PRIVATE KEY-----
+MIICXAIBADCCAjUGByqGSM44BAEwggIoAoIBAQCJi6h3cmIxHTrzsA3vrBM//AKv
+/bM1K9FTJb/h+GTJpJ1Ccp4yURmxdS44/P1nhJBu0EcUCaP8UzBM9DLUtIVqO5Ag
+KkxdgLsTspunGLykEkMcAN4Ij6ggcoSQ56SftQYZ1kgxJQPDT/KZk217Wwg1lLyJ
+HobH6++HKfDB5z5NdCA3jau3ANNH9kptNGpnyai1FLJHBSHa8605fvRCvEtgL4jm
+/7ZgIR8Xvm9D4CnIhtlYkWjy6dAykyjnh+AovJrEuB6DBEW5YU8PhEj2cYW7+GvV
+KXFFsN90bocqf/6++dToB/bqUNW1j3Pg6+gDdqCkMD/k/4itZ5ObOBvw9yL3Ah0A
+qtTg2DsMkJFSs3S9Q10LKJI561L9tj0mf7LinQKCAQA9BLRa4B1ozotJbiUNGRt9
+H0Ebvnh3IlL3F4JjNQUqChUvsOTHvRG/Ogck1k1fTTBGugg+oZiHG4CAFtNvz4LZ
+DehPy4A8BW+nQEXoUxmlJTBjgc5J5lYBIgRQLv8FGCxdd3zo/4cgXjpchosk4N/J
+rz33BvpovUoQE8t1ks3bddRD7MsN6muCvyJYED69rnCn79OEOjOKhmOQb3G/rTH8
+eO1acRjcTu1uMie/vHtltvd2TxGTNqzVBRvLIDWYD0UK/LFwig1TwWfZF3QLZ1HS
+40//npFAd3C5Opf/ZPYOFlT3a/8GaZSSGzkugwLmSeCrI6DPQ6Z3r1sDkSY6ixXf
+BB4CHAW4zQgr2nCGhaJmYvlaLmPfzpeN1LOOX0QCmy0=
+-----END PRIVATE KEY-----`
+	dsa2048Pub = `
+-----BEGIN PUBLIC KEY-----
+MIIDQjCCAjUGByqGSM44BAEwggIoAoIBAQCJi6h3cmIxHTrzsA3vrBM//AKv/bM1
+K9FTJb/h+GTJpJ1Ccp4yURmxdS44/P1nhJBu0EcUCaP8UzBM9DLUtIVqO5AgKkxd
+gLsTspunGLykEkMcAN4Ij6ggcoSQ56SftQYZ1kgxJQPDT/KZk217Wwg1lLyJHobH
+6++HKfDB5z5NdCA3jau3ANNH9kptNGpnyai1FLJHBSHa8605fvRCvEtgL4jm/7Zg
+IR8Xvm9D4CnIhtlYkWjy6dAykyjnh+AovJrEuB6DBEW5YU8PhEj2cYW7+GvVKXFF
+sN90bocqf/6++dToB/bqUNW1j3Pg6+gDdqCkMD/k/4itZ5ObOBvw9yL3Ah0AqtTg
+2DsMkJFSs3S9Q10LKJI561L9tj0mf7LinQKCAQA9BLRa4B1ozotJbiUNGRt9H0Eb
+vnh3IlL3F4JjNQUqChUvsOTHvRG/Ogck1k1fTTBGugg+oZiHG4CAFtNvz4LZDehP
+y4A8BW+nQEXoUxmlJTBjgc5J5lYBIgRQLv8FGCxdd3zo/4cgXjpchosk4N/Jrz33
+BvpovUoQE8t1ks3bddRD7MsN6muCvyJYED69rnCn79OEOjOKhmOQb3G/rTH8eO1a
+cRjcTu1uMie/vHtltvd2TxGTNqzVBRvLIDWYD0UK/LFwig1TwWfZF3QLZ1HS40//
+npFAd3C5Opf/ZPYOFlT3a/8GaZSSGzkugwLmSeCrI6DPQ6Z3r1sDkSY6ixXfA4IB
+BQACggEAMEBw8GdcPUuYJExRfYQLKNih789so8favDqcRI+ilfrRJz+hF4ZIKnTH
+I7jPB5Lj20inAazVLl4omNxBdFzfKuzAdrYEGBHL5rjGNafo6VrLiU1y5zWFjJq7
+UAGZB1HbhnUXOaNlfVoSMMK+ErcazwUjPrzso/f9j5bmvkmT9vmuMieLEVaQ6dOJ
+dScNUoz3aCEmxpOgPWFEYPtdN7QVg75CQ68PYjueNyyJR4nfovuIcGOmENV+FuDz
+7GV23I8WCj1OBqERHrbXCYryMS7GOSKQiISOVKdi1kqyV2rBeFL9IWW1oUPyKC1P
+8OvJojkV57e01tT6HN44BhWwhWRplg==
+-----END PUBLIC KEY-----`
 )
