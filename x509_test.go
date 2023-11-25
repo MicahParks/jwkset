@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"encoding/pem"
+	"errors"
 	"strings"
 	"testing"
 
@@ -67,10 +68,44 @@ func TestLoadX509KeyInfer(t *testing.T) {
 		t.Fatal("Failed to load private RSA 4096 X509 key:", err)
 	}
 	_ = key.(*rsa.PrivateKey)
+
+	b = loadPEM(t, rsa2048PKCS1Priv)
+	key, err = jwkset.LoadX509KeyInfer(b)
+	if err != nil {
+		t.Fatal("Failed to load private RSA 2048 PKCS1 X509 key:", err)
+	}
+	_ = key.(*rsa.PrivateKey)
+
+	b = loadPEM(t, rsa2048PKCS1Pub)
+	key, err = jwkset.LoadX509KeyInfer(b)
+	if err != nil {
+		t.Fatal("Failed to load public RSA 2048 PKCS1 X509 key:", err)
+	}
+	_ = key.(*rsa.PublicKey)
+
+	b = loadPEM(t, ecP256Priv)
+	key, err = jwkset.LoadX509KeyInfer(b)
+	if err != nil {
+		t.Fatal("Failed to load private EC P256 X509 key:", err)
+	}
+	_ = key.(*ecdsa.PrivateKey)
+
+	b = &pem.Block{}
+	_, err = jwkset.LoadX509KeyInfer(b)
+	if !errors.Is(err, jwkset.ErrX509Infer) {
+		t.Fatal("Should have failed to infer X509 key type:", err)
+	}
+
+	replaced := strings.ReplaceAll(rsa2048PKCS1Priv, "RSA PRIVATE KEY", "PRIVATE KEY")
+	b = loadPEM(t, replaced)
+	_, err = jwkset.LoadX509KeyInfer(b)
+	if err == nil {
+		t.Fatal("Should have failed to infer X509 key type.")
+	}
 }
 
 func TestLoadPKCS1Private(t *testing.T) {
-	b := loadPEM(t, pkcs1Priv)
+	b := loadPEM(t, rsa2048PKCS1Priv)
 	_, err := jwkset.LoadPKCS1Private(b)
 	if err != nil {
 		t.Fatal("Failed to load private PKCS1 key:", err)
@@ -78,10 +113,18 @@ func TestLoadPKCS1Private(t *testing.T) {
 }
 
 func TestLoadPKCS1Public(t *testing.T) {
-	b := loadPEM(t, pkcs1Pub)
+	b := loadPEM(t, rsa2048PKCS1Pub)
 	_, err := jwkset.LoadPKCS1Public(b)
 	if err != nil {
 		t.Fatal("Failed to load public PKCS1 key:", err)
+	}
+}
+
+func TestLoadECPrivate(t *testing.T) {
+	b := loadPEM(t, ecP256Priv)
+	_, err := jwkset.LoadECPrivate(b)
+	if err != nil {
+		t.Fatal("Failed to load private EC key:", err)
 	}
 }
 
@@ -94,6 +137,7 @@ func loadPEM(t *testing.T, rawPem string) *pem.Block {
 	return b
 }
 
+// Certificates.
 const (
 	ec521Cert = `
 -----BEGIN CERTIFICATE-----
@@ -113,22 +157,6 @@ jF2D/I0Auw7sFQMvV3ImKp+L42kYpoFMXvnmKcuDt6n/OZCDAWpky/Uj/gLbvR2M
 fsCNJ+9mbi+4AkIBB0L6Ue7Mxl5cNGprGKSy5c0mlXWezB3GhUKxNrOMUo3+Lt3G
 slfqg3TSRlKC1YH863YkRGsE0XWwt9Myj2N6cVI=
 -----END CERTIFICATE-----`
-	ec521Priv = `
------BEGIN PRIVATE KEY-----
-MIHuAgEAMBAGByqGSM49AgEGBSuBBAAjBIHWMIHTAgEBBEIBK1phZlyXggGSevAh
-qqdocYbUK0AQBeD52ZB14sXshymnv/VkMop9UkZRIv11GrIDInxdfRBTXHS4lS18
-DvW6mOehgYkDgYYABAG1bYX4w+09w363li1hyrx2W5UGKZwndzBNP8equWzSIfOk
-9UA0AVEaqG9mc5vivPtuHdtGpKbNE1dP2VEmGDTuAgDyfaPztWDmvYU3CVF8Pl4w
-03eD6jrYdSwH2wF+kyIa8umGC/KDsy25vuh/h4E2mEdMG+HcZT5L1MQe9M0/clrR
-pQ==
------END PRIVATE KEY-----`
-	ec521Pub = `
------BEGIN PUBLIC KEY-----
-MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQBtW2F+MPtPcN+t5YtYcq8dluVBimc
-J3cwTT/Hqrls0iHzpPVANAFRGqhvZnOb4rz7bh3bRqSmzRNXT9lRJhg07gIA8n2j
-87Vg5r2FNwlRfD5eMNN3g+o62HUsB9sBfpMiGvLphgvyg7Mtub7of4eBNphHTBvh
-3GU+S9TEHvTNP3Ja0aU=
------END PUBLIC KEY-----`
 	ed25519Cert = `
 -----BEGIN CERTIFICATE-----
 MIIB8TCCAaOgAwIBAgIUV1qgafWZ5a/PVYZiwTZIyCfiF6gwBQYDK2VwMG4xCzAJ
@@ -143,14 +171,6 @@ BBgwFoAUoblrsByGUQ2+Ttthwnm/Vwe+yB8wDwYDVR0TAQH/BAUwAwEB/zAFBgMr
 ZXADQQB89PtKOOmgALNTe14oSxMEeFXxGgns7ZiTsuQ+nRtlvkkCJVJKDEJxBXnZ
 RqPHwMhPvj2Jw4lYx85CSr47R7cM
 -----END CERTIFICATE-----`
-	ed25519Priv = `
------BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VwBCIEIOC6YxHKyd+kPJo6N0lpdiGQLrre5P5W1GKDPwMN0Hxj
------END PRIVATE KEY-----`
-	ed25519Pub = `
------BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAV12dT8/uFZQfN2WNxdOx8o3lB991hKKSpSh23g8C7ug=
------END PUBLIC KEY-----`
 	rsa4096Cert = `
 -----BEGIN CERTIFICATE-----
 MIIFvTCCA6WgAwIBAgIUZNBtI415mo2zhbfEo3i9YeSocy8wDQYJKoZIhvcNAQEL
@@ -185,6 +205,34 @@ NcMXVckh2/bpHjlZM03LJoabhDp+6c16U+NvOxoVsaPT7y4avoGZZ/IU30i3QpDf
 qx5NKPcC4HDK28Daw6zBdO+fkodKFcgsL4jUqP+Q6QCWBH88PlmlXx80XoPQu++W
 VhA/xoU82uODjoUbY6FzMW49ESHddZfuFg9fXHm1z31q
 -----END CERTIFICATE-----`
+)
+
+// PKCS#8 formats.
+const (
+	ec521Priv = `
+-----BEGIN PRIVATE KEY-----
+MIHuAgEAMBAGByqGSM49AgEGBSuBBAAjBIHWMIHTAgEBBEIBK1phZlyXggGSevAh
+qqdocYbUK0AQBeD52ZB14sXshymnv/VkMop9UkZRIv11GrIDInxdfRBTXHS4lS18
+DvW6mOehgYkDgYYABAG1bYX4w+09w363li1hyrx2W5UGKZwndzBNP8equWzSIfOk
+9UA0AVEaqG9mc5vivPtuHdtGpKbNE1dP2VEmGDTuAgDyfaPztWDmvYU3CVF8Pl4w
+03eD6jrYdSwH2wF+kyIa8umGC/KDsy25vuh/h4E2mEdMG+HcZT5L1MQe9M0/clrR
+pQ==
+-----END PRIVATE KEY-----`
+	ec521Pub = `
+-----BEGIN PUBLIC KEY-----
+MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQBtW2F+MPtPcN+t5YtYcq8dluVBimc
+J3cwTT/Hqrls0iHzpPVANAFRGqhvZnOb4rz7bh3bRqSmzRNXT9lRJhg07gIA8n2j
+87Vg5r2FNwlRfD5eMNN3g+o62HUsB9sBfpMiGvLphgvyg7Mtub7of4eBNphHTBvh
+3GU+S9TEHvTNP3Ja0aU=
+-----END PUBLIC KEY-----`
+	ed25519Priv = `
+-----BEGIN PRIVATE KEY-----
+MC4CAQAwBQYDK2VwBCIEIOC6YxHKyd+kPJo6N0lpdiGQLrre5P5W1GKDPwMN0Hxj
+-----END PRIVATE KEY-----`
+	ed25519Pub = `
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAV12dT8/uFZQfN2WNxdOx8o3lB991hKKSpSh23g8C7ug=
+-----END PUBLIC KEY-----`
 	rsa4096Priv = `
 -----BEGIN PRIVATE KEY-----
 MIIJQgIBADANBgkqhkiG9w0BAQEFAASCCSwwggkoAgEAAoICAQDb0PvK0zNiGOHD
@@ -253,7 +301,11 @@ rWZoIaD8s7KiziRlrxfHSxJCgPMKCm0lMYQpaXAIbDMVWr4a1O+WZy0z7R7e9QiF
 vSoy1ocL9m+5UwiOmS2Z/Oj9HZP+ZT+A/H0Z/hQwnN7zpbsNms4LGgrneCOc7VaK
 Yq+jeWIsoQ8Bq9aZwsTnH58CAwEAAQ==
 -----END PUBLIC KEY-----`
-	pkcs1Priv = `
+)
+
+// Other formats.
+const (
+	rsa2048PKCS1Priv = `
 -----BEGIN RSA PRIVATE KEY-----
 MIIEpgIBAAKCAQEA4v/3tBv7bKZgVyC8+Kjb82edPJmiEO2nJmTi/pAGK6bWEqOk
 nsl9Qx5Ih1Z374mnIPWpeM/D4g/CC8E4NWWy6htGzZx8b5tcO08XJ7uGEWfG1Nyq
@@ -281,7 +333,7 @@ cg2bZGfCT+bF3rna3peFgutiD5Vapu3Ts8qK29NSxaeRWtktCljKvxp+QRE0BOVT
 txxRdz/fj2HNEkEconBHVRwyr/f7vy2qmmo9Xd1fnvvSjOcuuZLL4WxXrhSYvK9e
 cbf0IYk6FVqTwLdW1PFAR9PsMPnb9OKQ2MBKZIuamw5GEhL0KoNjVsUc
 -----END RSA PRIVATE KEY-----`
-	pkcs1Pub = `
+	rsa2048PKCS1Pub = `
 -----BEGIN RSA PUBLIC KEY-----
 MIIBCgKCAQEA4v/3tBv7bKZgVyC8+Kjb82edPJmiEO2nJmTi/pAGK6bWEqOknsl9
 Qx5Ih1Z374mnIPWpeM/D4g/CC8E4NWWy6htGzZx8b5tcO08XJ7uGEWfG1NyqACsQ
@@ -290,4 +342,10 @@ QD6I00o1hirs0oCka/Rlfy/OhikzvkiGDcS6VC+KFwP6wXx91TIwMLy+ncJ6hZJH
 HXbQN5oVkga1ZAtid4xeYvC9Ma5ytIfeRG61cUetc173vdxBtcHPXfrSDvjCG8vF
 TrtIkY4rE6zx9qrTXrYniSgrBKsn+HoWcQIDAQAB
 -----END RSA PUBLIC KEY-----`
+	ecP256Priv = `
+-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIPEHBaM5VfAK2Gss3HQcXg89UH/5+APhT+LeXv9QXJ5toAoGCCqGSM49
+AwEHoUQDQgAEpKijCjLFUcDsIjNAXkzQsk1/YnObl5dx1KR/CfDzKklOIDiCaU4H
+O6SocyslNS/EH5UqyZgShM3WhoHcdvdBSg==
+-----END EC PRIVATE KEY-----`
 )

@@ -92,7 +92,7 @@ func LoadCertificates(rawPEM []byte) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-func LoadX509KeyInfer(pemBlock *pem.Block) (key any, err error) { // TODO Won't work with PEM encoding.
+func LoadX509KeyInfer(pemBlock *pem.Block) (key any, err error) {
 	switch pemBlock.Type {
 	case "EC PRIVATE KEY":
 		key, err = LoadECPrivate(pemBlock)
