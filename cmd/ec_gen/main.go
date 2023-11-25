@@ -12,7 +12,7 @@ import (
 
 const (
 	logFmt   = "%s\nError: %s"
-	privFile = "ec256Priv.pem"
+	privFile = "ec256SEC1Priv.pem"
 )
 
 func main() {
