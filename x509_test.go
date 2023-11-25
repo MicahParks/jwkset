@@ -83,7 +83,7 @@ func TestLoadX509KeyInfer(t *testing.T) {
 	}
 	_ = key.(*rsa.PublicKey)
 
-	b = loadPEM(t, ecP256Priv)
+	b = loadPEM(t, ec256SEC1Priv)
 	key, err = jwkset.LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load private EC P256 X509 key:", err)
@@ -121,7 +121,7 @@ func TestLoadPKCS1Public(t *testing.T) {
 }
 
 func TestLoadECPrivate(t *testing.T) {
-	b := loadPEM(t, ecP256Priv)
+	b := loadPEM(t, ec256SEC1Priv)
 	_, err := jwkset.LoadECPrivate(b)
 	if err != nil {
 		t.Fatal("Failed to load private EC key:", err)
@@ -207,7 +207,7 @@ VhA/xoU82uODjoUbY6FzMW49ESHddZfuFg9fXHm1z31q
 -----END CERTIFICATE-----`
 )
 
-// PKCS#8 formats.
+// PKCS#8 and PKIX formats.
 const (
 	ec521Priv = `
 -----BEGIN PRIVATE KEY-----
@@ -342,7 +342,7 @@ QD6I00o1hirs0oCka/Rlfy/OhikzvkiGDcS6VC+KFwP6wXx91TIwMLy+ncJ6hZJH
 HXbQN5oVkga1ZAtid4xeYvC9Ma5ytIfeRG61cUetc173vdxBtcHPXfrSDvjCG8vF
 TrtIkY4rE6zx9qrTXrYniSgrBKsn+HoWcQIDAQAB
 -----END RSA PUBLIC KEY-----`
-	ecP256Priv = `
+	ec256SEC1Priv = `
 -----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIPEHBaM5VfAK2Gss3HQcXg89UH/5+APhT+LeXv9QXJ5toAoGCCqGSM49
 AwEHoUQDQgAEpKijCjLFUcDsIjNAXkzQsk1/YnObl5dx1KR/CfDzKklOIDiCaU4H
