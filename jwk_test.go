@@ -2,6 +2,7 @@ package jwkset_test
 
 import (
 	"context"
+	"crypto/ecdh"
 	"crypto/ed25519"
 	"crypto/x509"
 	"encoding/base64"
@@ -18,6 +19,17 @@ func TestJSON(t *testing.T) {
 	defer cancel()
 
 	jwks := jwkset.NewMemory()
+
+	b, err := base64.RawURLEncoding.DecodeString(x25519PrivateKey)
+	if err != nil {
+		t.Fatalf("Failed to decode ECDH X25519 private key. %s", err)
+	}
+	x25519Priv, err := ecdh.X25519().NewPrivateKey(b)
+	if err != nil {
+		t.Fatalf("Failed to generate ECDH X25519 key. %s", err)
+	}
+	const x25519ID = "myX25519Key"
+	writeKey(ctx, t, jwks, x25519Priv, x25519ID)
 
 	block, _ := pem.Decode([]byte(ecPrivateKey))
 	eKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
@@ -76,9 +88,9 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 	}
 
 	wrongLength := false
-	if private && len(keys.Keys) != 4 {
+	if private && len(keys.Keys) != 5 {
 		wrongLength = true
-	} else if !private && len(keys.Keys) != 3 {
+	} else if !private && len(keys.Keys) != 4 {
 		wrongLength = true
 	}
 	if wrongLength {
@@ -101,8 +113,15 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 				matchingAttributes = append(matchingAttributes, "d")
 			}
 		case jwkset.KtyOKP:
-			expectedJSON = json.RawMessage(edExpected)
-			matchingAttributes = []string{"kty", "kid", "x"}
+			switch jwkset.CRV(key["crv"].(string)) {
+			case jwkset.CrvEd25519:
+				expectedJSON = json.RawMessage(edExpected)
+			case jwkset.CrvX25519:
+				expectedJSON = json.RawMessage(x25519Expected)
+			default:
+				t.Fatalf("Unknown OKP curve %q.", key["crv"].(string))
+			}
+			matchingAttributes = []string{"crv", "kty", "kid", "x"}
 			if private {
 				matchingAttributes = append(matchingAttributes, "d")
 			}
@@ -169,7 +188,15 @@ These assets were generated using this tool:
 https://mkjwk.org/
 */
 const (
-	ecExpected = `{
+	x25519Expected = `{
+    "kty": "OKP",
+    "d": "GIu7AbclXA1FtVswPBUileBckbJu2B9UUhZPTebrox4",
+    "crv": "X25519",
+    "kid": "myX25519Key",
+    "x": "fGMcCrO_gWS7rva_PpXiS7D5-2OppjZQLlZmdRUSN0g"
+}`
+	x25519PrivateKey = `GIu7AbclXA1FtVswPBUileBckbJu2B9UUhZPTebrox4`
+	ecExpected       = `{
     "kty": "EC",
     "d": "Vp3epfDd9viOo1w6Co7DpIP2lPnqwIB8HcOrI7Jt0II",
     "crv": "P-256",
