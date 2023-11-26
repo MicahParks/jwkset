@@ -225,8 +225,8 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 			key = publicKey
 		}
 	case KtyOKP:
-		if marshal.X == "" {
-			return JWK{}, fmt.Errorf(`%w: %s requires parameter "x"`, ErrKeyUnmarshalParameter, KtyOKP)
+		if marshal.CRV == "" || marshal.X == "" {
+			return JWK{}, fmt.Errorf(`%w: %s requires parameters "crv" and "x"`, ErrKeyUnmarshalParameter, KtyOKP)
 		}
 		public, err := base64urlTrailingPadding(marshal.X)
 		if err != nil {

@@ -141,8 +141,8 @@ func NewJWKFromMarshal(marshal JWKMarshal, marshalOptions JWKMarshalOptions, val
 	return j, nil
 }
 
-// NewJWKFromX509 uses the X.509 information in the options to create a JWK.
-func NewJWKFromX509(options JWKOptions) (JWK, error) {
+// NewJWKFromX5C uses the X.509 X5C information in the options to create a JWK.
+func NewJWKFromX5C(options JWKOptions) (JWK, error) {
 	if len(options.X509.X5C) == 0 {
 		return JWK{}, fmt.Errorf("%w: no X.509 certificates provided", ErrOptions)
 	}
