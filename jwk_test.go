@@ -14,6 +14,19 @@ import (
 	"github.com/MicahParks/jwkset"
 )
 
+func TestNewJWKFromRawJSON(t *testing.T) {
+	marshalOptions := jwkset.JWKMarshalOptions{
+		AsymmetricPrivate: true,
+	}
+	jwk, err := jwkset.NewJWKFromRawJSON([]byte(edExpected), marshalOptions, jwkset.JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create JWK from raw JSON. %s", err)
+	}
+	if jwk.Marshal().KID != edID {
+		t.Fatalf("Incorrect KID. %s", jwk.Marshal().KID)
+	}
+}
+
 func TestJSON(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -28,7 +41,6 @@ func TestJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate ECDH X25519 key. %s", err)
 	}
-	const x25519ID = "myX25519Key"
 	writeKey(ctx, t, jwks, x25519Priv, x25519ID)
 
 	block, _ := pem.Decode([]byte(ecPrivateKey))
@@ -36,7 +48,6 @@ func TestJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to parse EC private key. %s", err)
 	}
-	const eID = "myECKey"
 	writeKey(ctx, t, jwks, eKey, eID)
 
 	edPriv, err := base64.RawURLEncoding.DecodeString(edPrivateKey)
@@ -48,7 +59,6 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to decode EdDSA public key. %s", err)
 	}
 	ed := ed25519.PrivateKey(append(edPriv, edPub...))
-	const edID = "myEdDSAKey"
 	writeKey(ctx, t, jwks, ed, edID)
 
 	block, _ = pem.Decode([]byte(rsaPrivateKey))
@@ -60,7 +70,6 @@ func TestJSON(t *testing.T) {
 	writeKey(ctx, t, jwks, rKey, rID)
 
 	hKey := []byte(hmacSecret)
-	const hID = "myHMACKey"
 	writeKey(ctx, t, jwks, hKey, hID)
 
 	jsonRepresentation, err := jwks.JSONPublic(ctx)
@@ -113,17 +122,18 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 				matchingAttributes = append(matchingAttributes, "d")
 			}
 		case jwkset.KtyOKP:
+			matchingAttributes = []string{"crv", "kty", "kid", "x"}
+			if private {
+				matchingAttributes = append(matchingAttributes, "d")
+			}
 			switch jwkset.CRV(key["crv"].(string)) {
 			case jwkset.CrvEd25519:
+				matchingAttributes = append(matchingAttributes, "alg")
 				expectedJSON = json.RawMessage(edExpected)
 			case jwkset.CrvX25519:
 				expectedJSON = json.RawMessage(x25519Expected)
 			default:
 				t.Fatalf("Unknown OKP curve %q.", key["crv"].(string))
-			}
-			matchingAttributes = []string{"crv", "kty", "kid", "x"}
-			if private {
-				matchingAttributes = append(matchingAttributes, "d")
 			}
 		case jwkset.KtyRSA:
 			expectedJSON = json.RawMessage(rsaExpected)
@@ -183,6 +193,13 @@ func writeKey(ctx context.Context, t *testing.T, jwks jwkset.JWKSet, key any, ke
 	}
 }
 
+const (
+	x25519ID = "myX25519Key"
+	eID      = "myECKey"
+	edID     = "myEdDSAKey"
+	hID      = "myHMACKey"
+)
+
 /*
 These assets were generated using this tool:
 https://mkjwk.org/
@@ -209,6 +226,7 @@ MEECAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQcEJzAlAgEBBCBWnd6l8N32+I6jXDoK
 jsOkg/aU+erAgHwdw6sjsm3Qgg==
 -----END PRIVATE KEY-----`
 	edExpected = `{
+    "alg": "EdDSA",
     "kty": "OKP",
     "d": "tKqo1bnSif18g2hE0D7zPDNgSTKQKwBMEl2UvhJZ-bs",
     "crv": "Ed25519",
