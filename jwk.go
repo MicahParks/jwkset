@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-// JWK TODO
+// JWK represents a JSON Web Key.
 type JWK struct {
 	key     any
 	marshal JWKMarshal

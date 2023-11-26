@@ -270,6 +270,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 				if err != nil {
 					return JWK{}, fmt.Errorf("failed to create X25519 private key: %w", err)
 				}
+				marshalCopy.D = marshal.D
 			} else {
 				key, err = ecdh.X25519().NewPublicKey(public)
 				if err != nil {
