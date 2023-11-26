@@ -1,6 +1,7 @@
 package jwkset
 
 import (
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -81,6 +82,20 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 	m := JWKMarshal{}
 	m.ALG = options.Metadata.ALG
 	switch key := key.(type) {
+	case *ecdh.PublicKey:
+		pub := key.Bytes()
+		m.CRV = CrvX25519
+		m.X = base64.RawURLEncoding.EncodeToString(pub)
+		m.KTY = KtyOKP
+	case *ecdh.PrivateKey:
+		pub := key.PublicKey().Bytes()
+		m.CRV = CrvX25519
+		m.X = base64.RawURLEncoding.EncodeToString(pub)
+		m.KTY = KtyOKP
+		if options.Marshal.AsymmetricPrivate {
+			priv := key.Bytes()
+			m.D = base64.RawURLEncoding.EncodeToString(priv)
+		}
 	case *ecdsa.PrivateKey:
 		pub := key.PublicKey
 		m.CRV = CRV(pub.Curve.Params().Name)
@@ -210,12 +225,6 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 			key = publicKey
 		}
 	case KtyOKP:
-		if marshal.CRV == CrvX25519 {
-			return JWK{}, fmt.Errorf("%w: no suitable Golang type to unmarshal to", ErrUnsupportedKey)
-		}
-		if marshal.CRV != CrvEd25519 {
-			return JWK{}, fmt.Errorf("%w: %s key type should have %q curve", ErrKeyUnmarshalParameter, KtyOKP, CrvEd25519)
-		}
 		if marshal.X == "" {
 			return JWK{}, fmt.Errorf(`%w: %s requires parameter "x"`, ErrKeyUnmarshalParameter, KtyOKP)
 		}
@@ -223,24 +232,52 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 		if err != nil {
 			return JWK{}, fmt.Errorf(`failed to decode %s key parameter "x": %w`, KtyOKP, err)
 		}
-		if len(public) != ed25519.PublicKeySize {
-			return JWK{}, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, ed25519.PublicKeySize)
-		}
 		marshalCopy.CRV = marshal.CRV
 		marshalCopy.X = marshal.X
+		var private []byte
 		if options.AsymmetricPrivate && marshal.D != "" {
-			private, err := base64urlTrailingPadding(marshal.D)
+			private, err = base64urlTrailingPadding(marshal.D)
 			if err != nil {
 				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyOKP, err)
 			}
-			private = append(private, public...)
-			if len(private) != ed25519.PrivateKeySize {
-				return JWK{}, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, ed25519.PrivateKeySize)
+		}
+		switch marshal.CRV {
+		case CrvEd25519:
+			if len(public) != ed25519.PublicKeySize {
+				return JWK{}, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, ed25519.PublicKeySize)
 			}
-			key = ed25519.PrivateKey(private)
-			marshalCopy.D = marshal.D
-		} else {
-			key = ed25519.PublicKey(public)
+			if options.AsymmetricPrivate && marshal.D != "" {
+				private = append(private, public...)
+				if len(private) != ed25519.PrivateKeySize {
+					return JWK{}, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, ed25519.PrivateKeySize)
+				}
+				key = ed25519.PrivateKey(private)
+				marshalCopy.D = marshal.D
+			} else {
+				key = ed25519.PublicKey(public)
+			}
+		case CrvX25519:
+			const x25519PublicKeySize = 32
+			if len(public) != x25519PublicKeySize {
+				return JWK{}, fmt.Errorf("%w: %s with curve %s public key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, CrvEd25519, x25519PublicKeySize)
+			}
+			if options.AsymmetricPrivate && marshal.D != "" {
+				const x25519PrivateKeySize = 32
+				if len(private) != x25519PrivateKeySize {
+					return JWK{}, fmt.Errorf("%w: %s with curve %s private key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, CrvEd25519, x25519PrivateKeySize)
+				}
+				key, err = ecdh.X25519().NewPrivateKey(private)
+				if err != nil {
+					return JWK{}, fmt.Errorf("failed to create X25519 private key: %w", err)
+				}
+			} else {
+				key, err = ecdh.X25519().NewPublicKey(public)
+				if err != nil {
+					return JWK{}, fmt.Errorf("failed to create X25519 public key: %w", err)
+				}
+			}
+		default:
+			return JWK{}, fmt.Errorf("%w: unsupported curve type %q", ErrKeyUnmarshalParameter, marshal.CRV)
 		}
 	case KtyRSA:
 		if marshal.N == "" || marshal.E == "" {
