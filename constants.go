@@ -1,5 +1,9 @@
 package jwkset
 
+import (
+	"crypto/x509"
+)
+
 const (
 	// HeaderKID is a JWT header for the key ID.
 	HeaderKID = "kid"
@@ -142,4 +146,30 @@ func (use USE) valid() bool {
 		return true
 	}
 	return false
+}
+
+func certToAlg(cert x509.SignatureAlgorithm) ALG {
+	switch cert {
+	case x509.ECDSAWithSHA256:
+		return AlgES256
+	case x509.ECDSAWithSHA384:
+		return AlgES384
+	case x509.ECDSAWithSHA512:
+		return AlgES512
+	case x509.PureEd25519:
+		return AlgEdDSA
+	case x509.SHA256WithRSA:
+		return AlgRS256
+	case x509.SHA384WithRSA:
+		return AlgRS384
+	case x509.SHA512WithRSA:
+		return AlgRS512
+	case x509.SHA256WithRSAPSS:
+		return AlgPS256
+	case x509.SHA384WithRSAPSS:
+		return AlgPS384
+	case x509.SHA512WithRSAPSS:
+		return AlgPS512
+	}
+	return ""
 }

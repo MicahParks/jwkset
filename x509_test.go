@@ -12,6 +12,25 @@ import (
 	"github.com/MicahParks/jwkset"
 )
 
+func TestNewJWKFromX5C(t *testing.T) {
+	b := append(append([]byte(ec521Cert), []byte(ed25519Cert)...), []byte(rsa4096Cert)...)
+	certs, err := jwkset.LoadCertificates(b)
+	if err != nil {
+		t.Fatal("Failed to parse certificates:", err)
+	}
+	x509Options := jwkset.JWKX509Options{
+		X5C: certs,
+	}
+	options := jwkset.JWKOptions{
+		X509: x509Options,
+	}
+	jwk, err := jwkset.NewJWKFromX5C(options)
+	if err != nil {
+		t.Fatal("Failed to create JWK from X5C:", err)
+	}
+	_ = jwk
+}
+
 func TestLoadCertificates(t *testing.T) {
 	b := append(append([]byte(ec521Cert), []byte(ed25519Cert)...), []byte(rsa4096Cert)...)
 	certs, err := jwkset.LoadCertificates(b)

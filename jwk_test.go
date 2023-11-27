@@ -25,6 +25,11 @@ func TestNewJWKFromRawJSON(t *testing.T) {
 	if jwk.Marshal().KID != edID {
 		t.Fatalf("Incorrect KID. %s", jwk.Marshal().KID)
 	}
+
+	_, err = jwkset.NewJWKFromRawJSON([]byte("invalid"), jwkset.JWKMarshalOptions{}, jwkset.JWKValidateOptions{})
+	if err == nil {
+		t.Fatal("Expected an error.")
+	}
 }
 
 func TestJSON(t *testing.T) {

@@ -145,10 +145,18 @@ func NewJWKFromX5C(options JWKOptions) (JWK, error) {
 	if len(options.X509.X5C) == 0 {
 		return JWK{}, fmt.Errorf("%w: no X.509 certificates provided", ErrOptions)
 	}
-	marshal, err := keyMarshal(options.X509.X5C[0].PublicKey, options)
+	cert := options.X509.X5C[0]
+	marshal, err := keyMarshal(cert.PublicKey, options)
 	if err != nil {
 		return JWK{}, fmt.Errorf("failed to marshal JSON Web Key: %w", err)
 	}
+	alg := certToAlg(cert.SignatureAlgorithm)
+	if options.Metadata.ALG == "" {
+		options.Metadata.ALG = alg
+	} else if options.Metadata.ALG != alg {
+		return JWK{}, fmt.Errorf("%w: ALG in metadata does not match ALG in X.509 certificate", errors.Join(ErrOptions, ErrX509Mismatch))
+	}
+
 	j := JWK{
 		key:     options.X509.X5C[0].PublicKey,
 		marshal: marshal,
@@ -263,50 +271,9 @@ func (j JWK) Validate() error {
 		default:
 			return fmt.Errorf("%w: Golang key is type %T, which is not supported, so it cannot be compared to given X.509 certificates", errors.Join(ErrJWKValidation, ErrUnsupportedKey, ErrX509Mismatch), j.key)
 		}
-		const badAlgoErrMsg = " %w: X.509 certificate signature algorithm does not match JWK algorithm %q"
-		switch cert.SignatureAlgorithm {
-		case x509.ECDSAWithSHA256:
-			if j.marshal.ALG != AlgES256 {
-				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
-			}
-		case x509.ECDSAWithSHA384:
-			if j.marshal.ALG != AlgES384 {
-				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
-			}
-		case x509.ECDSAWithSHA512:
-			if j.marshal.ALG != AlgES512 {
-				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
-			}
-		case x509.PureEd25519:
-			if j.marshal.ALG != AlgEdDSA {
-				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
-			}
-		case x509.SHA256WithRSA:
-			if j.marshal.ALG != AlgRS256 {
-				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
-			}
-		case x509.SHA384WithRSA:
-			if j.marshal.ALG != AlgRS384 {
-				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
-			}
-		case x509.SHA512WithRSA:
-			if j.marshal.ALG != AlgRS512 {
-				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
-			}
-		case x509.SHA256WithRSAPSS:
-			if j.marshal.ALG != AlgPS256 {
-				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
-			}
-		case x509.SHA384WithRSAPSS:
-			if j.marshal.ALG != AlgPS384 {
-				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
-			}
-		case x509.SHA512WithRSAPSS:
-			if j.marshal.ALG != AlgPS512 {
-				return fmt.Errorf(badAlgoErrMsg, errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
-			}
-		default:
-			return fmt.Errorf("%w: X.509 certificate signature algorithm %q is not supported", errors.Join(ErrJWKValidation, ErrX509Mismatch), cert.SignatureAlgorithm)
+		expectedAlg := certToAlg(cert.SignatureAlgorithm)
+		if j.marshal.ALG != expectedAlg {
+			return fmt.Errorf("%w: X.509 certificate signature algorithm does not match JWK algorithm %q", errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
 		}
 		if j.options.Validate.CheckX509ValidTime {
 			now := time.Now()

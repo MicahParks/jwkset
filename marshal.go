@@ -161,13 +161,22 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 	default:
 		return JWKMarshal{}, fmt.Errorf("%w: %T", ErrUnsupportedKey, key)
 	}
-	for i, cert := range options.X509.X5C {
-		m.X5C = append(m.X5C, base64.StdEncoding.EncodeToString(cert.Raw))
-		if i == 0 {
-			h1 := sha1.Sum(cert.Raw)
-			m.X5T = base64.RawURLEncoding.EncodeToString(h1[:])
-			h256 := sha256.Sum256(cert.Raw)
-			m.X5TS256 = base64.RawURLEncoding.EncodeToString(h256[:])
+	haveX5C := len(options.X509.X5C) > 0
+	if haveX5C {
+		for i, cert := range options.X509.X5C {
+			m.X5C = append(m.X5C, base64.StdEncoding.EncodeToString(cert.Raw))
+			if i == 0 {
+				h1 := sha1.Sum(cert.Raw)
+				m.X5T = base64.RawURLEncoding.EncodeToString(h1[:])
+				h256 := sha256.Sum256(cert.Raw)
+				m.X5TS256 = base64.RawURLEncoding.EncodeToString(h256[:])
+			}
+		}
+		expectedAlg := certToAlg(options.X509.X5C[0].SignatureAlgorithm)
+		if m.ALG == "" {
+			m.ALG = expectedAlg
+		} else if m.ALG != expectedAlg {
+			return JWKMarshal{}, fmt.Errorf("%w: %s", ErrX509Mismatch, m.ALG)
 		}
 	}
 	m.KID = options.Metadata.KID
