@@ -478,13 +478,13 @@ func TestUnmarshalOct(t *testing.T) {
 	}
 
 	options := jwkset.JWKMarshalOptions{}
-	jwk, err := jwkset.NewJWKFromMarshal(marshal, options, jwkset.JWKValidateOptions{})
+	_, err := jwkset.NewJWKFromMarshal(marshal, options, jwkset.JWKValidateOptions{})
 	if !errors.Is(err, jwkset.ErrOptions) {
 		t.Fatalf("Symmetric key should be unsupported for given options. %s", err)
 	}
 
 	options.Symmetric = true
-	jwk, err = jwkset.NewJWKFromMarshal(marshal, options, jwkset.JWKValidateOptions{})
+	jwk, err := jwkset.NewJWKFromMarshal(marshal, options, jwkset.JWKValidateOptions{})
 	if err != nil {
 		t.Fatalf("Failed to unmarshal key with correct options. %s", err)
 	}
