@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"encoding/pem"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -13,22 +14,54 @@ import (
 )
 
 func TestNewJWKFromX5C(t *testing.T) {
-	b := append(append([]byte(ec521Cert), []byte(ed25519Cert)...), []byte(rsa4096Cert)...)
-	certs, err := jwkset.LoadCertificates(b)
-	if err != nil {
-		t.Fatal("Failed to parse certificates:", err)
+	testCases := []struct {
+		name    string
+		raw     []byte
+		keyType any
+	}{
+		{
+			name:    "EC",
+			raw:     []byte(ec521Cert),
+			keyType: &ecdsa.PublicKey{},
+		},
+		{
+			name:    "EdDSA",
+			raw:     []byte(ed25519Cert),
+			keyType: ed25519.PublicKey{},
+		},
+		{
+			name:    "RSA",
+			raw:     []byte(rsa4096Cert),
+			keyType: &rsa.PublicKey{},
+		},
+		{
+			name:    "Chain",
+			raw:     []byte(ec521Cert + ed25519Cert + rsa4096Cert),
+			keyType: &ecdsa.PublicKey{},
+		},
 	}
-	x509Options := jwkset.JWKX509Options{
-		X5C: certs,
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			certs, err := jwkset.LoadCertificates(testCase.raw)
+			if err != nil {
+				t.Fatal("Failed to load certificates:", err)
+			}
+			x509Options := jwkset.JWKX509Options{
+				X5C: certs,
+			}
+			options := jwkset.JWKOptions{
+				X509: x509Options,
+			}
+			jwk, err := jwkset.NewJWKFromX5C(options)
+			if err != nil {
+				t.Fatal("Failed to create JWK from X5C:", err)
+			}
+			if reflect.TypeOf(jwk.Key()) != reflect.TypeOf(testCase.keyType) {
+				t.Fatal("Wrong key type:", reflect.TypeOf(jwk.Key()))
+			}
+		})
 	}
-	options := jwkset.JWKOptions{
-		X509: x509Options,
-	}
-	jwk, err := jwkset.NewJWKFromX5C(options)
-	if err != nil {
-		t.Fatal("Failed to create JWK from X5C:", err)
-	}
-	_ = jwk
 }
 
 func TestLoadCertificates(t *testing.T) {
