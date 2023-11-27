@@ -197,15 +197,22 @@ func NewJWKFromX5U(options JWKOptions) (JWK, error) {
 	return jwk, nil
 }
 
+// Key returns the public or private cryptographic key associated with the JWK.
 func (j JWK) Key() any {
 	return j.key
 }
+
+// Marshal returns Go type that can be marshalled into JSON.
 func (j JWK) Marshal() JWKMarshal {
 	return j.marshal
 }
+
+// X509 returns the X.509 certificate information for the JWK.
 func (j JWK) X509() JWKX509Options {
 	return j.options.X509
 }
+
+// Validate validates the JWK. The JWK is automatically validated when created from a function in this package.
 func (j JWK) Validate() error {
 	if j.options.Validate.SkipAll {
 		return nil
