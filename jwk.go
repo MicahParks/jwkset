@@ -218,14 +218,6 @@ func (j JWK) Validate() error {
 		i := cert.PublicKey
 		switch k := j.key.(type) {
 		// ECDH keys are not used to sign certificates.
-		case *ecdsa.PrivateKey:
-			pub, ok := i.(*ecdsa.PublicKey)
-			if !ok {
-				return fmt.Errorf("%w: Golang key is type *ecdsa.Private but X.509 public key was of type %T", errors.Join(ErrJWKValidation, ErrX509Mismatch), i)
-			}
-			if !k.PublicKey.Equal(pub) {
-				return fmt.Errorf("%w: Golang *ecdsa.PrivateKey's public key does not match the X.509 public key", errors.Join(ErrJWKValidation, ErrX509Mismatch))
-			}
 		case *ecdsa.PublicKey:
 			pub, ok := i.(*ecdsa.PublicKey)
 			if !ok {
@@ -233,14 +225,6 @@ func (j JWK) Validate() error {
 			}
 			if !k.Equal(pub) {
 				return fmt.Errorf("%w: Golang *ecdsa.PublicKey does not match the X.509 public key", errors.Join(ErrJWKValidation, ErrX509Mismatch))
-			}
-		case ed25519.PrivateKey:
-			pub, ok := i.(ed25519.PublicKey)
-			if !ok {
-				return fmt.Errorf("%w: Golang key is type ed25519.PrivateKey but X.509 public key was of type %T", errors.Join(ErrJWKValidation, ErrX509Mismatch), i)
-			}
-			if !bytes.Equal(k.Public().(ed25519.PublicKey), pub) {
-				return fmt.Errorf("%w: Golang ed25519.PrivateKey's public key does not match the X.509 public key", errors.Join(ErrJWKValidation, ErrX509Mismatch))
 			}
 		case ed25519.PublicKey:
 			pub, ok := i.(ed25519.PublicKey)
@@ -250,14 +234,6 @@ func (j JWK) Validate() error {
 			if !bytes.Equal(k, pub) {
 				return fmt.Errorf("%w: Golang ed25519.PublicKey does not match the X.509 public key", errors.Join(ErrJWKValidation, ErrX509Mismatch))
 			}
-		case *rsa.PrivateKey:
-			pub, ok := i.(*rsa.PublicKey)
-			if !ok {
-				return fmt.Errorf("%w: Golang key is type *rsa.PrivateKey but X.509 public key was of type %T", errors.Join(ErrJWKValidation, ErrX509Mismatch), i)
-			}
-			if !k.PublicKey.Equal(pub) {
-				return fmt.Errorf("%w: Golang *rsa.PrivateKey's public key does not match the X.509 public key", errors.Join(ErrJWKValidation, ErrX509Mismatch))
-			}
 		case *rsa.PublicKey:
 			pub, ok := i.(*rsa.PublicKey)
 			if !ok {
@@ -266,8 +242,6 @@ func (j JWK) Validate() error {
 			if !k.Equal(pub) {
 				return fmt.Errorf("%w: Golang *rsa.PublicKey does not match the X.509 public key", errors.Join(ErrJWKValidation, ErrX509Mismatch))
 			}
-		case []byte:
-			return fmt.Errorf("%w: Golang key is type []byte, which is only used for symmectric key cryptography, but X.509 certificates were given, which are only used for public key cryptrography", errors.Join(ErrJWKValidation, ErrX509Mismatch))
 		default:
 			return fmt.Errorf("%w: Golang key is type %T, which is not supported, so it cannot be compared to given X.509 certificates", errors.Join(ErrJWKValidation, ErrUnsupportedKey, ErrX509Mismatch), j.key)
 		}
