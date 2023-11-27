@@ -6,6 +6,8 @@ import (
 	"crypto/rsa"
 	"encoding/pem"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
@@ -62,6 +64,34 @@ func TestNewJWKFromX5C(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDefaultGetX5U(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write([]byte(ec521Cert))
+		if err != nil {
+			t.Fatal("Failed to write certificate:", err)
+		}
+	}))
+	defer server.Close()
+
+	validateOptions := jwkset.JWKValidateOptions{
+		GetX5U:        jwkset.DefaultGetX5U,
+		SkipX5UScheme: true,
+	}
+	x509 := jwkset.JWKX509Options{
+		X5U: server.URL,
+	}
+	options := jwkset.JWKOptions{
+		Validate: validateOptions,
+		X509:     x509,
+	}
+	jwk, err := jwkset.NewJWKFromX5U(options)
+	if err != nil {
+		t.Fatal("Failed to create JWK from X5U:", err)
+	}
+
+	_ = jwk.Key().(*ecdsa.PublicKey)
 }
 
 func TestLoadCertificates(t *testing.T) {

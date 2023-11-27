@@ -127,7 +127,7 @@ func NewJWKFromRawJSON(j json.RawMessage, marshalOptions JWKMarshalOptions, vali
 	return NewJWKFromMarshal(marshal, marshalOptions, validateOptions)
 }
 
-// NewJWKFromMarshal transforms a JWKMarshal into a JWK. TODO Remove?
+// NewJWKFromMarshal transforms a JWKMarshal into a JWK.
 func NewJWKFromMarshal(marshal JWKMarshal, marshalOptions JWKMarshalOptions, validateOptions JWKValidateOptions) (JWK, error) {
 	j, err := keyUnmarshal(marshal, marshalOptions, validateOptions)
 	if err != nil {
@@ -167,6 +167,34 @@ func NewJWKFromX5C(options JWKOptions) (JWK, error) {
 		return JWK{}, fmt.Errorf("failed to validate JSON Web Key: %w", err)
 	}
 	return j, nil
+}
+
+// NewJWKFromX5U uses the X.509 X5U information in the options to create a JWK.
+func NewJWKFromX5U(options JWKOptions) (JWK, error) {
+	if options.X509.X5U == "" {
+		return JWK{}, fmt.Errorf("%w: no X.509 URI provided", ErrOptions)
+	}
+	u, err := url.ParseRequestURI(options.X509.X5U)
+	if err != nil {
+		return JWK{}, fmt.Errorf("failed to parse X5U URI: %w", errors.Join(ErrOptions, err))
+	}
+	if !options.Validate.SkipX5UScheme && u.Scheme != "https" {
+		return JWK{}, fmt.Errorf("%w: X5U URI scheme must be https", errors.Join(ErrOptions))
+	}
+	get := options.Validate.GetX5U
+	if get == nil {
+		get = DefaultGetX5U
+	}
+	certs, err := get(u)
+	if err != nil {
+		return JWK{}, fmt.Errorf("failed to get X5U URI: %w", err)
+	}
+	options.X509.X5C = certs
+	jwk, err := NewJWKFromX5C(options)
+	if err != nil {
+		return JWK{}, fmt.Errorf("failed to create JWK from fetched X5U assets: %w", err)
+	}
+	return jwk, nil
 }
 
 func (j JWK) Key() any {
@@ -327,7 +355,7 @@ func DefaultGetX5U(u *url.URL) ([]*x509.Certificate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read X5U response body: %w", errors.Join(ErrGetX5U, err))
 	}
-	certs, err := x509.ParseCertificates(b)
+	certs, err := LoadCertificates(b)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse X5U response body: %w", errors.Join(ErrGetX5U, err))
 	}

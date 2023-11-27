@@ -21,7 +21,7 @@ import (
 
 var (
 	// ErrGetX5U indicates there was an error getting the X5U remote resource.
-	ErrGetX5U = errors.New("X5U URI timed out")
+	ErrGetX5U = errors.New("failed to get X5U via given URI")
 	// ErrJWKValidation indicates that a JWK failed to validate.
 	ErrJWKValidation = errors.New("failed to validate JWK")
 	// ErrKeyUnmarshalParameter indicates that a JWK's attributes are invalid and cannot be unmarshaled.
