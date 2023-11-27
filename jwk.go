@@ -35,6 +35,11 @@ type JWKMarshalOptions struct {
 
 // JWKX509Options holds the X.509 certificate information for a JWK. This data structure is not used for JSON marshaling.
 type JWKX509Options struct {
+	// SkipSigningAlgorithmExtraction is used to skip extracting the signing algorithm from the X.509 certificate. By
+	// default, this project will attempt to extract the public key's signing algorithm from the X.509 certificate and
+	// use the corresponding "alg" parameter in its JWK.
+	SkipSigningAlgorithmExtraction bool
+
 	// X5C contains a chain of one or more PKIX certificates. The PKIX certificate containing the key value MUST be the
 	// first certificate.
 	X5C []*x509.Certificate // The PKIX certificate containing the key value MUST be the first certificate.
@@ -149,11 +154,14 @@ func NewJWKFromX5C(options JWKOptions) (JWK, error) {
 	if err != nil {
 		return JWK{}, fmt.Errorf("failed to marshal JSON Web Key: %w", err)
 	}
-	alg := certToAlg(cert.SignatureAlgorithm)
-	if options.Metadata.ALG == "" {
-		options.Metadata.ALG = alg
-	} else if options.Metadata.ALG != alg {
-		return JWK{}, fmt.Errorf("%w: ALG in metadata does not match ALG in X.509 certificate", errors.Join(ErrOptions, ErrX509Mismatch))
+
+	if !options.X509.SkipSigningAlgorithmExtraction {
+		alg := certToAlg(cert.SignatureAlgorithm)
+		if options.Metadata.ALG == "" {
+			options.Metadata.ALG = alg
+		} else if options.Metadata.ALG != alg {
+			return JWK{}, fmt.Errorf("%w: ALG in metadata does not match ALG in X.509 certificate", errors.Join(ErrOptions, ErrX509Mismatch))
+		}
 	}
 
 	j := JWK{
