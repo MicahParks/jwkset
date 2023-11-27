@@ -27,11 +27,10 @@ type JWK struct {
 
 // JWKMarshalOptions are used to specify options for JSON marshaling a JWK.
 type JWKMarshalOptions struct {
-	// AsymmetricPrivate is used to indicate that the JWK's asymmetric private key should be JSON marshaled and
-	// unmarshalled.
-	AsymmetricPrivate bool
-	// Symmetric is used to indicate that the JWK's symmetric (private) key should be JSON marshaled and unmarshalled.
-	Symmetric bool
+	// Private is used to indicate that the JWK's private key material should be JSON marshaled and unmarshalled. This
+	// includes symmetric and asymmetric keys. Setting this to true is the only way to marshal and unmarshal symmetric
+	// keys.
+	Private bool
 }
 
 // JWKX509Options holds the X.509 certificate information for a JWK. This data structure is not used for JSON marshaling.

@@ -16,7 +16,7 @@ import (
 
 func TestNewJWKFromRawJSON(t *testing.T) {
 	marshalOptions := jwkset.JWKMarshalOptions{
-		AsymmetricPrivate: true,
+		Private: true,
 	}
 	jwk, err := jwkset.NewJWKFromRawJSON([]byte(edExpected), marshalOptions, jwkset.JWKValidateOptions{})
 	if err != nil {
@@ -46,14 +46,14 @@ func TestJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate ECDH X25519 key. %s", err)
 	}
-	writeKey(ctx, t, jwks, x25519Priv, x25519ID)
+	writeKey(ctx, t, jwks, x25519Priv, x25519ID, false)
 
 	block, _ := pem.Decode([]byte(ecPrivateKey))
 	eKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
 		t.Fatalf("Failed to parse EC private key. %s", err)
 	}
-	writeKey(ctx, t, jwks, eKey, eID)
+	writeKey(ctx, t, jwks, eKey, eID, false)
 
 	edPriv, err := base64.RawURLEncoding.DecodeString(edPrivateKey)
 	if err != nil {
@@ -64,7 +64,7 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to decode EdDSA public key. %s", err)
 	}
 	ed := ed25519.PrivateKey(append(edPriv, edPub...))
-	writeKey(ctx, t, jwks, ed, edID)
+	writeKey(ctx, t, jwks, ed, edID, false)
 
 	block, _ = pem.Decode([]byte(rsaPrivateKey))
 	rKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
@@ -72,10 +72,10 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to parse RSA private key. %s", err)
 	}
 	const rID = "myRSAKey"
-	writeKey(ctx, t, jwks, rKey, rID)
+	writeKey(ctx, t, jwks, rKey, rID, false)
 
 	hKey := []byte(hmacSecret)
-	writeKey(ctx, t, jwks, hKey, hID)
+	writeKey(ctx, t, jwks, hKey, hID, true)
 
 	jsonRepresentation, err := jwks.JSONPublic(ctx)
 	if err != nil {
@@ -84,6 +84,19 @@ func TestJSON(t *testing.T) {
 	compareJSON(t, jsonRepresentation, false)
 
 	jsonRepresentation, err = jwks.JSONPrivate(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get JSON. %s", err)
+	}
+	compareJSON(t, jsonRepresentation, true)
+
+	jwks = jwkset.NewMemory()
+	writeKey(ctx, t, jwks, x25519Priv, x25519ID, true)
+	writeKey(ctx, t, jwks, eKey, eID, true)
+	writeKey(ctx, t, jwks, ed, edID, true)
+	writeKey(ctx, t, jwks, rKey, rID, true)
+	writeKey(ctx, t, jwks, hKey, hID, true)
+
+	jsonRepresentation, err = jwks.JSON(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get JSON. %s", err)
 	}
@@ -176,10 +189,9 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 	}
 }
 
-func writeKey(ctx context.Context, t *testing.T, jwks jwkset.JWKSet, key any, keyID string) {
+func writeKey(ctx context.Context, t *testing.T, jwks jwkset.JWKSet, key any, keyID string, private bool) {
 	marshal := jwkset.JWKMarshalOptions{
-		AsymmetricPrivate: true,
-		Symmetric:         true,
+		Private: private,
 	}
 	metadata := jwkset.JWKMetadataOptions{
 		KID: keyID,

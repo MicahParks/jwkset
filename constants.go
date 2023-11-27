@@ -9,6 +9,8 @@ const (
 	HeaderKID = "kid"
 )
 
+// These are string constants set in https://www.iana.org/assignments/jose/jose.xhtml
+// See their respective types for more information.
 const (
 	AlgHS256            ALG = "HS256"
 	AlgHS384            ALG = "HS384"
@@ -29,7 +31,7 @@ const (
 	AlgA128KW           ALG = "A128KW"
 	AlgA192KW           ALG = "A192KW"
 	AlgA256KW           ALG = "A256KW"
-	Algdir              ALG = "dir"
+	AlgDir              ALG = "dir"
 	AlgECDHES           ALG = "ECDH-ES"
 	AlgECDHESA128KW     ALG = "ECDH-ES+A128KW"
 	AlgECDHESA192KW     ALG = "ECDH-ES+A192KW"

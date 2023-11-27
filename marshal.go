@@ -92,7 +92,7 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 		m.CRV = CrvX25519
 		m.X = base64.RawURLEncoding.EncodeToString(pub)
 		m.KTY = KtyOKP
-		if options.Marshal.AsymmetricPrivate {
+		if options.Marshal.Private {
 			priv := key.Bytes()
 			m.D = base64.RawURLEncoding.EncodeToString(priv)
 		}
@@ -102,7 +102,7 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 		m.X = bigIntToBase64RawURL(pub.X)
 		m.Y = bigIntToBase64RawURL(pub.Y)
 		m.KTY = KtyEC
-		if options.Marshal.AsymmetricPrivate {
+		if options.Marshal.Private {
 			m.D = bigIntToBase64RawURL(key.D)
 		}
 	case *ecdsa.PublicKey:
@@ -116,7 +116,7 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 		m.CRV = CrvEd25519
 		m.X = base64.RawURLEncoding.EncodeToString(pub)
 		m.KTY = KtyOKP
-		if options.Marshal.AsymmetricPrivate {
+		if options.Marshal.Private {
 			m.D = base64.RawURLEncoding.EncodeToString(key[:32])
 		}
 	case ed25519.PublicKey:
@@ -129,7 +129,7 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 		m.E = bigIntToBase64RawURL(big.NewInt(int64(pub.E)))
 		m.N = bigIntToBase64RawURL(pub.N)
 		m.KTY = KtyRSA
-		if options.Marshal.AsymmetricPrivate {
+		if options.Marshal.Private {
 			m.D = bigIntToBase64RawURL(key.D)
 			m.P = bigIntToBase64RawURL(key.Primes[0])
 			m.Q = bigIntToBase64RawURL(key.Primes[1])
@@ -152,7 +152,7 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 		m.N = bigIntToBase64RawURL(key.N)
 		m.KTY = KtyRSA
 	case []byte:
-		if options.Marshal.Symmetric {
+		if options.Marshal.Private {
 			m.KTY = KtyOct
 			m.K = base64.RawURLEncoding.EncodeToString(key)
 		} else {
@@ -219,7 +219,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 		marshalCopy.CRV = marshal.CRV
 		marshalCopy.X = marshal.X
 		marshalCopy.Y = marshal.Y
-		if options.AsymmetricPrivate && marshal.D != "" {
+		if options.Private && marshal.D != "" {
 			d, err := base64urlTrailingPadding(marshal.D)
 			if err != nil {
 				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyEC, err)
@@ -244,7 +244,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 		marshalCopy.CRV = marshal.CRV
 		marshalCopy.X = marshal.X
 		var private []byte
-		if options.AsymmetricPrivate && marshal.D != "" {
+		if options.Private && marshal.D != "" {
 			private, err = base64urlTrailingPadding(marshal.D)
 			if err != nil {
 				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyOKP, err)
@@ -255,7 +255,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 			if len(public) != ed25519.PublicKeySize {
 				return JWK{}, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, ed25519.PublicKeySize)
 			}
-			if options.AsymmetricPrivate && marshal.D != "" {
+			if options.Private && marshal.D != "" {
 				private = append(private, public...)
 				if len(private) != ed25519.PrivateKeySize {
 					return JWK{}, fmt.Errorf("%w: %s key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, ed25519.PrivateKeySize)
@@ -270,7 +270,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 			if len(public) != x25519PublicKeySize {
 				return JWK{}, fmt.Errorf("%w: %s with curve %s public key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, CrvEd25519, x25519PublicKeySize)
 			}
-			if options.AsymmetricPrivate && marshal.D != "" {
+			if options.Private && marshal.D != "" {
 				const x25519PrivateKeySize = 32
 				if len(private) != x25519PrivateKeySize {
 					return JWK{}, fmt.Errorf("%w: %s with curve %s private key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, CrvEd25519, x25519PrivateKeySize)
@@ -307,7 +307,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 		}
 		marshalCopy.N = marshal.N
 		marshalCopy.E = marshal.E
-		if options.AsymmetricPrivate && marshal.D != "" && marshal.P != "" && marshal.Q != "" && marshal.DP != "" && marshal.DQ != "" && marshal.QI != "" { // TODO Only "d" is required, but if one of the others is present, they all must be.
+		if options.Private && marshal.D != "" && marshal.P != "" && marshal.Q != "" && marshal.DP != "" && marshal.DQ != "" && marshal.QI != "" { // TODO Only "d" is required, but if one of the others is present, they all must be.
 			d, err := base64urlTrailingPadding(marshal.D)
 			if err != nil {
 				return JWK{}, fmt.Errorf(`failed to decode %s key parameter "d": %w`, KtyRSA, err)
@@ -386,11 +386,11 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 			marshalCopy.DQ = marshal.DQ
 			marshalCopy.QI = marshal.QI
 			marshalCopy.OTH = slices.Clone(marshal.OTH)
-		} else if !options.AsymmetricPrivate {
+		} else if !options.Private {
 			key = &publicKey
 		}
 	case KtyOct:
-		if options.Symmetric {
+		if options.Private {
 			if marshal.K == "" {
 				return JWK{}, fmt.Errorf(`%w: %s requires parameter "k"`, ErrKeyUnmarshalParameter, KtyOct)
 			}

@@ -60,7 +60,7 @@ func TestMarshalECDH(t *testing.T) {
 		if marshal.CRV != jwkset.CrvX25519 {
 			t.Fatal(`Marshaled key parameter "crv" does not match original key.`)
 		}
-		if options.Marshal.AsymmetricPrivate {
+		if options.Marshal.Private {
 			if marshal.D != ecdhX25519D {
 				t.Fatal(`Marshaled key parameter "d" does not match original key.`)
 			}
@@ -85,14 +85,14 @@ func TestMarshalECDH(t *testing.T) {
 	}
 	checkMarshal(jwk.Marshal(), options)
 
-	options.Marshal.AsymmetricPrivate = true
+	options.Marshal.Private = true
 	jwk, err = jwkset.NewJWKFromKey(private, options)
 	if err != nil {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
 	}
 	checkMarshal(jwk.Marshal(), options)
 
-	options.Marshal.AsymmetricPrivate = false
+	options.Marshal.Private = false
 	jwk, err = jwkset.NewJWKFromKey(private.Public(), options)
 	if err != nil {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
@@ -120,7 +120,7 @@ func TestUnmarshalECDH(t *testing.T) {
 		t.Fatalf("Unmarshaled key does not match original key.")
 	}
 
-	marshalOptions.AsymmetricPrivate = true
+	marshalOptions.Private = true
 	jwk, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err != nil {
 		t.Fatalf("Failed to unmarshal key with correct options. %s", err)
@@ -191,7 +191,7 @@ func TestMarshalECDSA(t *testing.T) {
 		if marshal.CRV != jwkset.CrvP256 {
 			t.Fatal(`Marshaled parameter "crv" does not match original key.`)
 		}
-		if options.Marshal.AsymmetricPrivate {
+		if options.Marshal.Private {
 			if marshal.D != ecdsaP256D {
 				t.Fatal(`Marshaled parameter "d" does not match original key.`)
 			}
@@ -225,11 +225,11 @@ func TestMarshalECDSA(t *testing.T) {
 
 	checkMarshal(jwk.Marshal(), options)
 
-	options.Marshal.AsymmetricPrivate = true
+	options.Marshal.Private = true
 	jwk = newJWK(t, private, options)
 	checkMarshal(jwk.Marshal(), options)
 
-	options.Marshal.AsymmetricPrivate = false
+	options.Marshal.Private = false
 	jwk = newJWK(t, private.Public(), options)
 	checkMarshal(jwk.Marshal(), options)
 }
@@ -237,7 +237,7 @@ func TestMarshalECDSA(t *testing.T) {
 func TestUnmarshalECDSA(t *testing.T) {
 	checkUnmarshal := func(jwk jwkset.JWK, options jwkset.JWKMarshalOptions, original *ecdsa.PrivateKey) {
 		var public *ecdsa.PublicKey
-		if options.AsymmetricPrivate {
+		if options.Private {
 			private := jwk.Key().(*ecdsa.PrivateKey)
 			if private.D.Cmp(original.D) != 0 {
 				t.Fatal(`Unmarshaled key parameter "d" does not match original key.`)
@@ -270,7 +270,7 @@ func TestUnmarshalECDSA(t *testing.T) {
 	jwk := newJWKFromMarshal(t, marshal, marshalOptions)
 	checkUnmarshal(jwk, marshalOptions, key)
 
-	marshalOptions.AsymmetricPrivate = true
+	marshalOptions.Private = true
 	jwk = newJWKFromMarshal(t, marshal, marshalOptions)
 	checkUnmarshal(jwk, marshalOptions, key)
 
@@ -333,7 +333,7 @@ func TestMarshalEdDSA(t *testing.T) {
 		if marshal.CRV != jwkset.CrvEd25519 {
 			t.Fatal(`Marshaled key parameter "crv" does not match original key.`)
 		}
-		if options.Marshal.AsymmetricPrivate {
+		if options.Marshal.Private {
 			if marshal.D != eddsaPrivate {
 				t.Fatal(`Marshaled key parameter "d" does not match original key.`)
 			}
@@ -358,7 +358,7 @@ func TestMarshalEdDSA(t *testing.T) {
 	}
 	checkJWK(jwk.Marshal(), options)
 
-	options.Marshal.AsymmetricPrivate = true
+	options.Marshal.Private = true
 	jwk, err = jwkset.NewJWKFromKey(private, options)
 	if err != nil {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
@@ -366,7 +366,7 @@ func TestMarshalEdDSA(t *testing.T) {
 	}
 	checkJWK(jwk.Marshal(), options)
 
-	options.Marshal.AsymmetricPrivate = false
+	options.Marshal.Private = false
 	jwk, err = jwkset.NewJWKFromKey(private.Public(), options)
 	if err != nil {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
@@ -395,7 +395,7 @@ func TestUnmarshalEdDSA(t *testing.T) {
 		t.Fatalf("Unmarshaled key does not match original key.")
 	}
 
-	marshalOptions.AsymmetricPrivate = true
+	marshalOptions.Private = true
 	jwk, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err != nil {
 		t.Fatalf("Failed to unmarshal key with correct options. %s", err)
@@ -456,7 +456,7 @@ func TestMarshalOct(t *testing.T) {
 		t.Fatalf("Symmetric key should be unsupported for given options. %s", err)
 	}
 
-	options.Marshal.Symmetric = true
+	options.Marshal.Private = true
 	jwk, err := jwkset.NewJWKFromKey(key, options)
 	if err != nil {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
@@ -483,7 +483,7 @@ func TestUnmarshalOct(t *testing.T) {
 		t.Fatalf("Symmetric key should be unsupported for given options. %s", err)
 	}
 
-	options.Symmetric = true
+	options.Private = true
 	jwk, err := jwkset.NewJWKFromMarshal(marshal, options, jwkset.JWKValidateOptions{})
 	if err != nil {
 		t.Fatalf("Failed to unmarshal key with correct options. %s", err)
@@ -521,7 +521,7 @@ func TestMarshalRSA(t *testing.T) {
 		if marshal.N != rsa2048N {
 			t.Fatal(`Marshal parameter "n" does not match original key.`)
 		}
-		if options.Marshal.AsymmetricPrivate {
+		if options.Marshal.Private {
 			if marshal.D != rsa2048D {
 				t.Fatal(`Marshal parameter "d" does not match original key.`)
 			}
@@ -602,14 +602,14 @@ func TestMarshalRSA(t *testing.T) {
 	}
 	checkMarshal(jwk.Marshal(), options)
 
-	options.Marshal.AsymmetricPrivate = true
+	options.Marshal.Private = true
 	jwk, err = jwkset.NewJWKFromKey(private, options)
 	if err != nil {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
 	}
 	checkMarshal(jwk.Marshal(), options)
 
-	options.Marshal.AsymmetricPrivate = false
+	options.Marshal.Private = false
 	jwk, err = jwkset.NewJWKFromKey(&jwk.Key().(*rsa.PrivateKey).PublicKey, options)
 	if err != nil {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
@@ -621,7 +621,7 @@ func TestUnmarshalRSA(t *testing.T) {
 	checkJWK := func(jwk jwkset.JWK, options jwkset.JWKMarshalOptions, original *rsa.PrivateKey) {
 		var public *rsa.PublicKey
 		var ok bool
-		if options.AsymmetricPrivate {
+		if options.Private {
 			private, ok := jwk.Key().(*rsa.PrivateKey)
 			if !ok {
 				t.Fatal("Unmarshaled key should be a private key.")
@@ -671,7 +671,7 @@ func TestUnmarshalRSA(t *testing.T) {
 	}
 	private := makeRSA(t)
 
-	jwk := jwkset.JWKMarshal{
+	marshal := jwkset.JWKMarshal{
 		E:   rsa2048E,
 		D:   rsa2048D,
 		DP:  rsa2048DP,
@@ -701,107 +701,107 @@ func TestUnmarshalRSA(t *testing.T) {
 	}
 
 	marshalOptions := jwkset.JWKMarshalOptions{}
-	meta, err := jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	jwk, err := jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err != nil {
 		t.Fatalf("Failed to unmarshal key with correct options. %s", err)
 	}
-	checkJWK(meta, marshalOptions, private)
+	checkJWK(jwk, marshalOptions, private)
 
-	marshalOptions.AsymmetricPrivate = true
-	meta, err = jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	marshalOptions.Private = true
+	jwk, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err != nil {
 		t.Fatalf("Failed to unmarshal key with correct options. %s", err)
 	}
-	checkJWK(meta, marshalOptions, private)
+	checkJWK(jwk, marshalOptions, private)
 
-	jwk.N = ""
-	_, err = jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	marshal.N = ""
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err == nil {
 		t.Fatal(`Should get error when parameter "n" is empty.`)
 	}
 
-	jwk.N = invalidB64URL
-	_, err = jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	marshal.N = invalidB64URL
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "n" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.N = rsa2048N
+	marshal.N = rsa2048N
 
-	jwk.E = invalidB64URL
-	_, err = jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	marshal.E = invalidB64URL
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "e" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.E = rsa2048E
+	marshal.E = rsa2048E
 
-	jwk.D = invalidB64URL
-	_, err = jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	marshal.D = invalidB64URL
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "d" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.D = rsa2048D
+	marshal.D = rsa2048D
 
-	jwk.DP = invalidB64URL
-	_, err = jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	marshal.DP = invalidB64URL
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "dp" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.DP = rsa2048DP
+	marshal.DP = rsa2048DP
 
-	jwk.DQ = invalidB64URL
-	_, err = jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	marshal.DQ = invalidB64URL
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "dq" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.DQ = rsa2048DQ
+	marshal.DQ = rsa2048DQ
 
-	jwk.P = invalidB64URL
-	_, err = jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	marshal.P = invalidB64URL
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "p" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.P = rsa2048P
+	marshal.P = rsa2048P
 
-	jwk.Q = invalidB64URL
-	_, err = jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	marshal.Q = invalidB64URL
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "q" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.Q = rsa2048Q
+	marshal.Q = rsa2048Q
 
-	jwk.QI = invalidB64URL
-	_, err = jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	marshal.QI = invalidB64URL
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "qi" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.QI = rsa2048QI
+	marshal.QI = rsa2048QI
 
-	jwk.OTH[0].D = ""
-	_, err = jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	marshal.OTH[0].D = ""
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if !errors.Is(err, jwkset.ErrKeyUnmarshalParameter) {
 		t.Fatalf(`Should get error when parameter "oth" "d" is empty. %s`, err)
 	}
 
-	jwk.OTH[0].D = invalidB64URL
-	_, err = jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	marshal.OTH[0].D = invalidB64URL
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "oth" "d"" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.OTH[0].D = rsa2048OthD1
+	marshal.OTH[0].D = rsa2048OthD1
 
-	jwk.OTH[0].R = invalidB64URL
-	_, err = jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	marshal.OTH[0].R = invalidB64URL
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "oth" "r"" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.OTH[0].R = rsa2048OthR1
+	marshal.OTH[0].R = rsa2048OthR1
 
-	jwk.OTH[0].T = invalidB64URL
-	_, err = jwkset.NewJWKFromMarshal(jwk, marshalOptions, jwkset.JWKValidateOptions{})
+	marshal.OTH[0].T = invalidB64URL
+	_, err = jwkset.NewJWKFromMarshal(marshal, marshalOptions, jwkset.JWKValidateOptions{})
 	if err == nil {
 		t.Fatalf(`Should get error when parameter "oth" "t"" is invalid raw Base64 URL. %s`, err)
 	}
-	jwk.OTH[0].T = rsa2048OthT1
+	marshal.OTH[0].T = rsa2048OthT1
 }
 
 func TestMarshalUnsupported(t *testing.T) {

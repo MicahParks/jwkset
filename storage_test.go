@@ -123,25 +123,25 @@ func TestMemorySnapshotKeys(t *testing.T) {
 		t.Fatalf("Failed to write key 2. %s", err)
 	}
 
-	meta, err := store.SnapshotKeys(params.ctx)
+	keys, err := store.SnapshotKeys(params.ctx)
 	if err != nil {
 		t.Fatalf("Failed to snapshot keys. %s", err)
 	}
-	if len(meta) != 2 {
-		t.Fatalf("Snapshot should have 2 keys. %d", len(meta))
+	if len(keys) != 2 {
+		t.Fatalf("Snapshot should have 2 keys. %d", len(keys))
 	}
 
 	kid1Found := false
 	kid2Found := false
-	for _, m := range meta {
-		if !kid1Found && m.Marshal().KID == kidWritten {
+	for _, jwk := range keys {
+		if !kid1Found && jwk.Marshal().KID == kidWritten {
 			kid1Found = true
-			if !bytes.Equal(m.Key().([]byte), hmacKey1) {
+			if !bytes.Equal(jwk.Key().([]byte), hmacKey1) {
 				t.Fatalf("Snapshot key does not match written key.")
 			}
-		} else if !kid2Found && m.Marshal().KID == kidWritten2 {
+		} else if !kid2Found && jwk.Marshal().KID == kidWritten2 {
 			kid2Found = true
-			if !bytes.Equal(m.Key().([]byte), hmacKey2) {
+			if !bytes.Equal(jwk.Key().([]byte), hmacKey2) {
 				t.Fatalf("Snapshot key does not match written key.")
 			}
 		} else {
@@ -181,8 +181,7 @@ func setupMemory() (params storageTestParams) {
 
 func newStorageTestJWK(t *testing.T, key any, keyID string) jwkset.JWK {
 	marshal := jwkset.JWKMarshalOptions{
-		AsymmetricPrivate: true,
-		Symmetric:         true,
+		Private: true,
 	}
 	metadata := jwkset.JWKMetadataOptions{
 		KID: keyID,
