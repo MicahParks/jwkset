@@ -110,77 +110,77 @@ func TestLoadCertificates(t *testing.T) {
 
 func TestLoadX509KeyInfer(t *testing.T) {
 	b := loadPEM(t, ec521Pub)
-	key, err := jwkset.LoadX509KeyInfer(b)
+	key, err := jwkset.loadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load public EC 521 X509 key:", err)
 	}
 	_ = key.(*ecdsa.PublicKey)
 
 	b = loadPEM(t, ed25519Pub)
-	key, err = jwkset.LoadX509KeyInfer(b)
+	key, err = jwkset.loadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load public EdDSA X509 key:", err)
 	}
 	_ = key.(ed25519.PublicKey)
 
 	b = loadPEM(t, rsa4096Pub)
-	key, err = jwkset.LoadX509KeyInfer(b)
+	key, err = jwkset.loadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load public RSA 4096 X509 key:", err)
 	}
 	_ = key.(*rsa.PublicKey)
 
 	b = loadPEM(t, ec521Priv)
-	key, err = jwkset.LoadX509KeyInfer(b)
+	key, err = jwkset.loadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load private EC 521 X509 key:", err)
 	}
 	_ = key.(*ecdsa.PrivateKey)
 
 	b = loadPEM(t, ed25519Priv)
-	key, err = jwkset.LoadX509KeyInfer(b)
+	key, err = jwkset.loadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load private EdDSA X509 key:", err)
 	}
 	_ = key.(ed25519.PrivateKey)
 
 	b = loadPEM(t, rsa4096Priv)
-	key, err = jwkset.LoadX509KeyInfer(b)
+	key, err = jwkset.loadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load private RSA 4096 X509 key:", err)
 	}
 	_ = key.(*rsa.PrivateKey)
 
 	b = loadPEM(t, rsa2048PKCS1Priv)
-	key, err = jwkset.LoadX509KeyInfer(b)
+	key, err = jwkset.loadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load private RSA 2048 PKCS1 X509 key:", err)
 	}
 	_ = key.(*rsa.PrivateKey)
 
 	b = loadPEM(t, rsa2048PKCS1Pub)
-	key, err = jwkset.LoadX509KeyInfer(b)
+	key, err = jwkset.loadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load public RSA 2048 PKCS1 X509 key:", err)
 	}
 	_ = key.(*rsa.PublicKey)
 
 	b = loadPEM(t, ec256SEC1Priv)
-	key, err = jwkset.LoadX509KeyInfer(b)
+	key, err = jwkset.loadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load private EC P256 X509 key:", err)
 	}
 	_ = key.(*ecdsa.PrivateKey)
 
 	b = &pem.Block{}
-	_, err = jwkset.LoadX509KeyInfer(b)
+	_, err = jwkset.loadX509KeyInfer(b)
 	if !errors.Is(err, jwkset.ErrX509Infer) {
 		t.Fatal("Should have failed to infer X509 key type:", err)
 	}
 
 	replaced := strings.ReplaceAll(rsa2048PKCS1Priv, "RSA PRIVATE KEY", "PRIVATE KEY")
 	b = loadPEM(t, replaced)
-	_, err = jwkset.LoadX509KeyInfer(b)
+	_, err = jwkset.loadX509KeyInfer(b)
 	if err == nil {
 		t.Fatal("Should have failed to infer X509 key type.")
 	}
@@ -188,13 +188,13 @@ func TestLoadX509KeyInfer(t *testing.T) {
 
 func TestLoadPKCS1Private(t *testing.T) {
 	b := loadPEM(t, rsa2048PKCS1Priv)
-	_, err := jwkset.LoadPKCS1Private(b)
+	_, err := jwkset.loadPKCS1Private(b)
 	if err != nil {
 		t.Fatal("Failed to load private PKCS1 key:", err)
 	}
 
 	b = &pem.Block{}
-	_, err = jwkset.LoadPKCS1Private(b)
+	_, err = jwkset.loadPKCS1Private(b)
 	if err == nil {
 		t.Fatal("Should have failed to load private PKCS1 key.")
 	}
@@ -202,13 +202,13 @@ func TestLoadPKCS1Private(t *testing.T) {
 
 func TestLoadPKCS1Public(t *testing.T) {
 	b := loadPEM(t, rsa2048PKCS1Pub)
-	_, err := jwkset.LoadPKCS1Public(b)
+	_, err := jwkset.loadPKCS1Public(b)
 	if err != nil {
 		t.Fatal("Failed to load public PKCS1 key:", err)
 	}
 
 	b = &pem.Block{}
-	_, err = jwkset.LoadPKCS1Public(b)
+	_, err = jwkset.loadPKCS1Public(b)
 	if err == nil {
 		t.Fatal("Should have failed to load public PKCS1 key.")
 	}
@@ -216,12 +216,12 @@ func TestLoadPKCS1Public(t *testing.T) {
 
 func TestLoadECPrivate(t *testing.T) {
 	b := loadPEM(t, ec256SEC1Priv)
-	_, err := jwkset.LoadECPrivate(b)
+	_, err := jwkset.loadECPrivate(b)
 	if err != nil {
 		t.Fatal("Failed to load private EC key:", err)
 	}
 	b = &pem.Block{}
-	_, err = jwkset.LoadECPrivate(b)
+	_, err = jwkset.loadECPrivate(b)
 	if err == nil {
 		t.Fatal("Should have failed to load private EC key.")
 	}
@@ -229,7 +229,7 @@ func TestLoadECPrivate(t *testing.T) {
 
 func TestLoadPKCS8PrivateUnsupportedKey(t *testing.T) {
 	b := &pem.Block{}
-	_, err := jwkset.LoadPKCS8Private(b)
+	_, err := jwkset.loadPKCS8Private(b)
 	if err == nil {
 		t.Fatal("Should have failed to load empty PEM block.")
 	}
@@ -238,12 +238,12 @@ func TestLoadPKCS8PrivateUnsupportedKey(t *testing.T) {
 
 func TestLoadPKIXPublicUnsupportedKey(t *testing.T) {
 	b := &pem.Block{}
-	_, err := jwkset.LoadPKIXPublic(b)
+	_, err := jwkset.loadPKIXPublic(b)
 	if err == nil {
 		t.Fatal("Should have failed to load empty PEM block.")
 	}
 	b = loadPEM(t, dsa2048Pub)
-	_, err = jwkset.LoadPKIXPublic(b)
+	_, err = jwkset.loadPKIXPublic(b)
 	if !errors.Is(err, jwkset.ErrUnsupportedKey) {
 		t.Fatal("Should have failed to load unsupported DSA public key.")
 	}
