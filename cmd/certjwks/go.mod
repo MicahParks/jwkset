@@ -1,4 +1,4 @@
-module delme
+module github.com/MicahParks/jwkset/cmd/certjwks
 
 go 1.21.4
 
