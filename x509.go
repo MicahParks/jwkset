@@ -23,7 +23,7 @@ func LoadCertificate(pemBlock []byte) (*x509.Certificate, error) {
 		return nil, fmt.Errorf("failed to parse certificates: %w", err)
 	}
 	switch cert.PublicKey.(type) {
-	case *ecdh.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey, *rsa.PublicKey:
+	case *ecdsa.PublicKey, ed25519.PublicKey, *rsa.PublicKey:
 	default:
 		return nil, fmt.Errorf("%w: %T", ErrUnsupportedKey, cert.PublicKey)
 	}
@@ -49,7 +49,7 @@ func LoadCertificates(rawPEM []byte) ([]*x509.Certificate, error) {
 	}
 	for _, cert := range certs {
 		switch cert.PublicKey.(type) {
-		case *ecdh.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey, *rsa.PublicKey:
+		case *ecdsa.PublicKey, ed25519.PublicKey, *rsa.PublicKey:
 		default:
 			return nil, fmt.Errorf("%w: %T", ErrUnsupportedKey, cert.PublicKey)
 		}

@@ -92,6 +92,29 @@ func TestDefaultGetX5U(t *testing.T) {
 	_ = jwk.Key().(*ecdsa.PublicKey)
 }
 
+func TestLoadCertificate(t *testing.T) {
+	b := loadPEM(t, ec521Cert)
+	cert, err := LoadCertificate(b.Bytes)
+	if err != nil {
+		t.Fatal("Failed to load certificate:", err)
+	}
+	_ = cert.PublicKey.(*ecdsa.PublicKey)
+
+	b = loadPEM(t, ed25519Cert)
+	cert, err = LoadCertificate(b.Bytes)
+	if err != nil {
+		t.Fatal("Failed to load certificate:", err)
+	}
+	_ = cert.PublicKey.(ed25519.PublicKey)
+
+	b = loadPEM(t, rsa4096Cert)
+	cert, err = LoadCertificate(b.Bytes)
+	if err != nil {
+		t.Fatal("Failed to load certificate:", err)
+	}
+	_ = cert.PublicKey.(*rsa.PublicKey)
+}
+
 func TestLoadCertificates(t *testing.T) {
 	b := append(append([]byte(ec521Cert), []byte(ed25519Cert)...), []byte(rsa4096Cert)...)
 	certs, err := LoadCertificates(b)
