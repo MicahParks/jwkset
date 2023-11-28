@@ -511,7 +511,6 @@ func TestUnmarshalOct(t *testing.T) {
 func TestMarshalRSA(t *testing.T) {
 	private := makeRSA(t)
 	checkMarshal := func(marshal jwkset.JWKMarshal, options jwkset.JWKOptions) {
-		// TODO Check ALG.
 		if marshal.E != rsa2048E {
 			t.Fatal(`Marshal parameter "e" does not match original key.`)
 		}

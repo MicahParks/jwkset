@@ -17,8 +17,6 @@ import (
 	"strings"
 )
 
-// TODO Implement https://datatracker.ietf.org/doc/html/rfc7517#section-7 JWK Set encryption?
-
 var (
 	// ErrGetX5U indicates there was an error getting the X5U remote resource.
 	ErrGetX5U = errors.New("failed to get X5U via given URI")
@@ -171,12 +169,6 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 				h256 := sha256.Sum256(cert.Raw)
 				m.X5TS256 = base64.RawURLEncoding.EncodeToString(h256[:])
 			}
-		}
-		expectedAlg := certToAlg(options.X509.X5C[0].SignatureAlgorithm)
-		if m.ALG == "" {
-			m.ALG = expectedAlg
-		} else if m.ALG != expectedAlg {
-			return JWKMarshal{}, fmt.Errorf("%w: %s", ErrX509Mismatch, m.ALG)
 		}
 	}
 	m.KID = options.Metadata.KID

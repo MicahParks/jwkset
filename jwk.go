@@ -35,11 +35,6 @@ type JWKMarshalOptions struct {
 
 // JWKX509Options holds the X.509 certificate information for a JWK. This data structure is not used for JSON marshaling.
 type JWKX509Options struct {
-	// SkipSigningAlgorithmExtraction is used to skip extracting the signing algorithm from the X.509 certificate. By
-	// default, this project will attempt to extract the public key's signing algorithm from the X.509 certificate and
-	// use the corresponding "alg" parameter in its JWK.
-	SkipSigningAlgorithmExtraction bool
-
 	// X5C contains a chain of one or more PKIX certificates. The PKIX certificate containing the key value MUST be the
 	// first certificate.
 	X5C []*x509.Certificate // The PKIX certificate containing the key value MUST be the first certificate.
@@ -155,12 +150,11 @@ func NewJWKFromX5C(options JWKOptions) (JWK, error) {
 		return JWK{}, fmt.Errorf("failed to marshal JSON Web Key: %w", err)
 	}
 
-	if !options.X509.SkipSigningAlgorithmExtraction {
-		alg := certToAlg(cert.SignatureAlgorithm)
-		if options.Metadata.ALG == "" {
-			options.Metadata.ALG = alg
-		} else if options.Metadata.ALG != alg {
+	if cert.PublicKeyAlgorithm == x509.Ed25519 {
+		if options.Metadata.ALG != "" && options.Metadata.ALG != AlgEdDSA {
 			return JWK{}, fmt.Errorf("%w: ALG in metadata does not match ALG in X.509 certificate", errors.Join(ErrOptions, ErrX509Mismatch))
+		} else {
+			options.Metadata.ALG = AlgEdDSA
 		}
 	}
 
@@ -287,9 +281,10 @@ func (j JWK) Validate() error {
 		default:
 			return fmt.Errorf("%w: Golang key is type %T, which is not supported, so it cannot be compared to given X.509 certificates", errors.Join(ErrJWKValidation, ErrUnsupportedKey, ErrX509Mismatch), j.key)
 		}
-		expectedAlg := certToAlg(cert.SignatureAlgorithm)
-		if j.marshal.ALG != expectedAlg {
-			return fmt.Errorf("%w: X.509 certificate signature algorithm does not match JWK algorithm %q", errors.Join(ErrJWKValidation, ErrX509Mismatch), j.marshal.ALG)
+		if cert.PublicKeyAlgorithm == x509.Ed25519 {
+			if j.marshal.ALG != AlgEdDSA {
+				return fmt.Errorf("%w: ALG in marshal does not match ALG in X.509 certificate", errors.Join(ErrJWKValidation, ErrX509Mismatch))
+			}
 		}
 		if j.options.Validate.CheckX509ValidTime {
 			now := time.Now()

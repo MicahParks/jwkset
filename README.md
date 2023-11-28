@@ -1,12 +1,58 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/MicahParks/jwkset)](https://goreportcard.com/report/github.com/MicahParks/jwkset) [![Go Reference](https://pkg.go.dev/badge/github.com/MicahParks/jwkset.svg)](https://pkg.go.dev/github.com/MicahParks/jwkset)
+[![Go Reference](https://pkg.go.dev/badge/github.com/MicahParks/jwkset.svg)](https://pkg.go.dev/github.com/MicahParks/jwkset)
 
-# JWK Set
+# JWK Set (JSON Web Key Set)
 
-This is a JWK Set (JWKS or jwks) implementation. For a JWK Set client,
-see [`github.com/MicahParks/keyfunc`](https://github.com/MicahParks/keyfunc). Cryptographic keys can be added, deleted,
-and read from the JWK Set. A JSON representation of the JWK Set can be created for hosting via HTTPS. This project
-includes an in-memory storage implementation, but an interface is provided for more advanced use cases. For this
-implementation, a key ID (`kid`) is required.
+This project is a JWK Set (JSON Web Key Set) implementation written in Golang. Server and client side code is provided.
+
+If you would like to run a JWK Set server without writing any Golang code, please visit the Docker server section below.
+TODO
+
+If you would like to have a JWK Set client without writing any Golang code, you can use the
+[JWK Set Client Proxy (JCP) project](https://github.com/MicahParks/jcp) perform JWK Set client operations in the
+lanaguage of your choice using an OpenAPI interface.
+
+This project aims to implement the relevant RFCs to the fullest extent possible using the Go standard library, but does
+not implement any cryptographic algorithms itself. Since the Go standard library does not support Ed448, neither does
+this project. Please reference the [Notes](#notes) section for other important details.
+
+# Generating a JWK Set
+
+If you would like to generate a JWK Set without writing Golang code, this project publishes utilities to generate a JWK
+Set from:
+
+* PEM encoded X.509 Certificates
+* PEM encoded public keys
+* PEM encoded private keys
+
+The PEM block type is used to infer which key type to decode. Reference the below table for
+
+## Website
+
+Please visit [https://jwkset.com](https://jwkset.com) to use the web interface for this project. You can self-host this
+website by following the instructions in the [github.com/MicahParks/jwksetcom](https://github.com/MicahParks/jwksetcom).
+
+## Command line
+
+Gather your PEM encoded files and use the `cmd/jwksetinfer` command line tool to generate a JWK Set. This tool will
+consume
+
+TODO Add example.
+
+# Supported keys
+
+This project supports the following key types:
+
+* [Edwards-curve Digital Signature Algorithm (EdDSA)](https://en.wikipedia.org/wiki/EdDSA) (Ed25519 only)
+* [Elliptic-curve Diffie–Hellman (ECDH)](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) (X25519
+  only)
+* [Elliptic Curve Digital Signature Algorithm (ECDSA)](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm)
+* [Rivest–Shamir–Adleman (RSA)](https://en.wikipedia.org/wiki/RSA_(cryptosystem))
+* [HMAC](https://en.wikipedia.org/wiki/HMAC), [AES Key Wrap](https://en.wikipedia.org/wiki/Key_Wrap), and other
+  symmetric keys.
+
+Cryptographic keys can be added, deleted, and read from the JWK Set. A JSON representation of the JWK Set can be created
+for hosting via HTTPS. This project includes an in-memory storage implementation, but an interface is provided for more
+advanced use cases. For this implementation, a key ID (`kid`) is required.
 
 This project only depends on packages from the standard Go library. It has no external dependencies.
 
@@ -147,17 +193,18 @@ func main() {
 }
 ```
 
-# Notes:
+# Notes
 
+* RFC 8037 adds support for `Ed448`, `X448`, and `secp256k1`, but there is no Golang standard library support for these
+  key types.
 * RFC 7518 specifies that `Base64urlUInt` must use the "minimum number of octets" to represent the number. This can lead
   to a problem with parsing JWK made by other projects that may contain leading zeros in the
   non-compliant `Base64urlUInt` encoding. This error happens during JWK validation and will look
   like: `failed to validate JWK: marshaled JWK does not match original JWK`. To work around this, please modify the
-  JWK's JSON to remove the leading zeros from the `Base64urlUInt` encoding. TODO make tool that can do this.
-* JWK key type `OKP` with `crv` parameter value `X25519` is only supported in marshalling operations. This is because
-  the Go standard library does not support unmarshalling this key type at the time of writing this package.
-* RFC 8037 adds support for `Ed448`, but there is no Golang standard library support for this key type.
-* There is no RFC that supports DSA keys in JWK format that I know of.
+  JWK's JSON to remove the leading zeros for a proper `Base64urlUInt` encoding. If you need help doing this, please open
+  a GitHub issue.
+* This project does not currently support JWK Set encryption using JWE. This would involve implementing the relevant JWE
+  specifications. It may be implemented in the future if there is interest.
 
 # Test coverage
 

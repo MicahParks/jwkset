@@ -108,77 +108,77 @@ func TestLoadCertificates(t *testing.T) {
 
 func TestLoadX509KeyInfer(t *testing.T) {
 	b := loadPEM(t, ec521Pub)
-	key, err := loadX509KeyInfer(b)
+	key, err := LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load public EC 521 X509 key:", err)
 	}
 	_ = key.(*ecdsa.PublicKey)
 
 	b = loadPEM(t, ed25519Pub)
-	key, err = loadX509KeyInfer(b)
+	key, err = LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load public EdDSA X509 key:", err)
 	}
 	_ = key.(ed25519.PublicKey)
 
 	b = loadPEM(t, rsa4096Pub)
-	key, err = loadX509KeyInfer(b)
+	key, err = LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load public RSA 4096 X509 key:", err)
 	}
 	_ = key.(*rsa.PublicKey)
 
 	b = loadPEM(t, ec521Priv)
-	key, err = loadX509KeyInfer(b)
+	key, err = LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load private EC 521 X509 key:", err)
 	}
 	_ = key.(*ecdsa.PrivateKey)
 
 	b = loadPEM(t, ed25519Priv)
-	key, err = loadX509KeyInfer(b)
+	key, err = LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load private EdDSA X509 key:", err)
 	}
 	_ = key.(ed25519.PrivateKey)
 
 	b = loadPEM(t, rsa4096Priv)
-	key, err = loadX509KeyInfer(b)
+	key, err = LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load private RSA 4096 X509 key:", err)
 	}
 	_ = key.(*rsa.PrivateKey)
 
 	b = loadPEM(t, rsa2048PKCS1Priv)
-	key, err = loadX509KeyInfer(b)
+	key, err = LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load private RSA 2048 PKCS1 X509 key:", err)
 	}
 	_ = key.(*rsa.PrivateKey)
 
 	b = loadPEM(t, rsa2048PKCS1Pub)
-	key, err = loadX509KeyInfer(b)
+	key, err = LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load public RSA 2048 PKCS1 X509 key:", err)
 	}
 	_ = key.(*rsa.PublicKey)
 
 	b = loadPEM(t, ec256SEC1Priv)
-	key, err = loadX509KeyInfer(b)
+	key, err = LoadX509KeyInfer(b)
 	if err != nil {
 		t.Fatal("Failed to load private EC P256 X509 key:", err)
 	}
 	_ = key.(*ecdsa.PrivateKey)
 
 	b = &pem.Block{}
-	_, err = loadX509KeyInfer(b)
+	_, err = LoadX509KeyInfer(b)
 	if !errors.Is(err, ErrX509Infer) {
 		t.Fatal("Should have failed to infer X509 key type:", err)
 	}
 
 	replaced := strings.ReplaceAll(rsa2048PKCS1Priv, "RSA PRIVATE KEY", "PRIVATE KEY")
 	b = loadPEM(t, replaced)
-	_, err = loadX509KeyInfer(b)
+	_, err = LoadX509KeyInfer(b)
 	if err == nil {
 		t.Fatal("Should have failed to infer X509 key type.")
 	}

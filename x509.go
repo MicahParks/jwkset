@@ -16,11 +16,24 @@ var (
 	ErrX509Infer = errors.New("failed to infer X509 key type")
 )
 
+// LoadCertificate loads an X509 certificate from a PEM block.
+func LoadCertificate(pemBlock []byte) (*x509.Certificate, error) {
+	cert, err := x509.ParseCertificate(pemBlock)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse certificates: %w", err)
+	}
+	switch cert.PublicKey.(type) {
+	case *ecdh.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey, *rsa.PublicKey:
+	default:
+		return nil, fmt.Errorf("%w: %T", ErrUnsupportedKey, cert.PublicKey)
+	}
+	return cert, nil
+}
+
 // LoadCertificates loads X509 certificates from raw PEM data. It can be useful in loading X5U remote resources.
 func LoadCertificates(rawPEM []byte) ([]*x509.Certificate, error) {
-	var b []byte
+	b := make([]byte, 0)
 	for {
-		var block *pem.Block
 		block, rest := pem.Decode(rawPEM)
 		if block == nil {
 			break
@@ -44,6 +57,27 @@ func LoadCertificates(rawPEM []byte) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
+// LoadX509KeyInfer loads an X509 key from a PEM block.
+func LoadX509KeyInfer(pemBlock *pem.Block) (key any, err error) {
+	switch pemBlock.Type {
+	case "EC PRIVATE KEY":
+		key, err = loadECPrivate(pemBlock)
+	case "RSA PRIVATE KEY":
+		key, err = loadPKCS1Private(pemBlock)
+	case "RSA PUBLIC KEY":
+		key, err = loadPKCS1Public(pemBlock)
+	case "PRIVATE KEY":
+		key, err = loadPKCS8Private(pemBlock)
+	case "PUBLIC KEY":
+		key, err = loadPKIXPublic(pemBlock)
+	default:
+		return nil, ErrX509Infer
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to load key from inferred format %q: %w", key, err)
+	}
+	return key, nil
+}
 func loadECPrivate(pemBlock *pem.Block) (priv *ecdsa.PrivateKey, err error) {
 	priv, err = x509.ParseECPrivateKey(pemBlock.Bytes)
 	if err != nil {
@@ -88,24 +122,4 @@ func loadPKIXPublic(pemBlock *pem.Block) (pub any, err error) {
 		return nil, fmt.Errorf("%w: %T", ErrUnsupportedKey, pub)
 	}
 	return pub, nil
-}
-func loadX509KeyInfer(pemBlock *pem.Block) (key any, err error) {
-	switch pemBlock.Type {
-	case "EC PRIVATE KEY":
-		key, err = loadECPrivate(pemBlock)
-	case "RSA PRIVATE KEY":
-		key, err = loadPKCS1Private(pemBlock)
-	case "RSA PUBLIC KEY":
-		key, err = loadPKCS1Public(pemBlock)
-	case "PRIVATE KEY":
-		key, err = loadPKCS8Private(pemBlock)
-	case "PUBLIC KEY":
-		key, err = loadPKIXPublic(pemBlock)
-	default:
-		return nil, ErrX509Infer
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to load key from inferred format %q: %w", key, err)
-	}
-	return key, nil
 }
