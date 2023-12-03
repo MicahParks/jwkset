@@ -96,7 +96,7 @@ func (alg ALG) IANARegistered() bool {
 		AlgECDHESA128KW, AlgECDHESA192KW, AlgECDHESA256KW, AlgA128GCMKW, AlgA192GCMKW, AlgA256GCMKW,
 		AlgPBES2HS256A128KW, AlgPBES2HS384A192KW, AlgPBES2HS512A256KW, AlgA128CBCHS256, AlgA192CBCHS384,
 		AlgA256CBCHS512, AlgA128GCM, AlgA192GCM, AlgA256GCM, AlgEdDSA, AlgRS1, AlgRSAOAEP384, AlgRSAOAEP512, AlgA128CBC,
-		AlgA192CBC, AlgA256CBC, AlgA128CTR, AlgA192CTR, AlgA256CTR, AlgHS1, AlgES256K:
+		AlgA192CBC, AlgA256CBC, AlgA128CTR, AlgA192CTR, AlgA256CTR, AlgHS1, AlgES256K, "":
 		return true
 	}
 	return false
@@ -111,7 +111,7 @@ type CRV string
 
 func (crv CRV) IANARegistered() bool {
 	switch crv {
-	case CrvP256, CrvP384, CrvP521, CrvEd25519, CrvEd448, CrvX25519, CrvX448, CrvSECP256K1:
+	case CrvP256, CrvP384, CrvP521, CrvEd25519, CrvEd448, CrvX25519, CrvX448, CrvSECP256K1, "":
 		return true
 	}
 	return false
@@ -126,7 +126,8 @@ type KEYOPS string
 
 func (keyopts KEYOPS) IANARegistered() bool {
 	switch keyopts {
-	case KeyOpsSign, KeyOpsVerify, KeyOpsEncrypt, KeyOpsDecrypt, KeyOpsWrapKey, KeyOpsUnwrapKey, KeyOpsDeriveKey, KeyOpsDeriveBits:
+	case KeyOpsSign, KeyOpsVerify, KeyOpsEncrypt, KeyOpsDecrypt, KeyOpsWrapKey, KeyOpsUnwrapKey, KeyOpsDeriveKey,
+		KeyOpsDeriveBits:
 		return true
 	}
 	return false
