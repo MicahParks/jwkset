@@ -218,19 +218,19 @@ func (j JWK) Validate() error {
 	if j.options.Validate.SkipAll {
 		return nil
 	}
-	if !j.marshal.KTY.valid() {
+	if !j.marshal.KTY.IANARegistered() {
 		return fmt.Errorf("%w: invalid or unsupported key type %q", ErrJWKValidation, j.marshal.KTY)
 	}
 
 	if !j.options.Validate.SkipKeyOps {
 		for _, o := range j.marshal.KEYOPS {
-			if !o.valid() {
+			if !o.IANARegistered() {
 				return fmt.Errorf("%w: invalid or unsupported key_opt %q", ErrJWKValidation, o)
 			}
 		}
 	}
 
-	if !j.options.Validate.SkipUse && !j.marshal.USE.valid() {
+	if !j.options.Validate.SkipUse && !j.marshal.USE.IANARegistered() {
 		return fmt.Errorf("%w: invalid or unsupported key use %q", ErrJWKValidation, j.marshal.USE)
 	}
 

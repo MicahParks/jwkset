@@ -89,6 +89,18 @@ const (
 // https://www.rfc-editor.org/rfc/rfc7518#section-7.1
 type ALG string
 
+func (alg ALG) IANARegistered() bool {
+	switch alg {
+	case AlgHS256, AlgHS384, AlgHS512, AlgRS256, AlgRS384, AlgRS512, AlgES256, AlgES384, AlgES512, AlgPS256, AlgPS384,
+		AlgPS512, AlgNone, AlgRSA1_5, AlgRSAOAEP, AlgRSAOAEP256, AlgA128KW, AlgA192KW, AlgA256KW, AlgDir, AlgECDHES,
+		AlgECDHESA128KW, AlgECDHESA192KW, AlgECDHESA256KW, AlgA128GCMKW, AlgA192GCMKW, AlgA256GCMKW,
+		AlgPBES2HS256A128KW, AlgPBES2HS384A192KW, AlgPBES2HS512A256KW, AlgA128CBCHS256, AlgA192CBCHS384,
+		AlgA256CBCHS512, AlgA128GCM, AlgA192GCM, AlgA256GCM, AlgEdDSA, AlgRS1, AlgRSAOAEP384, AlgRSAOAEP512, AlgA128CBC,
+		AlgA192CBC, AlgA256CBC, AlgA128CTR, AlgA192CTR, AlgA256CTR, AlgHS1, AlgES256K:
+		return true
+	}
+	return false
+}
 func (alg ALG) String() string {
 	return string(alg)
 }
@@ -97,6 +109,13 @@ func (alg ALG) String() string {
 // mentioned in https://www.rfc-editor.org/rfc/rfc7518.html#section-6.2.1.1
 type CRV string
 
+func (crv CRV) IANARegistered() bool {
+	switch crv {
+	case CrvP256, CrvP384, CrvP521, CrvEd25519, CrvEd448, CrvX25519, CrvX448, CrvSECP256K1:
+		return true
+	}
+	return false
+}
 func (crv CRV) String() string {
 	return string(crv)
 }
@@ -105,43 +124,43 @@ func (crv CRV) String() string {
 // https://www.rfc-editor.org/rfc/rfc7517#section-4.3
 type KEYOPS string
 
-func (keyopts KEYOPS) String() string {
-	return string(keyopts)
-}
-func (keyopts KEYOPS) valid() bool {
+func (keyopts KEYOPS) IANARegistered() bool {
 	switch keyopts {
 	case KeyOpsSign, KeyOpsVerify, KeyOpsEncrypt, KeyOpsDecrypt, KeyOpsWrapKey, KeyOpsUnwrapKey, KeyOpsDeriveKey, KeyOpsDeriveBits:
 		return true
 	}
 	return false
 }
+func (keyopts KEYOPS) String() string {
+	return string(keyopts)
+}
 
 // KTY is a set of "JSON Web Key Types" from https://www.iana.org/assignments/jose/jose.xhtml as mentioned in
 // https://www.rfc-editor.org/rfc/rfc7517#section-4.1
 type KTY string
 
-func (kty KTY) String() string {
-	return string(kty)
-}
-func (kty KTY) valid() bool {
+func (kty KTY) IANARegistered() bool {
 	switch kty {
 	case KtyEC, KtyOKP, KtyRSA, KtyOct:
 		return true
 	}
 	return false
 }
+func (kty KTY) String() string {
+	return string(kty)
+}
 
 // USE is a set of "JSON Web Key Use" types from https://www.iana.org/assignments/jose/jose.xhtml as mentioned in
 // https://www.rfc-editor.org/rfc/rfc7517#section-4.2
 type USE string
 
-func (use USE) String() string {
-	return string(use)
-}
-func (use USE) valid() bool {
+func (use USE) IANARegistered() bool {
 	switch use {
 	case UseEnc, UseSig, "":
 		return true
 	}
 	return false
+}
+func (use USE) String() string {
+	return string(use)
 }
