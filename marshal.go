@@ -396,7 +396,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 			return JWK{}, fmt.Errorf("%w: incorrect options to unmarshal symmetric key (%s)", ErrOptions, KtyOct)
 		}
 	default:
-		return JWK{}, fmt.Errorf("%w: %s", ErrUnsupportedKey, marshal.KTY)
+		return JWK{}, fmt.Errorf("%w: %s (kty)", ErrUnsupportedKey, marshal.KTY)
 	}
 	marshalCopy.KTY = marshal.KTY
 	x5c := make([]*x509.Certificate, len(marshal.X5C))
