@@ -378,7 +378,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 			marshalCopy.DQ = marshal.DQ
 			marshalCopy.QI = marshal.QI
 			marshalCopy.OTH = slices.Clone(marshal.OTH)
-		} else if !options.Private {
+		} else {
 			key = &publicKey
 		}
 	case KtyOct:
