@@ -33,6 +33,7 @@ func (i *Index) Initialize(s server.Server) error {
 func (i *Index) Respond(req *http.Request) (meta hh.TemplateRespMeta, templateData any, wrapperData hh.WrapperData) {
 	w := i.s.WrapperData(req)
 	w.Title = "Home - JWK Set"
+	w.Description = "A website for JSON Web Key Sets. Generate and inspect JSON Web Keys. Compatible with PEM encoded assets."
 	tData := IndexData{}
 	tData.WrapperData = w
 	return meta, tData, w
