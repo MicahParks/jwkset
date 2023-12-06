@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	LinkGitHub      = "https://github.com/MicahParks/jwkset/website"
+	LinkGitHub      = "https://github.com/MicahParks/jwkset/blob/master/website/README.md"
 	PathAPIInspect  = "/api/inspect"
 	PathAPINewGen   = "/api/new-gen"
 	PathAPIPemGen   = "/api/pem-gen"
