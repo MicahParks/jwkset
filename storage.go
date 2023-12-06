@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 )
 
@@ -31,47 +32,50 @@ type Storage interface {
 var _ Storage = &memoryJWKSet{}
 
 type memoryJWKSet struct {
-	m   map[string]JWK
+	set []JWK
 	mux sync.RWMutex
 }
 
 // NewMemoryStorage creates a new in-memory Storage implementation.
 func NewMemoryStorage() Storage {
-	return &memoryJWKSet{
-		m: make(map[string]JWK),
-	}
+	return &memoryJWKSet{}
 }
 
 func (m *memoryJWKSet) SnapshotKeys(_ context.Context) ([]JWK, error) {
 	m.mux.RLock()
 	defer m.mux.RUnlock()
-	cpy := make([]JWK, len(m.m))
-	i := 0
-	for _, jwk := range m.m {
-		cpy[i] = jwk
-		i++
-	}
-	return cpy, nil
+	return slices.Clone(m.set), nil
 }
 func (m *memoryJWKSet) DeleteKey(_ context.Context, keyID string) (ok bool, err error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	_, ok = m.m[keyID]
-	delete(m.m, keyID)
+	for i, jwk := range m.set {
+		if jwk.Marshal().KID == keyID {
+			m.set = append(m.set[:i], m.set[i+1:]...)
+			return true, nil
+		}
+	}
 	return ok, nil
 }
 func (m *memoryJWKSet) ReadKey(_ context.Context, keyID string) (JWK, error) {
 	m.mux.RLock()
 	defer m.mux.RUnlock()
-	k, ok := m.m[keyID]
-	if !ok {
-		return k, fmt.Errorf("%s: %w", keyID, ErrKeyNotFound)
+	for _, jwk := range m.set {
+		if jwk.Marshal().KID == keyID {
+			return jwk, nil
+		}
 	}
-	return k, nil
+	return JWK{}, fmt.Errorf("%w: kid %q", ErrKeyNotFound, keyID)
 }
 func (m *memoryJWKSet) WriteKey(_ context.Context, jwk JWK) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	m.m[jwk.Marshal().KID] = jwk
+	for i, j := range m.set {
+		if j.Marshal().KID == jwk.Marshal().KID {
+			m.set[i] = jwk
+			return nil
+		}
+	}
+	m.set = append(m.set, jwk)
 	return nil
 }

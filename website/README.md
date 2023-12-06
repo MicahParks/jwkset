@@ -5,6 +5,9 @@ the https://github.com/MicahParks/jwkset open source project.
 
 # Self-host
 
+This website can work with private cryptographic keys. Only work with private keys when using a self-hosted instance of
+this website.
+
 Use the pre-built Docker container to self-host this website.
 
 ```

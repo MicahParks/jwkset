@@ -4,8 +4,8 @@
 
 This is a JWK Set (JSON Web Key Set) implementation written in Golang.
 
-If you would like to generate or validate a JWK without writing any Golang code, please visit the Docker server section
-below.
+If you would like to generate or validate a JWK without writing any Golang code, please visit
+the [Generate a JWK Set](#generate-a-jwk-set) section.
 
 If you would like to have a JWK Set client to help verify JWTs without writing any Golang code, you can use the
 [JWK Set Client Proxy (JCP) project](https://github.com/MicahParks/jcp) perform JWK Set client operations in the
@@ -20,7 +20,8 @@ Set from:
 * PEM encoded public keys
 * PEM encoded private keys
 
-The PEM block type is used to infer which key type to decode. Reference the below table for
+The PEM block type is used to infer which key type to decode. Reference the [Supported keys](#supported-keys) section
+for a list of supported cryptographic key types.
 
 ## Website
 
@@ -30,12 +31,15 @@ directory.
 
 ## Command line
 
-Gather your PEM encoded keys or certificates and use the `cmd/jwksetinfer` command line tool to generate a JWK Set. This
-tool will consume
+Gather your PEM encoded keys or certificates and use the `cmd/jwksetinfer` command line tool to generate a JWK Set.
+
+**Install**
 
 ```
 go install github.com/MicahParks/jwkset/cmd/jwksetinfer@latest
 ```
+
+**Usage**
 
 ```
 jwksetinfer mykey.pem mycert.crt
@@ -60,7 +64,7 @@ This project supports the following key types:
 
 Cryptographic keys can be added, deleted, and read from the JWK Set. A JSON representation of the JWK Set can be created
 for hosting via HTTPS. This project includes an in-memory storage implementation, but an interface is provided for more
-advanced use cases. For this implementation, a key ID (`kid`) is required.
+advanced use cases.
 
 # Notes
 
@@ -76,7 +80,7 @@ not implement any cryptographic algorithms itself.
   JWK's JSON to remove the leading zeros for a proper `Base64urlUInt` encoding. If you need help doing this, please open
   a GitHub issue.
 * This project does not currently support JWK Set encryption using JWE. This would involve implementing the relevant JWE
-  specifications. It may be implemented in the future if there is interest.
+  specifications. It may be implemented in the future if there is interest. Open a GitHub issue to express interest.
 
 # Test coverage
 
@@ -86,7 +90,6 @@ PASS
 coverage: 85.5% of statements
 ok      github.com/MicahParks/jwkset    0.013s
 ```
-
 
 # See also
 
