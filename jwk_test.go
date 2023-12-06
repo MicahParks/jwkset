@@ -2,9 +2,8 @@ package jwkset_test
 
 import (
 	"context"
-	"crypto/ecdsa"
+	"crypto/ecdh"
 	"crypto/ed25519"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -15,22 +14,46 @@ import (
 	"github.com/MicahParks/jwkset"
 )
 
+func TestNewJWKFromRawJSON(t *testing.T) {
+	marshalOptions := jwkset.JWKMarshalOptions{
+		Private: true,
+	}
+	jwk, err := jwkset.NewJWKFromRawJSON([]byte(edExpected), marshalOptions, jwkset.JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create JWK from raw JSON. %s", err)
+	}
+	if jwk.Marshal().KID != edID {
+		t.Fatalf("Incorrect KID. %s", jwk.Marshal().KID)
+	}
+
+	_, err = jwkset.NewJWKFromRawJSON([]byte("invalid"), jwkset.JWKMarshalOptions{}, jwkset.JWKValidateOptions{})
+	if err == nil {
+		t.Fatal("Expected an error.")
+	}
+}
+
 func TestJSON(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	jwks := jwkset.NewMemory[any]()
+	jwks := jwkset.NewMemory()
+
+	b, err := base64.RawURLEncoding.DecodeString(x25519PrivateKey)
+	if err != nil {
+		t.Fatalf("Failed to decode ECDH X25519 private key. %s", err)
+	}
+	x25519Priv, err := ecdh.X25519().NewPrivateKey(b)
+	if err != nil {
+		t.Fatalf("Failed to generate ECDH X25519 key. %s", err)
+	}
+	writeKey(ctx, t, jwks, x25519Priv, x25519ID, false)
 
 	block, _ := pem.Decode([]byte(ecPrivateKey))
 	eKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
 		t.Fatalf("Failed to parse EC private key. %s", err)
 	}
-	const eID = "myECKey"
-	err = jwks.Store.WriteKey(ctx, jwkset.NewKey[any](eKey.(*ecdsa.PrivateKey), eID))
-	if err != nil {
-		t.Fatalf("Failed to write EC key. %s", err)
-	}
+	writeKey(ctx, t, jwks, eKey, eID, false)
 
 	edPriv, err := base64.RawURLEncoding.DecodeString(edPrivateKey)
 	if err != nil {
@@ -41,11 +64,7 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to decode EdDSA public key. %s", err)
 	}
 	ed := ed25519.PrivateKey(append(edPriv, edPub...))
-	const edID = "myEdDSAKey"
-	err = jwks.Store.WriteKey(ctx, jwkset.NewKey[any](ed, edID))
-	if err != nil {
-		t.Fatalf("Failed to write EdDSA key. %s", err)
-	}
+	writeKey(ctx, t, jwks, ed, edID, false)
 
 	block, _ = pem.Decode([]byte(rsaPrivateKey))
 	rKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
@@ -53,20 +72,10 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to parse RSA private key. %s", err)
 	}
 	const rID = "myRSAKey"
-	err = jwks.Store.WriteKey(ctx, jwkset.NewKey[any](rKey.(*rsa.PrivateKey), rID))
-	if err != nil {
-		t.Fatalf("Failed to write RSA key. %s", err)
-	}
+	writeKey(ctx, t, jwks, rKey, rID, false)
 
 	hKey := []byte(hmacSecret)
-	const hID = "myHMACKey"
-	err = jwks.Store.WriteKey(ctx, jwkset.KeyWithMeta[any]{
-		Key:   hKey,
-		KeyID: hID,
-	})
-	if err != nil {
-		t.Fatalf("Failed to write HMAC key. %s", err)
-	}
+	writeKey(ctx, t, jwks, hKey, hID, true)
 
 	jsonRepresentation, err := jwks.JSONPublic(ctx)
 	if err != nil {
@@ -79,11 +88,24 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to get JSON. %s", err)
 	}
 	compareJSON(t, jsonRepresentation, true)
+
+	jwks = jwkset.NewMemory()
+	writeKey(ctx, t, jwks, x25519Priv, x25519ID, true)
+	writeKey(ctx, t, jwks, eKey, eID, true)
+	writeKey(ctx, t, jwks, ed, edID, true)
+	writeKey(ctx, t, jwks, rKey, rID, true)
+	writeKey(ctx, t, jwks, hKey, hID, true)
+
+	jsonRepresentation, err = jwks.JSON(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get JSON. %s", err)
+	}
+	compareJSON(t, jsonRepresentation, true)
 }
 
 func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 	type jwksUnmarshal struct {
-		Keys []map[string]interface{} `json:"keys"`
+		Keys []map[string]any `json:"keys"`
 	}
 
 	var keys jwksUnmarshal
@@ -93,9 +115,9 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 	}
 
 	wrongLength := false
-	if private && len(keys.Keys) != 4 {
+	if private && len(keys.Keys) != 5 {
 		wrongLength = true
-	} else if !private && len(keys.Keys) != 3 {
+	} else if !private && len(keys.Keys) != 4 {
 		wrongLength = true
 	}
 	if wrongLength {
@@ -118,10 +140,18 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 				matchingAttributes = append(matchingAttributes, "d")
 			}
 		case jwkset.KtyOKP:
-			expectedJSON = json.RawMessage(edExpected)
-			matchingAttributes = []string{"kty", "kid", "x"}
+			matchingAttributes = []string{"crv", "kty", "kid", "x"}
 			if private {
 				matchingAttributes = append(matchingAttributes, "d")
+			}
+			switch jwkset.CRV(key["crv"].(string)) {
+			case jwkset.CrvEd25519:
+				matchingAttributes = append(matchingAttributes, "alg")
+				expectedJSON = json.RawMessage(edExpected)
+			case jwkset.CrvX25519:
+				expectedJSON = json.RawMessage(x25519Expected)
+			default:
+				t.Fatalf("Unknown OKP curve %q.", key["crv"].(string))
 			}
 		case jwkset.KtyRSA:
 			expectedJSON = json.RawMessage(rsaExpected)
@@ -137,7 +167,7 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 				t.Fatal("HMAC keys should not have a JSON representation.")
 			}
 		}
-		var expectedMap map[string]interface{}
+		var expectedMap map[string]any
 		err = json.Unmarshal(expectedJSON, &expectedMap)
 		if err != nil {
 			t.Fatalf("Failed to unmarshal expected JSON. %s", err)
@@ -159,12 +189,48 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 	}
 }
 
+func writeKey(ctx context.Context, t *testing.T, jwks jwkset.JWKSet, key any, keyID string, private bool) {
+	marshal := jwkset.JWKMarshalOptions{
+		Private: private,
+	}
+	metadata := jwkset.JWKMetadataOptions{
+		KID: keyID,
+	}
+	options := jwkset.JWKOptions{
+		Marshal:  marshal,
+		Metadata: metadata,
+	}
+	jwk, err := jwkset.NewJWKFromKey(key, options)
+	if err != nil {
+		t.Fatalf("Failed to create JWK from key ID %q. %s", keyID, err)
+	}
+	err = jwks.Store.WriteKey(ctx, jwk)
+	if err != nil {
+		t.Fatalf("Failed to write key ID %q. %s", keyID, err)
+	}
+}
+
+const (
+	x25519ID = "myX25519Key"
+	eID      = "myECKey"
+	edID     = "myEdDSAKey"
+	hID      = "myHMACKey"
+)
+
 /*
 These assets were generated using this tool:
 https://mkjwk.org/
 */
 const (
-	ecExpected = `{
+	x25519Expected = `{
+    "kty": "OKP",
+    "d": "GIu7AbclXA1FtVswPBUileBckbJu2B9UUhZPTebrox4",
+    "crv": "X25519",
+    "kid": "myX25519Key",
+    "x": "fGMcCrO_gWS7rva_PpXiS7D5-2OppjZQLlZmdRUSN0g"
+}`
+	x25519PrivateKey = `GIu7AbclXA1FtVswPBUileBckbJu2B9UUhZPTebrox4`
+	ecExpected       = `{
     "kty": "EC",
     "d": "Vp3epfDd9viOo1w6Co7DpIP2lPnqwIB8HcOrI7Jt0II",
     "crv": "P-256",
@@ -177,6 +243,7 @@ MEECAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQcEJzAlAgEBBCBWnd6l8N32+I6jXDoK
 jsOkg/aU+erAgHwdw6sjsm3Qgg==
 -----END PRIVATE KEY-----`
 	edExpected = `{
+    "alg": "EdDSA",
     "kty": "OKP",
     "d": "tKqo1bnSif18g2hE0D7zPDNgSTKQKwBMEl2UvhJZ-bs",
     "crv": "Ed25519",

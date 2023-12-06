@@ -1,0 +1,646 @@
+{{- define "generate.gohtml.header" -}}
+  <script defer src="/js/generate.js"></script>
+{{- end -}}
+{{- /*gotype: github.com/MicahParks/jwkset/website/handle/template.GenerateData*/ -}}
+
+{{- /*Header*/}}
+<div class="bg-white py-8">
+  <div class="mx-auto max-w-7xl px-6 lg:px-8">
+    <div class="mx-auto max-w-4xl lg:mx-0">
+      <a href="{{.WrapperData.Link.GitHub}}"
+         class="text-base font-semibold leading-7 text-indigo-600">
+        Open source self-host instructions here
+      </a>
+      <h2 class="mt-2 text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+        JWK Generator
+      </h2>
+      <p class="mt-6 text-lg leading-8 text-gray-600">
+        Use PEM encoded ASN.1 DER data for SEC 1, PKCS #1, PKCS #8, PKIX, or certificates to generate a JWK or
+        generate a new key.
+      </p>
+    </div>
+  </div>
+</div>
+{{- /*Header*/}}
+
+<div class="flex flex-col space-y-5">
+    {{- /*Use existing PEM encoded key or certificate*/}}
+  <div class="bg-gray-50 shadow sm:rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <div class="flex flex-row justify-between">
+        <div class="max-w-4xl">
+          <h2 class="text-base font-semibold text-black">
+            Generate using PEM
+          </h2>
+          <p class="mt-1 text-sm text-gray-700">
+            Generate a JWK given a PEM encoded key or certificate.
+            <br/>
+            Do not upload a private key unless this website is self-hosted.
+          </p>
+        </div>
+        <div>
+          <button id="pem-gen-button" type="button" disabled
+                  class="cursor-not-allowed inline-flex items-center gap-x-2 rounded-md bg-indigo-400 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+            Generate
+            <i class="fa-solid fa-gears fa-lg"></i>
+          </button>
+        </div>
+      </div>
+      <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="bg-white shadow rounded-lg px-3 py-3.5">
+          <label for="pem-input" class="block text-sm font-medium leading-6 text-black">
+            PEM encoded key or certificate
+          </label>
+          <div class="mt-2">
+            <textarea rows="13" name="pem-input" id="pem-input"
+                      class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                      placeholder="-----BEGIN PUBLIC KEY-----
+MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQBtW2F+MPtPcN+t5YtYcq8dluVBimcJ3cwTT/Hqrls0iHzpPVANAFRGqhvZnOb4rz7bh3bRqSmzRNXT9lRJhg07gIA8n2j87Vg5r2FNwlRfD5eMNN3g+o62HUsB9sBfpMiGvLphgvyg7Mtub7of4eBNphHTBvh3GU+S9TEHvTNP3Ja0aU=
+-----END PUBLIC KEY-----"></textarea>
+          </div>
+        </div>
+        <div class="bg-white shadow rounded-lg px-3 py-3.5 divide-y divide-gray-200">
+          <div class="pb-3">
+            <label for="pem-key-id" class="block text-sm font-medium leading-6 text-gray-900">
+              Key ID <span class="text-gray-400 text-xs">(recommended)</span>
+            </label>
+            <div class="mt-2">
+              <input type="text" name="pem-key-id" id="pem-key-id"
+                     class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                     value="">
+            </div>
+          </div>
+          <div class="py-3">
+            <label for="pem-key-alg" class="block text-sm font-medium leading-6 text-gray-900">
+              Key algorithm <span class="text-gray-400 text-xs">(optional)</span>
+              <a href="https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms"
+                 class="fa-solid fa-question-circle fa-xs text-gray-400"></a>
+            </label>
+            <select id="pem-key-alg" name="pem-key-alg"
+                    class="mt-2 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6">
+            </select>
+          </div>
+          <div class="py-3">
+            <label for="pem-key-use" class="block text-sm font-medium leading-6 text-gray-900">
+              Key use <span class="text-gray-400 text-xs">(optional)</span>
+              <a href="https://www.iana.org/assignments/jose/jose.xhtml#web-key-use"
+                 class="fa-solid fa-question-circle fa-xs text-gray-400"></a>
+            </label>
+            <select id="pem-key-use" name="pem-key-use"
+                    class="mt-2 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6">
+              <option value="" selected></option>
+              <option value="sig">Signature</option>
+              <option value="enc">Encryption</option>
+            </select>
+          </div>
+        </div>
+        <div class="bg-white shadow rounded-lg px-3 py-3.5">
+          <fieldset class="py-3">
+            <legend class="text-sm font-medium leading-6 text-gray-900">
+              Key operations <span class="text-gray-400 text-xs">(optional)</span>
+              <a href="https://www.iana.org/assignments/jose/jose.xhtml#web-key-operations"
+                 class="fa-solid fa-question-circle fa-xs text-gray-400"></a>
+            </legend>
+            <div class="divide-y divide-gray-200 border-b border-t border-gray-200">
+              <label for="pem-key-op-sign" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Sign
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="pem-key-op-sign" name="pem-key-op-sign" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="pem-key-op-verify" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Verify
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="pem-key-op-verify" name="pem-key-op-verify" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="pem-key-op-encrypt" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Encrypt
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="pem-key-op-encrypt" name="pem-key-op-encrypt" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="pem-key-op-decrypt" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Decrypt
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="pem-key-op-decrypt" name="pem-key-op-decrypt" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="pem-key-op-wrap-key" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Wrap key
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="pem-key-op-wrap-key" name="pem-key-op-wrap-key" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="pem-key-op-unwrap-key" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Unwrap key
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="pem-key-op-unwrap-key" name="pem-key-op-unwrap-key" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="pem-key-op-derive-key" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Derive key
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="pem-key-op-derive-key" name="pem-key-op-derive-key" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="pem-key-op-derive-bits" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Derive bits
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="pem-key-op-derive-bits" name="pem-key-op-derive-bits" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+            </div>
+          </fieldset>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pem-gen-results" class="hidden bg-gray-50 shadow sm:rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <div class="flex flex-row justify-between">
+        <div>
+          <h2 class="text-base font-semibold text-black">
+            PEM Generation Results
+          </h2>
+          <p id="pem-result-text" class="mt-1 text-sm text-gray-700">
+            The PEM is valid. The JWK results are below.
+          </p>
+        </div>
+        <div id="pem-result-button" type="button"{{/* bg-red-600 */}}
+             class="inline-flex items-center gap-x-2 rounded-md bg-green-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg">
+          Valid
+          <i class="fa-solid fa-circle-check fa-lg"></i>
+        </div>
+      </div>
+      <ul id="pem-results-list" role="list" class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <li class="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow">
+          <div class="flex w-full items-center justify-between space-x-6 p-6">
+            <div class="flex-1">
+              <div class="flex items-center space-x-3">
+                <h3 class="text-lg font-medium text-gray-900">
+                  JSON Web Key
+                </h3>
+                  {{/*                <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Admin</span>*/}}
+              </div>
+              <p class="mt-1 text-sm text-gray-500">
+                The given key encoded in to JWK format.
+              </p>
+            </div>
+            <button id="pem-gen-copy-jwk" type="button"
+                    class="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+              Copy
+              <i class="fa-solid fa-copy fa-lg"></i>
+            </button>
+          </div>
+          <div>
+              <pre class="bg-gray-700 rounded-lg overflow-x-auto m-4 p-4 shadow-lg"><code
+                        class="language-json text-sm text-white block" id="pem-gen-jwk-result"></code></pre>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+    {{- /*Use existing PEM encoded key or certificate*/}}
+
+    {{- /*Generate a new key*/}}
+  <div class="bg-gray-50 shadow sm:rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <div class="flex flex-row justify-between">
+        <div class="max-w-4xl">
+          <h2 class="text-base font-semibold text-black">
+            Generate a new key
+          </h2>
+          <p class="mt-1 text-sm text-gray-700">
+            Generate a new key given and receive the JWK, PKIX public key, and PKCS #8 private key.
+            <br/>
+            Only trust the private key if you are self-hosting this website.
+          </p>
+        </div>
+        <div>
+          <button id="new-gen-button" type="button"
+                  class="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+            Generate
+            <i class="fa-solid fa-gears fa-lg"></i>
+          </button>
+        </div>
+      </div>
+      <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="bg-white shadow rounded-lg px-3 py-3.5">
+          <div class="text-sm font-medium leading-6 text-gray-900 self-start mb-2">
+            Key type
+          </div>
+          <fieldset class="w-full">
+            <legend class="sr-only">
+              Select a cryptographic key type
+            </legend>
+            <div class="divide-y divide-gray-200 border-t border-b">
+              <label for="new-key-type-rsa" class="relative flex items-start pb-2 pt-1.5 cursor-pointer">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="font-medium text-gray-900">
+                    RSA
+                  </div>
+                  <p id="new-key-type-rsa-description" class="text-gray-500">
+                    Signing/Encryption
+                  </p>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="new-key-type-rsa" aria-describedby="new-key-type-rsa-description" name="new-key-type"
+                         type="radio" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                         value="RSA" checked>
+                </div>
+              </label>
+              <label for="new-key-type-ecdsa" class="relative flex items-start pb-2 pt-1.5 cursor-pointer">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="font-medium text-gray-900">
+                    ECDSA
+                  </div>
+                  <p id="new-key-type-ecdsa-description" class="text-gray-500">
+                    Signing
+                  </p>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="new-key-type-ecdsa" aria-describedby="new-key-type-ecdsa-description" name="new-key-type"
+                         type="radio" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                         value="ECDSA">
+                </div>
+              </label>
+              <label for="new-key-type-ed25519" class="relative flex items-start pb-2 pt-1.5 cursor-pointer">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="font-medium text-gray-900">
+                    Ed25519
+                  </div>
+                  <p id="new-key-type-ed25519-description" class="text-gray-500">
+                    Signing
+                  </p>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="new-key-type-ed25519" aria-describedby="new-key-type-ed25519-description"
+                         name="new-key-type" value="Ed25519"
+                         type="radio" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="new-key-type-x25519" class="relative flex items-start pb-2 pt-1.5 cursor-pointer">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="font-medium text-gray-900">
+                    X25519
+                  </div>
+                  <p id="new-key-type-x25519-description" class="text-gray-500">
+                    Key Exchange
+                  </p>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="new-key-type-x25519" aria-describedby="new-key-type-x25519-description"
+                         name="new-key-type" value="X25519"
+                         type="radio" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="new-key-type-symmetric" class="relative flex items-start pb-2 pt-1.5 cursor-pointer">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="font-medium text-gray-900">
+                    Symmetric (64 bytes)
+                  </div>
+                  <p id="new-key-type-symmetric-description" class="text-gray-500">
+                    Signing/Encryption
+                  </p>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="new-key-type-symmetric" aria-describedby="new-key-type-symmetric-description"
+                         name="new-key-type" value="Symmetric"
+                         type="radio" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+            </div>
+          </fieldset>
+        </div>
+        <div class="bg-white shadow rounded-lg px-3 py-3.5 divide-y divide-gray-200">
+          <div class="pb-3">
+            <label for="new-key-id" class="block text-sm font-medium leading-6 text-gray-900">
+              Key ID <span class="text-gray-400 text-xs">(recommended)</span>
+            </label>
+            <div class="mt-2">
+              <input type="text" name="new-key-id" id="new-key-id"
+                     class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                     value="">
+            </div>
+          </div>
+          <div class="py-3">
+            <label for="new-key-alg" class="block text-sm font-medium leading-6 text-gray-900">
+              Key algorithm <span id="new-key-alg-optional" class="text-gray-400 text-xs">(optional)</span>
+              <a href="https://www.iana.org/assignments/jose/jose.xhtml#web-signature-encryption-algorithms"
+                 class="fa-solid fa-question-circle fa-xs text-gray-400"></a>
+            </label>
+            <select id="new-key-alg" name="new-key-alg"
+                    class="mt-2 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6">
+            </select>
+          </div>
+          <div class="py-3">
+            <label for="new-key-use" class="block text-sm font-medium leading-6 text-gray-900">
+              Key use <span class="text-gray-400 text-xs">(optional)</span>
+              <a href="https://www.iana.org/assignments/jose/jose.xhtml#web-key-use"
+                 class="fa-solid fa-question-circle fa-xs text-gray-400"></a>
+            </label>
+            <select id="new-key-use" name="new-key-use"
+                    class="mt-2 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6">
+            </select>
+          </div>
+          <div id="new-rsa-bits" class="py-3">
+            <div class="block text-sm font-medium leading-6 text-gray-900">
+              Bits
+            </div>
+            <fieldset class="mt-2">
+              <legend class="sr-only">Choose an RSA key bit size</legend>
+              <div class="grid grid-cols-3 gap-3">
+                <!--
+                  In Stock: "cursor-pointer", Out of Stock: "opacity-25 cursor-not-allowed"
+                  Active: "ring-2 ring-indigo-600 ring-offset-2"
+                  Checked: "bg-indigo-600 text-white hover:bg-indigo-500", Not Checked: "ring-1 ring-inset ring-gray-300 bg-white text-gray-900 hover:bg-gray-50"
+                -->
+                <label class="flex items-center justify-center rounded-md py-3 px-3 text-sm font-semibold uppercase sm:flex-1 cursor-pointer focus:outline-none ring-1 ring-inset ring-gray-300 bg-white text-gray-900 hover:bg-gray-50">
+                  <input type="radio" name="new-rsa-bits" value="1024" class="sr-only"
+                         aria-labelledby="new-rsa-bits-1024-label">
+                  <span id="new-rsa-bits-1024-label">1024</span>
+                </label>
+                <label class="flex items-center justify-center rounded-md py-3 px-3 text-sm font-semibold uppercase sm:flex-1 cursor-pointer focus:outline-none bg-indigo-600 text-white hover:bg-indigo-500">
+                  <input checked type="radio" name="new-rsa-bits" value="2048" class="sr-only"
+                         aria-labelledby="new-rsa-bits-2048-label">
+                  <span id="new-rsa-bits-2048-label">2048</span>
+                </label>
+                <label class="flex items-center justify-center rounded-md py-3 px-3 text-sm font-semibold uppercase sm:flex-1 cursor-pointer focus:outline-none ring-1 ring-inset ring-gray-300 bg-white text-gray-900 hover:bg-gray-50">
+                  <input type="radio" name="new-rsa-bits" value="4096" class="sr-only"
+                         aria-labelledby="new-rsa-bits-4096-label">
+                  <span id="new-rsa-bits-4096-label">4096</span>
+                </label>
+              </div>
+            </fieldset>
+          </div>
+          <div id="new-ecdsa-curve" class="hidden py-3">
+            <div class="block text-sm font-medium leading-6 text-gray-900">
+              Curve
+            </div>
+            <fieldset class="mt-2">
+              <legend class="sr-only">Choose an elliptic curve</legend>
+              <div class="grid grid-cols-3 gap-3">
+                <!--
+                  In Stock: "cursor-pointer", Out of Stock: "opacity-25 cursor-not-allowed"
+                  Active: "ring-2 ring-indigo-600 ring-offset-2"
+                  Checked: "bg-indigo-600 text-white hover:bg-indigo-500", Not Checked: "ring-1 ring-inset ring-gray-300 bg-white text-gray-900 hover:bg-gray-50"
+                -->
+                <label class="flex items-center justify-center rounded-md py-3 px-3 text-sm font-semibold uppercase sm:flex-1 cursor-pointer focus:outline-none bg-indigo-600 text-white hover:bg-indigo-500">
+                  <input checked type="radio" name="new-ecdsa-curve" value="P-256" class="sr-only"
+                         aria-labelledby="new-ecdsa-p-256-label">
+                  <span id="new-ecdsa-p-256-label">P-256</span>
+                </label>
+                <label class="flex items-center justify-center rounded-md py-3 px-3 text-sm font-semibold uppercase sm:flex-1 cursor-pointer focus:outline-none ring-1 ring-inset ring-gray-300 bg-white text-gray-900 hover:bg-gray-50">
+                  <input type="radio" name="new-ecdsa-curve" value="P-384" class="sr-only"
+                         aria-labelledby="new-ecdsa-p-384-label">
+                  <span id="new-ecdsa-p-384-label">P-384</span>
+                </label>
+                <label class="flex items-center justify-center rounded-md py-3 px-3 text-sm font-semibold uppercase sm:flex-1 cursor-pointer focus:outline-none ring-1 ring-inset ring-gray-300 bg-white text-gray-900 hover:bg-gray-50">
+                  <input type="radio" name="new-ecdsa-curve" value="P-521" class="sr-only"
+                         aria-labelledby="new-ecdsa-p-521-label">
+                  <span id="new-ecdsa-p-521-label">P-521</span>
+                </label>
+              </div>
+            </fieldset>
+          </div>
+        </div>
+        <div class="bg-white shadow rounded-lg px-3 py-3.5">
+          <fieldset class="py-3">
+            <legend class="text-sm font-medium leading-6 text-gray-900">
+              Key operations <span class="text-gray-400 text-xs">(optional)</span>
+              <a href="https://www.iana.org/assignments/jose/jose.xhtml#web-key-operations"
+                 class="fa-solid fa-question-circle fa-xs text-gray-400"></a>
+            </legend>
+            <div class="divide-y divide-gray-200 border-b border-t border-gray-200">
+              <label for="new-key-op-sign" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Sign
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="new-key-op-sign" name="new-key-op-sign" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="new-key-op-verify" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Verify
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="new-key-op-verify" name="new-key-op-verify" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="new-key-op-encrypt" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Encrypt
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="new-key-op-encrypt" name="new-key-op-encrypt" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="new-key-op-decrypt" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Decrypt
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="new-key-op-decrypt" name="new-key-op-decrypt" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="new-key-op-wrap-key" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Wrap key
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="new-key-op-wrap-key" name="new-key-op-wrap-key" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="new-key-op-unwrap-key" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Unwrap key
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="new-key-op-unwrap-key" name="new-key-op-unwrap-key" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="new-key-op-derive-key" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Derive key
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="new-key-op-derive-key" name="new-key-op-derive-key" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+              <label for="new-key-op-derive-bits" class="relative flex items-start py-2">
+                <div class="min-w-0 flex-1 text-sm leading-6">
+                  <div class="select-none text-gray-900">
+                    Derive bits
+                  </div>
+                </div>
+                <div class="ml-3 flex h-6 items-center">
+                  <input id="new-key-op-derive-bits" name="new-key-op-derive-bits" type="checkbox"
+                         class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600">
+                </div>
+              </label>
+            </div>
+          </fieldset>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="new-gen-results" class="hidden bg-gray-50 shadow sm:rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <div class="flex flex-row justify-between">
+        <div>
+          <h2 class="text-base font-semibold text-black">
+            New Key Generation Results
+          </h2>
+          <p id="new-result-text" class="mt-1 text-sm text-gray-700">
+            The results from the new key generation.
+          </p>
+        </div>
+        <div id="new-result-button" type="button"{{/* bg-red-600 */}}
+             class="inline-flex items-center gap-x-2 rounded-md bg-green-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg">
+          Valid
+          <i class="fa-solid fa-circle-check fa-lg"></i>
+        </div>
+      </div>
+      <ul id="new-results-list" role="list" class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <li class="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow">
+          <div class="flex w-full items-center justify-between space-x-6 p-6">
+            <div class="flex-1">
+              <div class="flex items-center space-x-3">
+                <h3 class="text-lg font-medium text-gray-900">
+                  JSON Web Key
+                </h3>
+                  {{/*                <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Admin</span>*/}}
+              </div>
+              <p class="mt-1 text-sm text-gray-500">
+                The given key encoded in to JWK format.
+              </p>
+            </div>
+            <button id="new-gen-copy-jwk" type="button"
+                    class="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+              Copy
+              <i class="fa-solid fa-copy fa-lg"></i>
+            </button>
+          </div>
+          <div>
+              <pre class="bg-gray-700 rounded-lg overflow-x-auto m-4 p-4 shadow-lg"><code
+                        class="language-json text-sm text-white block" id="new-gen-jwk-result"></code></pre>
+          </div>
+        </li>
+        <li id="new-gen-pkix" class="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow">
+          <div class="flex w-full items-center justify-between space-x-6 p-6">
+            <div class="flex-1">
+              <div class="flex items-center space-x-3">
+                <h3 class="text-lg font-medium text-gray-900">
+                  PKIX (Public Key)
+                </h3>
+                  {{/*                <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Admin</span>*/}}
+              </div>
+              <p class="mt-1 text-sm text-gray-500">
+                The generated public key in PKIX, ASN.1 DER, PEM encoding.
+              </p>
+            </div>
+            <button id="new-gen-copy-pkix" type="button"
+                    class="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+              Copy
+              <i class="fa-solid fa-copy fa-lg"></i>
+            </button>
+          </div>
+          <div>
+              <pre class="bg-gray-700 rounded-lg overflow-x-auto m-4 p-4 shadow-lg"><code
+                        class="language-json text-sm text-white block" id="new-gen-pkix-result"></code></pre>
+          </div>
+        </li>
+        <li id="new-gen-pkcs8" class="col-span-2 divide-y divide-gray-200 rounded-lg bg-white shadow">
+          <div class="flex w-full items-center justify-between space-x-6 p-6">
+            <div class="flex-1">
+              <div class="flex items-center space-x-3">
+                <h3 class="text-lg font-medium text-gray-900">
+                  PKCS #8 (Private Key)
+                </h3>
+                  {{/*                <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Admin</span>*/}}
+              </div>
+              <p class="mt-1 text-sm text-gray-500">
+                The generated private key in PKCS #8, ASN.1 DER, PEM encoding.
+              </p>
+            </div>
+            <button id="new-gen-copy-pkcs8" type="button"
+                    class="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+              Copy
+              <i class="fa-solid fa-copy fa-lg"></i>
+            </button>
+          </div>
+          <div>
+              <pre class="bg-gray-700 rounded-lg overflow-x-auto m-4 p-4 shadow-lg"><code
+                        class="language-json text-sm text-white block" id="new-gen-pkcs8-result"></code></pre>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+    {{- /*Generate a new key*/}}
+</div>
