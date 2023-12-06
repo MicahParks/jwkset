@@ -32,6 +32,7 @@ func (i *Generate) Initialize(s server.Server) error {
 func (i *Generate) Respond(r *http.Request) (meta hh.TemplateRespMeta, templateData any, wrapperData hh.WrapperData) {
 	w := i.s.WrapperData(r)
 	w.Title = "Generate - JWK Set"
+	w.Description = "Generate a new JSON Web Key Set or make one from existing PEM encoded keys."
 	tData := GenerateData{}
 	tData.WrapperData = w
 	return meta, tData, w

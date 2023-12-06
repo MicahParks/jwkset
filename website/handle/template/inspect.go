@@ -32,6 +32,7 @@ func (i *Inspect) Initialize(s server.Server) error {
 func (i *Inspect) Respond(r *http.Request) (meta hh.TemplateRespMeta, templateData any, wrapperData hh.WrapperData) {
 	w := i.s.WrapperData(r)
 	w.Title = "Inspect - JWK Set"
+	w.Description = "Inspect a JSON Web Key Set validity and extract public and private keys as PKIX and PKCS #8 assets."
 	tData := InspectData{}
 	tData.WrapperData = w
 	return meta, tData, w
