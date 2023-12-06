@@ -1,0 +1,160 @@
+{{- define "inspect.gohtml.header" -}}
+  <script defer src="/js/inspect.js"></script>
+{{- end -}}
+{{- /*gotype: github.com/MicahParks/jwkset/website/handle/template.InspectData*/ -}}
+
+{{- /*Header*/}}
+<div class="bg-white py-8">
+  <div class="mx-auto max-w-7xl px-6 lg:px-8">
+    <div class="mx-auto max-w-4xl lg:mx-0">
+      <a href="{{.WrapperData.Link.GitHub}}"
+         class="text-base font-semibold leading-7 text-indigo-600">
+        Open source self-host instructions here
+      </a>
+      <h2 class="mt-2 text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+        JWK Inspector
+      </h2>
+      <p class="mt-6 text-lg leading-8 text-gray-600">
+        Upload a JWK to parse for validity and extract cryptographic keys in PEM encoded ASN.1 DER format for PKCS #8 or
+        PKIX.
+      </p>
+    </div>
+  </div>
+</div>
+{{- /*Header*/}}
+
+<div class="flex flex-col space-y-5">
+    {{/*Inspector*/}}
+  <div class="bg-gray-50 shadow sm:rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <div class="flex flex-row justify-between">
+        <div class="max-w-4xl">
+          <h2 class="text-base font-semibold text-black">
+            Inspect a JWK
+          </h2>
+          <p class="mt-1 text-sm text-gray-700">
+            Paste a JWK to inspect it. Validity status and cryptographic keys will be returned in PEM format.
+            <br/>
+            Do not upload a JWK with private key material unless this website is self-hosted.
+          </p>
+        </div>
+        <div>
+          <button id="jwk-inspect-button" type="button" disabled
+                  class="cursor-not-allowed inline-flex items-center gap-x-2 rounded-md bg-indigo-400 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+            Inspect
+            <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+          </button>
+        </div>
+      </div>
+      <textarea rows="8" name="jwk-input" id="jwk-input"
+                class="mt-4 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                placeholder='{
+  "kty": "EC",
+  "kid": "fd415283-5b58-4372-8f97-3c5b26910d85",
+  "crv": "P-256",
+  "x": "pYkxEyczvZkQ7UG1rIpl6fBAQQvXmpITYv99Uf3X7aE",
+  "y": "uQKi7IUrz3wwlcy1yW3HbZxiu5bQgRTfoVFDIFFHluE",
+  "d": "2bkgxUvO64UL-ouu4Eib02PA39nQ-HBmrN7jESp1gag"
+}'></textarea>
+    </div>
+  </div>
+    {{/*Inspector*/}}
+
+    {{/*Results*/}}
+  <div id="inspect-results" class="hidden bg-gray-50 shadow sm:rounded-lg">
+    <div class="px-4 py-5 sm:p-6">
+      <div class="flex flex-row justify-between">
+        <div>
+          <h2 class="text-base font-semibold text-black">
+            JWK Inspection Results
+          </h2>
+          <p id="result-text" class="mt-1 text-sm text-gray-700">
+            The JWK is valid. The parsing results are below.
+          </p>
+        </div>
+        <div>
+          <div id="result-button" type="button"{{/* bg-red-600 */}}
+               class="inline-flex items-center gap-x-2 rounded-md bg-green-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg">
+            Valid
+            <i class="fa-solid fa-circle-check fa-lg"></i>
+          </div>
+        </div>
+      </div>
+      <ul role="list" class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <li id="jwk-result" class="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow">
+          <div class="flex w-full items-center justify-between space-x-6 p-6">
+            <div class="flex-1">
+              <div class="flex items-center space-x-3">
+                <h3 class="text-lg font-medium text-gray-900">
+                  JSON Web Key
+                </h3>
+                  {{/*                <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Admin</span>*/}}
+              </div>
+              <p class="mt-1 text-sm text-gray-500">
+                The JWK without any extra attributes.
+              </p>
+            </div>
+            <button id="new-gen-copy-jwk" type="button"
+                    class="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+              Copy
+              <i class="fa-solid fa-copy fa-lg"></i>
+            </button>
+          </div>
+          <div>
+              <pre class="bg-gray-700 rounded-lg overflow-x-auto m-4 p-4 shadow-lg"><code
+                        class="language-json text-sm text-white block" id="jwk-result-text"></code></pre>
+          </div>
+        </li>
+        <li id="pkix-result" class="hidden col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow">
+          <div class="flex w-full items-center justify-between space-x-6 p-6">
+            <div class="flex-1">
+              <div class="flex items-center space-x-3">
+                <h3 class="text-lg font-medium text-gray-900">
+                  PKIX (Public Key)
+                </h3>
+                  {{/*                <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Admin</span>*/}}
+              </div>
+              <p class="mt-1 text-sm text-gray-500">
+                The public key in PKIX, ASN.1 DER, PEM encoding.
+              </p>
+            </div>
+            <button id="new-gen-copy-pkix" type="button"
+                    class="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+              Copy
+              <i class="fa-solid fa-copy fa-lg"></i>
+            </button>
+          </div>
+          <div>
+              <pre class="bg-gray-700 rounded-lg overflow-x-auto m-4 p-4 shadow-lg"><code
+                        class="language-json text-sm text-white block" id="pkix-result-text"></code></pre>
+          </div>
+        </li>
+        <li id="pkcs8-result" class="hidden col-span-2 divide-y divide-gray-200 rounded-lg bg-white shadow">
+          <div class="flex w-full items-center justify-between space-x-6 p-6">
+            <div class="flex-1">
+              <div class="flex items-center space-x-3">
+                <h3 class="text-lg font-medium text-gray-900">
+                  PKCS #8 (Private Key)
+                </h3>
+                  {{/*                <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Admin</span>*/}}
+              </div>
+              <p class="mt-1 text-sm text-gray-500">
+                The private key in PKCS #8, ASN.1 DER, PEM encoding.
+              </p>
+            </div>
+            <button id="new-gen-copy-pkcs8" type="button"
+                    class="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+              Copy
+              <i class="fa-solid fa-copy fa-lg"></i>
+            </button>
+          </div>
+          <div>
+              <pre class="bg-gray-700 rounded-lg overflow-x-auto m-4 p-4 shadow-lg"><code
+                        class="language-json text-sm text-white block" id="pkcs8-result-text"></code></pre>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+    {{/*Results*/}}
+</div>

@@ -4,10 +4,10 @@
 
 This is a JWK Set (JSON Web Key Set) implementation written in Golang.
 
-If you would like to run a JWK Set server without writing any Golang code, please visit the Docker server section below.
-TODO
+If you would like to generate or validate a JWK without writing any Golang code, please visit the Docker server section
+below.
 
-If you would like to have a JWK Set client without writing any Golang code, you can use the
+If you would like to have a JWK Set client to help verify JWTs without writing any Golang code, you can use the
 [JWK Set Client Proxy (JCP) project](https://github.com/MicahParks/jcp) perform JWK Set client operations in the
 language of your choice using an OpenAPI interface.
 
@@ -25,14 +25,21 @@ The PEM block type is used to infer which key type to decode. Reference the belo
 ## Website
 
 Please visit [https://jwkset.com](https://jwkset.com) to use the web interface for this project. You can self-host this
-website by following the instructions in the [github.com/MicahParks/jwksetcom](https://github.com/MicahParks/jwksetcom).
+website by following the instructions in the `README.md` in the [website](https://github.com/MicahParks/jwkset/website)
+directory.
 
 ## Command line
 
-Gather your PEM encoded files and use the `cmd/jwksetinfer` command line tool to generate a JWK Set. This tool will
-consume
+Gather your PEM encoded keys or certificates and use the `cmd/jwksetinfer` command line tool to generate a JWK Set. This
+tool will consume
 
-TODO Add example.
+```
+go install github.com/MicahParks/jwkset/cmd/jwksetinfer@latest
+```
+
+```
+jwksetinfer mykey.pem mycert.crt
+```
 
 # Supported keys
 
@@ -74,19 +81,14 @@ not implement any cryptographic algorithms itself.
 # Test coverage
 
 ```
-$ go test -cover -race
+$ go test -cover
 PASS
-coverage: 86.5% of statements
-ok      github.com/MicahParks/jwkset    1.064s
+coverage: 85.5% of statements
+ok      github.com/MicahParks/jwkset    0.013s
 ```
 
-# References
 
-This project was built and tested using various RFCs and services. The services are listed below:
-
-* [mkjwk.org](https://github.com/mitreid-connect/mkjwk.org)
-
-See also:
+# See also
 
 * [`github.com/MicahParks/jcp`](https://github.com/MicahParks/jcp)
 * [`github.com/MicahParks/keyfunc`](https://github.com/MicahParks/keyfunc)

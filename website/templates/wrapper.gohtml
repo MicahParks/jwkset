@@ -1,0 +1,112 @@
+{{- /*gotype: github.com/MicahParks/jwkset/website/server.WrapperData*/ -}}
+<!doctype html>
+<html class="h-full" lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script defer src="https://code.jquery.com/jquery-3.7.1.min.js"
+          integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    {{- if .ReCAPTCHASiteKey}}
+      <script defer src="https://www.google.com/recaptcha/api.js?render={{.ReCAPTCHASiteKey}}"></script>
+    {{- end}}
+  <script defer src="/js/wrapper.js"></script>
+  <title>{{.Title}}</title>
+  <link rel="stylesheet" href="/css/tailwind.min.css"/>
+    {{- /*Font Awesome*/}}
+  <link href="/css/all.min.css" rel="stylesheet">
+    {{- /*Font Awesome*/}}
+    {{- /*Favicon*/}}
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    {{/*  <link rel="manifest" href="/site.webmanifest">*/}}
+  <meta name="theme-color" content="#ffffff">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    {{- /*Favicon*/}}
+  <meta name="description" content="Micah Parks' personal website."/>
+    {{- if .Result.HeaderAdd}}
+        {{.Result.HeaderAdd}}
+    {{- end}}
+  <script>
+    const reCAPTCHASiteKey = '{{.ReCAPTCHASiteKey}}';
+    const pathAPIInspect = '{{.Path.APIInspect}}';
+    const pathAPINewGen = '{{.Path.APINewGen}}';
+    const pathAPIPemGen = '{{.Path.APIPemGen}}';
+  </script>
+</head>
+<body class="h-full bg-gray-100">
+<nav class="bg-white shadow">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="flex h-16 justify-between">
+      <div class="flex">
+        <a href="{{.Path.Index}}"
+           class="flex flex-shrink-0 items-center justify-center bg-indigo-600 h-10 w-10 rounded-full self-center justify-self-center">
+          <i class="fa-solid fa-key fa-xl text-white"></i>
+        </a>
+        <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+            {{- range .NavItems}}
+              <!-- Current: "border-indigo-500 text-gray-900", Default: "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700" -->
+              <a href="{{.Href}}"
+                 class="inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium {{if .Active}}border-indigo-500 text-gray-900{{else}}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{{end}}">
+                  {{.Name}}
+              </a>
+            {{- end}}
+        </div>
+      </div>
+      <div class="hidden sm:ml-6 sm:flex sm:items-center">
+        <a href="{{.Link.GitHub}}" class="text-gray-500 fa-brands fa-github fa-xl"></a>
+      </div>
+      <div class="-mr-2 flex items-center sm:hidden">
+        <!-- Mobile menu button -->
+        <button id="mobile-menu-button" type="button"
+                class="relative inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+                aria-controls="mobile-menu" aria-expanded="false">
+          <span class="absolute -inset-0.5"></span>
+          <span class="sr-only">Open main menu</span>
+          <i id="mobile-menu-icon" class="hidden py-2 fa-solid fa-bars fa-lg"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile menu, show/hide based on menu state. -->
+  <div id="mobile-menu" class="hidden sm:hidden">
+    <div class="space-y-1 pb-3 pt-2">
+        {{- range .NavItems}}
+          <!-- Current: "bg-indigo-50 border-indigo-500 text-indigo-700", Default: "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700" -->
+          <a href="{{.Href}}"
+             class="block border-l-4 py-2 pl-3 pr-4 text-base font-medium {{if .Active}}bg-indigo-50 border-indigo-500 text-indigo-700{{else}}border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700{{end}}">
+              {{.Name}}
+          </a>
+        {{- end}}
+    </div>
+  </div>
+</nav>
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-6xl">
+    <div class="bg-white shadow sm:rounded-lg my-4 sm:my-8">
+      <div class="px-4 py-5 sm:p-6">
+          {{.Result.InnerHTML}}
+      </div>
+    </div>
+  </div>
+</div>
+<footer>
+  <div class="mx-auto max-w-7xl px-6 py-12 md:flex md:items-center md:justify-between lg:px-8">
+    <div class="flex justify-center space-x-6 md:order-2">
+      <a href="https://micahparks.com" class="text-gray-600 hover:text-gray-500">
+        <span class="sr-only">Personal Website</span>
+        <i class="fa-solid fa-globe fa-lg"></i>
+      </a>
+      <a href="{{.Link.GitHub}}" class="text-gray-600 hover:text-gray-500">
+        <span class="sr-only">GitHub</span>
+        <i class="fa-brands fa-github fa-lg"></i>
+      </a>
+    </div>
+    <div class="mt-8 md:order-1 md:mt-0">
+      <p class="text-center text-xs leading-5 text-gray-800">&copy; 2023 Micah Parks. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
+</body>
+</html>
