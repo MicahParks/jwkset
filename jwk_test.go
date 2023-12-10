@@ -36,7 +36,7 @@ func TestJSON(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	jwks := jwkset.NewMemory()
+	jwks := jwkset.NewMemoryStorage()
 
 	b, err := base64.RawURLEncoding.DecodeString(x25519PrivateKey)
 	if err != nil {
@@ -89,7 +89,7 @@ func TestJSON(t *testing.T) {
 	}
 	compareJSON(t, jsonRepresentation, true)
 
-	jwks = jwkset.NewMemory()
+	jwks = jwkset.NewMemoryStorage()
 	writeKey(ctx, t, jwks, x25519Priv, x25519ID, true)
 	writeKey(ctx, t, jwks, eKey, eID, true)
 	writeKey(ctx, t, jwks, ed, edID, true)
@@ -189,7 +189,7 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 	}
 }
 
-func writeKey(ctx context.Context, t *testing.T, jwks jwkset.JWKSet, key any, keyID string, private bool) {
+func writeKey(ctx context.Context, t *testing.T, jwks jwkset.Storage, key any, keyID string, private bool) {
 	marshal := jwkset.JWKMarshalOptions{
 		Private: private,
 	}
@@ -204,7 +204,7 @@ func writeKey(ctx context.Context, t *testing.T, jwks jwkset.JWKSet, key any, ke
 	if err != nil {
 		t.Fatalf("Failed to create JWK from key ID %q. %s", keyID, err)
 	}
-	err = jwks.Store.WriteKey(ctx, jwk)
+	err = jwks.KeyWrite(ctx, jwk)
 	if err != nil {
 		t.Fatalf("Failed to write key ID %q. %s", keyID, err)
 	}

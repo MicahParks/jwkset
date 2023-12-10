@@ -19,26 +19,34 @@ var (
 	ErrInvalidHTTPStatusCode = errors.New("invalid HTTP status code")
 )
 
-type Client interface {
-	// ReadKey reads a key from the storage. If the key is not present, it returns ErrKeyNotFound. Any pointers returned
-	// should be considered read-only.
-	ReadKey(ctx context.Context, keyID string) (JWK, error)
-
-	// SnapshotKeys reads a snapshot of all keys from storage. As with ReadKey, any pointers returned should be
-	// considered read-only.
-	SnapshotKeys(ctx context.Context) ([]JWK, error)
-}
-
 // Storage handles storage operations for a JWKSet.
 type Storage interface {
-	// DeleteKey deletes a key from the storage. It will return ok as true if the key was present for deletion.
-	DeleteKey(ctx context.Context, keyID string) (ok bool, err error)
-
-	// WriteKey writes a key to the storage. If the key already exists, it will be overwritten. After writing a key,
+	// KeyDelete deletes a key from the storage. It will return ok as true if the key was present for deletion.
+	KeyDelete(ctx context.Context, keyID string) (ok bool, err error)
+	// KeyRead reads a key from the storage. If the key is not present, it returns ErrKeyNotFound. Any pointers returned
+	// should be considered read-only.
+	KeyRead(ctx context.Context, keyID string) (JWK, error)
+	// KeyReadAll reads a snapshot of all keys from storage. As with ReadKey, any pointers returned should be
+	// considered read-only.
+	KeyReadAll(ctx context.Context) ([]JWK, error)
+	// KeyWrite writes a key to the storage. If the key already exists, it will be overwritten. After writing a key,
 	// any pointers written should be considered owned by the underlying storage.
-	WriteKey(ctx context.Context, jwk JWK) error
+	KeyWrite(ctx context.Context, jwk JWK) error
 
-	Client
+	// JSON creates the JSON representation of the JWKSet.
+	JSON(ctx context.Context) (json.RawMessage, error)
+	// JSONPublic creates the JSON representation of the public keys in JWKSet.
+	JSONPublic(ctx context.Context) (json.RawMessage, error)
+	// JSONPrivate creates the JSON representation of the JWKSet public and private key material.
+	JSONPrivate(ctx context.Context) (json.RawMessage, error)
+	// JSONWithOptions creates the JSON representation of the JWKSet with the given options. These options override whatever
+	// options are set on the individual JWKs.
+	JSONWithOptions(ctx context.Context, marshalOptions JWKMarshalOptions, validationOptions JWKValidateOptions) (json.RawMessage, error)
+	// Marshal transforms the JWK Set's current state into a Go type that can be marshaled into JSON.
+	Marshal(ctx context.Context) (JWKSMarshal, error)
+	// MarshalWithOptions transforms the JWK Set's current state into a Go type that can be marshaled into JSON with the
+	// given options. These options override whatever options are set on the individual JWKs.
+	MarshalWithOptions(ctx context.Context, marshalOptions JWKMarshalOptions, validationOptions JWKValidateOptions) (JWKSMarshal, error)
 }
 
 var _ Storage = &memoryJWKSet{}
@@ -53,12 +61,7 @@ func NewMemoryStorage() Storage {
 	return &memoryJWKSet{}
 }
 
-func (m *memoryJWKSet) SnapshotKeys(_ context.Context) ([]JWK, error) {
-	m.mux.RLock()
-	defer m.mux.RUnlock()
-	return slices.Clone(m.set), nil
-}
-func (m *memoryJWKSet) DeleteKey(_ context.Context, keyID string) (ok bool, err error) {
+func (m *memoryJWKSet) KeyDelete(_ context.Context, keyID string) (ok bool, err error) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	for i, jwk := range m.set {
@@ -69,7 +72,7 @@ func (m *memoryJWKSet) DeleteKey(_ context.Context, keyID string) (ok bool, err 
 	}
 	return ok, nil
 }
-func (m *memoryJWKSet) ReadKey(_ context.Context, keyID string) (JWK, error) {
+func (m *memoryJWKSet) KeyRead(_ context.Context, keyID string) (JWK, error) {
 	m.mux.RLock()
 	defer m.mux.RUnlock()
 	for _, jwk := range m.set {
@@ -79,7 +82,12 @@ func (m *memoryJWKSet) ReadKey(_ context.Context, keyID string) (JWK, error) {
 	}
 	return JWK{}, fmt.Errorf("%w: kid %q", ErrKeyNotFound, keyID)
 }
-func (m *memoryJWKSet) WriteKey(_ context.Context, jwk JWK) error {
+func (m *memoryJWKSet) KeyReadAll(_ context.Context) ([]JWK, error) {
+	m.mux.RLock()
+	defer m.mux.RUnlock()
+	return slices.Clone(m.set), nil
+}
+func (m *memoryJWKSet) KeyWrite(_ context.Context, jwk JWK) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	for i, j := range m.set {
@@ -90,6 +98,65 @@ func (m *memoryJWKSet) WriteKey(_ context.Context, jwk JWK) error {
 	}
 	m.set = append(m.set, jwk)
 	return nil
+}
+
+func (m *memoryJWKSet) JSON(ctx context.Context) (json.RawMessage, error) {
+	jwks, err := m.Marshal(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JWK Set: %w", err)
+	}
+	return json.Marshal(jwks)
+}
+func (m *memoryJWKSet) JSONPublic(ctx context.Context) (json.RawMessage, error) {
+	return m.JSONWithOptions(ctx, JWKMarshalOptions{}, JWKValidateOptions{})
+}
+func (m *memoryJWKSet) JSONPrivate(ctx context.Context) (json.RawMessage, error) {
+	marshalOptions := JWKMarshalOptions{
+		Private: true,
+	}
+	return m.JSONWithOptions(ctx, marshalOptions, JWKValidateOptions{})
+}
+func (m *memoryJWKSet) JSONWithOptions(ctx context.Context, marshalOptions JWKMarshalOptions, validationOptions JWKValidateOptions) (json.RawMessage, error) {
+	jwks, err := m.MarshalWithOptions(ctx, marshalOptions, validationOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JWK Set with options: %w", err)
+	}
+	return json.Marshal(jwks)
+}
+func (m *memoryJWKSet) Marshal(ctx context.Context) (JWKSMarshal, error) {
+	keys, err := m.KeyReadAll(ctx)
+	if err != nil {
+		return JWKSMarshal{}, fmt.Errorf("failed to read snapshot of all keys from storage: %w", err)
+	}
+	jwks := JWKSMarshal{}
+	for _, key := range keys {
+		jwks.Keys = append(jwks.Keys, key.Marshal())
+	}
+	return jwks, nil
+}
+func (m *memoryJWKSet) MarshalWithOptions(ctx context.Context, marshalOptions JWKMarshalOptions, validationOptions JWKValidateOptions) (JWKSMarshal, error) {
+	jwks := JWKSMarshal{}
+
+	keys, err := m.KeyReadAll(ctx)
+	if err != nil {
+		return JWKSMarshal{}, fmt.Errorf("failed to read snapshot of all keys from storage: %w", err)
+	}
+
+	for _, key := range keys {
+		options := key.options
+		options.Marshal = marshalOptions
+		options.Validate = validationOptions
+		marshal, err := keyMarshal(key.Key(), options)
+		if err != nil {
+			if errors.Is(err, ErrOptions) {
+				continue
+			}
+			return JWKSMarshal{}, fmt.Errorf("failed to marshal key: %w", err)
+		}
+		jwks.Keys = append(jwks.Keys, marshal)
+	}
+
+	return jwks, nil
 }
 
 // HTTPClientStorageOptions are used to configure the behavior of NewStorageFromHTTP.
@@ -191,7 +258,7 @@ func NewStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, 
 			if err != nil {
 				return fmt.Errorf("failed to create JWK from JWK Marshal: %w", err)
 			}
-			err = store.WriteKey(options.Ctx, jwk)
+			err = store.KeyWrite(options.Ctx, jwk)
 			if err != nil {
 				return fmt.Errorf("failed to write JWK to memory storage: %w", err)
 			}

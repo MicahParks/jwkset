@@ -2,6 +2,7 @@ package jwkset
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -14,7 +15,8 @@ var (
 	ErrNewClient = errors.New("failed to create new JWK Set client")
 )
 
-type ClientOptions struct {
+// HTTPClientOptions are options for creating a new JWK Set client.
+type HTTPClientOptions struct {
 	// Given contains keys known from outside HTTP URLs.
 	Given Storage
 	// HTTPURLs are a mapping of HTTP URLs to JWK Set endpoints to storage implementations for the keys located at the
@@ -26,14 +28,14 @@ type ClientOptions struct {
 }
 
 // Client is a JWK Set client.
-type client struct {
+type httpClient struct {
 	given          Storage
 	httpURLs       map[string]Storage
 	prioritizeHTTP bool
 }
 
-// NewClient creates a new JWK Set client.
-func NewClient(options ClientOptions) (Client, error) {
+// NewHTTPClient creates a new JWK Set client from remote HTTP resources.
+func NewHTTPClient(options HTTPClientOptions) (Storage, error) {
 	if options.Given == nil && len(options.HTTPURLs) == 0 {
 		return nil, fmt.Errorf("%w: no given keys or HTTP URLs", ErrNewClient)
 	}
@@ -42,7 +44,7 @@ func NewClient(options ClientOptions) (Client, error) {
 			options.HTTPURLs[u] = NewMemoryStorage()
 		}
 	}
-	c := client{
+	c := httpClient{
 		given:          options.Given,
 		httpURLs:       options.HTTPURLs,
 		prioritizeHTTP: options.PrioritizeHTTP,
@@ -50,9 +52,9 @@ func NewClient(options ClientOptions) (Client, error) {
 	return c, nil
 }
 
-// NewDefaultClient creates a new JWK Set client with default options.
-func NewDefaultClient(urls []string) (Client, error) {
-	clientOptions := ClientOptions{
+// NewDefaultClient creates a new JWK Set client with default options from remote HTTP resources.
+func NewDefaultClient(urls []string) (Storage, error) {
+	clientOptions := HTTPClientOptions{
 		HTTPURLs: make(map[string]Storage),
 	}
 	for _, u := range urls {
@@ -78,12 +80,31 @@ func NewDefaultClient(urls []string) (Client, error) {
 		}
 		clientOptions.HTTPURLs[u] = c
 	}
-	return NewClient(clientOptions)
+	return NewHTTPClient(clientOptions)
 }
 
-func (c client) ReadKey(ctx context.Context, keyID string) (jwk JWK, err error) {
+func (c httpClient) KeyDelete(ctx context.Context, keyID string) (ok bool, err error) {
+	ok, err = c.given.KeyDelete(ctx, keyID)
+	if err != nil && !errors.Is(err, ErrKeyNotFound) {
+		return false, fmt.Errorf("failed to delete key with ID %q from given storage due to error: %w", keyID, err)
+	}
+	if ok {
+		return true, nil
+	}
+	for _, store := range c.httpURLs {
+		ok, err = store.KeyDelete(ctx, keyID)
+		if err != nil && !errors.Is(err, ErrKeyNotFound) {
+			return false, fmt.Errorf("failed to delete key with ID %q from HTTP storage due to error: %w", keyID, err)
+		}
+		if ok {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+func (c httpClient) KeyRead(ctx context.Context, keyID string) (jwk JWK, err error) {
 	if !c.prioritizeHTTP {
-		jwk, err = c.given.ReadKey(ctx, keyID)
+		jwk, err = c.given.KeyRead(ctx, keyID)
 		switch {
 		case errors.Is(err, ErrKeyNotFound):
 			// Do nothing.
@@ -94,7 +115,7 @@ func (c client) ReadKey(ctx context.Context, keyID string) (jwk JWK, err error) 
 		}
 	}
 	for _, store := range c.httpURLs {
-		jwk, err = store.ReadKey(ctx, keyID)
+		jwk, err = store.KeyRead(ctx, keyID)
 		switch {
 		case errors.Is(err, ErrKeyNotFound):
 			continue
@@ -105,7 +126,7 @@ func (c client) ReadKey(ctx context.Context, keyID string) (jwk JWK, err error) 
 		}
 	}
 	if c.prioritizeHTTP {
-		jwk, err = c.given.ReadKey(ctx, keyID)
+		jwk, err = c.given.KeyRead(ctx, keyID)
 		switch {
 		case errors.Is(err, ErrKeyNotFound):
 			// Do nothing.
@@ -117,17 +138,78 @@ func (c client) ReadKey(ctx context.Context, keyID string) (jwk JWK, err error) 
 	}
 	return JWK{}, fmt.Errorf("%w %q", ErrKeyNotFound, keyID)
 }
-func (c client) SnapshotKeys(ctx context.Context) ([]JWK, error) {
-	jwks, err := c.given.SnapshotKeys(ctx)
+func (c httpClient) KeyReadAll(ctx context.Context) ([]JWK, error) {
+	jwks, err := c.given.KeyReadAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to snapshot given keys due to error: %w", err)
 	}
 	for u, store := range c.httpURLs {
-		j, err := store.SnapshotKeys(ctx)
+		j, err := store.KeyReadAll(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to snapshot HTTP keys from %q due to error: %w", u, err)
 		}
 		jwks = append(jwks, j...)
 	}
 	return jwks, nil
+}
+func (c httpClient) KeyWrite(ctx context.Context, jwk JWK) error {
+	return c.given.KeyWrite(ctx, jwk)
+}
+
+func (c httpClient) JSON(ctx context.Context) (json.RawMessage, error) {
+	m, err := c.combineStorage(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to combine storage due to error: %w", err)
+	}
+	return m.JSON(ctx)
+}
+func (c httpClient) JSONPublic(ctx context.Context) (json.RawMessage, error) {
+	m, err := c.combineStorage(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to combine storage due to error: %w", err)
+	}
+	return m.JSONPublic(ctx)
+}
+func (c httpClient) JSONPrivate(ctx context.Context) (json.RawMessage, error) {
+	m, err := c.combineStorage(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to combine storage due to error: %w", err)
+	}
+	return m.JSONPrivate(ctx)
+}
+func (c httpClient) JSONWithOptions(ctx context.Context, marshalOptions JWKMarshalOptions, validationOptions JWKValidateOptions) (json.RawMessage, error) {
+	m, err := c.combineStorage(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to combine storage due to error: %w", err)
+	}
+	return m.JSONWithOptions(ctx, marshalOptions, validationOptions)
+}
+func (c httpClient) Marshal(ctx context.Context) (JWKSMarshal, error) {
+	m, err := c.combineStorage(ctx)
+	if err != nil {
+		return JWKSMarshal{}, fmt.Errorf("failed to combine storage due to error: %w", err)
+	}
+	return m.Marshal(ctx)
+}
+func (c httpClient) MarshalWithOptions(ctx context.Context, marshalOptions JWKMarshalOptions, validationOptions JWKValidateOptions) (JWKSMarshal, error) {
+	m, err := c.combineStorage(ctx)
+	if err != nil {
+		return JWKSMarshal{}, fmt.Errorf("failed to combine storage due to error: %w", err)
+	}
+	return m.MarshalWithOptions(ctx, marshalOptions, validationOptions)
+}
+
+func (c httpClient) combineStorage(ctx context.Context) (Storage, error) {
+	jwks, err := c.KeyReadAll(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to snapshot keys due to error: %w", err)
+	}
+	m := NewMemoryStorage()
+	for _, jwk := range jwks {
+		err = m.KeyWrite(ctx, jwk)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write key to memory storage due to error: %w", err)
+		}
+	}
+	return m, nil
 }
