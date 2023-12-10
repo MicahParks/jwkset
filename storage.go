@@ -220,6 +220,9 @@ func NewStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, 
 	if options.Ctx == nil {
 		options.Ctx = context.Background()
 	}
+	if options.HTTPExpectedStatus == 0 {
+		options.HTTPExpectedStatus = http.StatusOK
+	}
 	if options.HTTPTimeout == 0 {
 		options.HTTPTimeout = time.Minute
 	}
