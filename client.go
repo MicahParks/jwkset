@@ -44,8 +44,12 @@ func NewHTTPClient(options HTTPClientOptions) (Storage, error) {
 			options.HTTPURLs[u] = NewMemoryStorage()
 		}
 	}
+	given := options.Given
+	if given == nil {
+		given = NewMemoryStorage()
+	}
 	c := httpClient{
-		given:          options.Given,
+		given:          given,
 		httpURLs:       options.HTTPURLs,
 		prioritizeHTTP: options.PrioritizeHTTP,
 	}
