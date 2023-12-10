@@ -19,11 +19,7 @@ var (
 	ErrInvalidHTTPStatusCode = errors.New("invalid HTTP status code")
 )
 
-// Storage handles storage operations for a JWKSet.
-type Storage interface {
-	// DeleteKey deletes a key from the storage. It will return ok as true if the key was present for deletion.
-	DeleteKey(ctx context.Context, keyID string) (ok bool, err error)
-
+type Client interface {
 	// ReadKey reads a key from the storage. If the key is not present, it returns ErrKeyNotFound. Any pointers returned
 	// should be considered read-only.
 	ReadKey(ctx context.Context, keyID string) (JWK, error)
@@ -31,10 +27,18 @@ type Storage interface {
 	// SnapshotKeys reads a snapshot of all keys from storage. As with ReadKey, any pointers returned should be
 	// considered read-only.
 	SnapshotKeys(ctx context.Context) ([]JWK, error)
+}
+
+// Storage handles storage operations for a JWKSet.
+type Storage interface {
+	// DeleteKey deletes a key from the storage. It will return ok as true if the key was present for deletion.
+	DeleteKey(ctx context.Context, keyID string) (ok bool, err error)
 
 	// WriteKey writes a key to the storage. If the key already exists, it will be overwritten. After writing a key,
 	// any pointers written should be considered owned by the underlying storage.
 	WriteKey(ctx context.Context, jwk JWK) error
+
+	Client
 }
 
 var _ Storage = &memoryJWKSet{}

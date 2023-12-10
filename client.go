@@ -26,7 +26,7 @@ type ClientOptions struct {
 }
 
 // Client is a JWK Set client.
-type Client struct {
+type client struct {
 	given          Storage
 	httpURLs       map[string]Storage
 	prioritizeHTTP bool
@@ -35,14 +35,14 @@ type Client struct {
 // NewClient creates a new JWK Set client.
 func NewClient(options ClientOptions) (Client, error) {
 	if options.Given == nil && len(options.HTTPURLs) == 0 {
-		return Client{}, fmt.Errorf("%w: no given keys or HTTP URLs", ErrNewClient)
+		return nil, fmt.Errorf("%w: no given keys or HTTP URLs", ErrNewClient)
 	}
 	for u, store := range options.HTTPURLs {
 		if store == nil {
 			options.HTTPURLs[u] = NewMemoryStorage()
 		}
 	}
-	c := Client{
+	c := client{
 		given:          options.Given,
 		httpURLs:       options.HTTPURLs,
 		prioritizeHTTP: options.PrioritizeHTTP,
@@ -58,7 +58,7 @@ func NewDefaultClient(urls []string) (Client, error) {
 	for _, u := range urls {
 		parsed, err := url.ParseRequestURI(u)
 		if err != nil {
-			return Client{}, fmt.Errorf("failed to parse given URL %q: %w", u, errors.Join(err, ErrNewClient))
+			return nil, fmt.Errorf("failed to parse given URL %q: %w", u, errors.Join(err, ErrNewClient))
 		}
 		u = parsed.String()
 		refreshErrorHandler := func(ctx context.Context, err error) {
@@ -74,14 +74,14 @@ func NewDefaultClient(urls []string) (Client, error) {
 		}
 		c, err := NewMemoryStorageFromHTTP(parsed, options)
 		if err != nil {
-			return Client{}, fmt.Errorf("failed to create HTTP client storage for %q: %w", u, errors.Join(err, ErrNewClient))
+			return nil, fmt.Errorf("failed to create HTTP client storage for %q: %w", u, errors.Join(err, ErrNewClient))
 		}
 		clientOptions.HTTPURLs[u] = c
 	}
 	return NewClient(clientOptions)
 }
 
-func (c Client) ReadKey(ctx context.Context, keyID string) (jwk JWK, err error) {
+func (c client) ReadKey(ctx context.Context, keyID string) (jwk JWK, err error) {
 	if !c.prioritizeHTTP {
 		jwk, err = c.given.ReadKey(ctx, keyID)
 		switch {
@@ -117,8 +117,7 @@ func (c Client) ReadKey(ctx context.Context, keyID string) (jwk JWK, err error) 
 	}
 	return JWK{}, fmt.Errorf("%w %q", ErrKeyNotFound, keyID)
 }
-
-func (c Client) SnapshotKeys(ctx context.Context) ([]JWK, error) {
+func (c client) SnapshotKeys(ctx context.Context) ([]JWK, error) {
 	jwks, err := c.given.SnapshotKeys(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to snapshot given keys due to error: %w", err)
