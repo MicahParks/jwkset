@@ -122,7 +122,9 @@ type HTTPClientStorageOptions struct {
 
 	// RefreshErrorHandler is a function that consumes errors that happen during an HTTP refresh. This is only effectual
 	// if RefreshInterval is set.
-	RefreshErrorHandler func(ctx context.Context, err error) // TODO Option to fail on HTTP creation?
+	//
+	// If NoErrorReturnFirstHTTPReq is set, this function will be called when if the first HTTP request fails.
+	RefreshErrorHandler func(ctx context.Context, err error)
 
 	// RefreshInterval is the interval at which the HTTP URL is refreshed and the JWK Set is processed. This option will
 	// launch a "refresh goroutine" to refresh the remote HTTP resource at the given interval.
@@ -190,7 +192,11 @@ func NewMemoryStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Sto
 	defer cancel()
 	err := refresh(ctx)
 	cancel()
-	if err != nil && !options.NoErrorReturnFirstHTTPReq {
+	if err != nil {
+		if options.NoErrorReturnFirstHTTPReq {
+			options.RefreshErrorHandler(ctx, err)
+			return m, nil
+		}
 		return nil, fmt.Errorf("failed to perform first HTTP request for JWK Set: %w", err)
 	}
 
