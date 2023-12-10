@@ -8,7 +8,7 @@ import (
 )
 
 // JWKSet is a set of JSON Web Keys.
-type JWKSet struct {
+type JWKSet struct { // TODO Turn into functions that accept a Client.
 	Store Storage
 }
 

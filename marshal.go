@@ -76,6 +76,21 @@ type JWKSMarshal struct {
 	Keys []JWKMarshal `json:"keys"`
 }
 
+func (j JWKSMarshal) JWKSlice() ([]JWK, error) {
+	slice := make([]JWK, len(j.Keys))
+	for i, key := range j.Keys {
+		marshalOptions := JWKMarshalOptions{
+			Private: true,
+		}
+		jwk, err := keyUnmarshal(key, marshalOptions, JWKValidateOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal JWK: %w", err)
+		}
+		slice[i] = jwk
+	}
+	return slice, nil
+}
+
 func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 	m := JWKMarshal{}
 	m.ALG = options.Metadata.ALG
