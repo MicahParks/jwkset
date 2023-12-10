@@ -72,7 +72,7 @@ func NewDefaultClient(urls []string) (Client, error) {
 			RefreshErrorHandler:       refreshErrorHandler,
 			RefreshInterval:           time.Hour,
 		}
-		c, err := NewMemoryStorageFromHTTP(parsed, options)
+		c, err := NewStorageFromHTTP(parsed, options)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create HTTP client storage for %q: %w", u, errors.Join(err, ErrNewClient))
 		}

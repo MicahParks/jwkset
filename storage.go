@@ -92,7 +92,7 @@ func (m *memoryJWKSet) WriteKey(_ context.Context, jwk JWK) error {
 	return nil
 }
 
-// HTTPClientStorageOptions are used to configure the behavior of NewMemoryStorageFromHTTP.
+// HTTPClientStorageOptions are used to configure the behavior of NewStorageFromHTTP.
 type HTTPClientStorageOptions struct {
 	// Client is the HTTP client to use for requests.
 	//
@@ -135,13 +135,18 @@ type HTTPClientStorageOptions struct {
 	//
 	// Provide the Ctx option to end the goroutine when it's no longer needed.
 	RefreshInterval time.Duration
+
+	// Storage is the underlying storage implementation to use.
+	//
+	// This defaults to NewMemoryStorage().
+	Storage Storage
 }
 
-// NewMemoryStorageFromHTTP creates a new Storage implementation that processes a remote HTTP resource for a JWK Set. If
+// NewStorageFromHTTP creates a new Storage implementation that processes a remote HTTP resource for a JWK Set. If
 // the RefreshInterval option is not set, the remote HTTP resource will be requested and processed before returning. If
 // the RefreshInterval option is set, a background goroutine will be launched to refresh the remote HTTP resource and
 // not block the return of this function.
-func NewMemoryStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, error) {
+func NewStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, error) {
 	if options.Client == nil {
 		options.Client = http.DefaultClient
 	}
@@ -154,8 +159,10 @@ func NewMemoryStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Sto
 	if options.HTTPMethod == "" {
 		options.HTTPMethod = http.MethodGet
 	}
-
-	m := NewMemoryStorage()
+	store := options.Storage
+	if store == nil {
+		store = NewMemoryStorage()
+	}
 
 	refresh := func(ctx context.Context) error {
 		req, err := http.NewRequestWithContext(ctx, options.HTTPMethod, u.String(), nil)
@@ -184,7 +191,7 @@ func NewMemoryStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Sto
 			if err != nil {
 				return fmt.Errorf("failed to create JWK from JWK Marshal: %w", err)
 			}
-			err = m.WriteKey(options.Ctx, jwk)
+			err = store.WriteKey(options.Ctx, jwk)
 			if err != nil {
 				return fmt.Errorf("failed to write JWK to memory storage: %w", err)
 			}
@@ -199,7 +206,7 @@ func NewMemoryStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Sto
 	if err != nil {
 		if options.NoErrorReturnFirstHTTPReq {
 			options.RefreshErrorHandler(ctx, err)
-			return m, nil
+			return store, nil
 		}
 		return nil, fmt.Errorf("failed to perform first HTTP request for JWK Set: %w", err)
 	}
@@ -222,5 +229,5 @@ func NewMemoryStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Sto
 		}
 	}()
 
-	return m, nil
+	return store, nil
 }
