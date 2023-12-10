@@ -131,12 +131,6 @@ type HTTPClientStorageOptions struct {
 	RefreshInterval time.Duration
 }
 
-type httpJWKSet struct {
-	client *http.Client
-	ctx    context.Context
-	m      Storage
-}
-
 // NewHTTPClientStorage creates a new Storage implementation that processes a remote HTTP resource for a JWK Set. If the
 // RefreshInterval option is not set, the remote HTTP resource will be requested and processed before returning. If the
 // RefreshInterval option is set, a background goroutine will be launched to refresh the remote HTTP resource and not
@@ -156,11 +150,6 @@ func NewHTTPClientStorage(u *url.URL, options HTTPClientStorageOptions) (Storage
 	}
 
 	m := NewMemoryStorage()
-	h := &httpJWKSet{
-		client: options.Client,
-		ctx:    options.Ctx,
-		m:      m,
-	}
 
 	refresh := func(ctx context.Context) error {
 		req, err := http.NewRequestWithContext(ctx, options.HTTPMethod, u.String(), nil)
@@ -223,18 +212,5 @@ func NewHTTPClientStorage(u *url.URL, options HTTPClientStorageOptions) (Storage
 		}
 	}()
 
-	return h, nil
-}
-
-func (h *httpJWKSet) DeleteKey(ctx context.Context, keyID string) (ok bool, err error) {
-	return h.m.DeleteKey(ctx, keyID)
-}
-func (h *httpJWKSet) ReadKey(ctx context.Context, keyID string) (JWK, error) {
-	return h.m.ReadKey(ctx, keyID)
-}
-func (h *httpJWKSet) SnapshotKeys(ctx context.Context) ([]JWK, error) {
-	return h.m.SnapshotKeys(ctx)
-}
-func (h *httpJWKSet) WriteKey(ctx context.Context, jwk JWK) error {
-	return h.m.WriteKey(ctx, jwk)
+	return m, nil
 }
