@@ -88,7 +88,7 @@ func (m *memoryJWKSet) WriteKey(_ context.Context, jwk JWK) error {
 	return nil
 }
 
-// HTTPClientStorageOptions are used to configure the behavior of NewHTTPClientStorage.
+// HTTPClientStorageOptions are used to configure the behavior of NewMemoryStorageFromHTTP.
 type HTTPClientStorageOptions struct {
 	// Client is the HTTP client to use for requests.
 	//
@@ -131,11 +131,11 @@ type HTTPClientStorageOptions struct {
 	RefreshInterval time.Duration
 }
 
-// NewHTTPClientStorage creates a new Storage implementation that processes a remote HTTP resource for a JWK Set. If the
-// RefreshInterval option is not set, the remote HTTP resource will be requested and processed before returning. If the
-// RefreshInterval option is set, a background goroutine will be launched to refresh the remote HTTP resource and not
-// block the return of this function.
-func NewHTTPClientStorage(u *url.URL, options HTTPClientStorageOptions) (Storage, error) {
+// NewMemoryStorageFromHTTP creates a new Storage implementation that processes a remote HTTP resource for a JWK Set. If
+// the RefreshInterval option is not set, the remote HTTP resource will be requested and processed before returning. If
+// the RefreshInterval option is set, a background goroutine will be launched to refresh the remote HTTP resource and
+// not block the return of this function.
+func NewMemoryStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, error) {
 	if options.Client == nil {
 		options.Client = http.DefaultClient
 	}
