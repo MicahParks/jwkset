@@ -269,23 +269,25 @@ func NewStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, 
 		return nil
 	}
 
-	go func() { // Refresh goroutine.
-		ticker := time.NewTicker(options.RefreshInterval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-options.Ctx.Done():
-				return
-			case <-ticker.C:
-				ctx, cancel := context.WithTimeout(options.Ctx, options.HTTPTimeout)
-				err := refresh(ctx)
-				cancel()
-				if err != nil && options.RefreshErrorHandler != nil {
-					options.RefreshErrorHandler(ctx, err)
+	if options.RefreshInterval != 0 {
+		go func() { // Refresh goroutine.
+			ticker := time.NewTicker(options.RefreshInterval)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-options.Ctx.Done():
+					return
+				case <-ticker.C:
+					ctx, cancel := context.WithTimeout(options.Ctx, options.HTTPTimeout)
+					err := refresh(ctx)
+					cancel()
+					if err != nil && options.RefreshErrorHandler != nil {
+						options.RefreshErrorHandler(ctx, err)
+					}
 				}
 			}
-		}
-	}()
+		}()
+	}
 
 	ctx, cancel := context.WithTimeout(options.Ctx, options.HTTPTimeout)
 	defer cancel()
