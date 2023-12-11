@@ -82,15 +82,6 @@ not implement any cryptographic algorithms itself.
 * This project does not currently support JWK Set encryption using JWE. This would involve implementing the relevant JWE
   specifications. It may be implemented in the future if there is interest. Open a GitHub issue to express interest.
 
-# Test coverage
-
-```
-$ go test -cover
-PASS
-coverage: 85.5% of statements
-ok      github.com/MicahParks/jwkset    0.013s
-```
-
 # See also
 
 * [`github.com/MicahParks/jcp`](https://github.com/MicahParks/jcp)
