@@ -56,8 +56,8 @@ func NewHTTPClient(options HTTPClientOptions) (Storage, error) {
 	return c, nil
 }
 
-// NewDefaultClient creates a new JWK Set client with default options from remote HTTP resources.
-func NewDefaultClient(urls []string) (Storage, error) {
+// NewDefaultHTTPClient creates a new JWK Set client with default options from remote HTTP resources.
+func NewDefaultHTTPClient(urls []string) (Storage, error) {
 	clientOptions := HTTPClientOptions{
 		HTTPURLs: make(map[string]Storage),
 	}

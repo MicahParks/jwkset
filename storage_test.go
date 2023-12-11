@@ -1,4 +1,4 @@
-package jwkset_test
+package jwkset
 
 import (
 	"bytes"
@@ -6,8 +6,6 @@ import (
 	"errors"
 	"testing"
 	"time"
-
-	"github.com/MicahParks/jwkset"
 )
 
 const (
@@ -24,7 +22,7 @@ var (
 type storageTestParams struct {
 	ctx    context.Context
 	cancel context.CancelFunc
-	jwks   jwkset.Storage
+	jwks   Storage
 }
 
 func TestMemoryKeyDelete(t *testing.T) {
@@ -67,8 +65,8 @@ func TestMemoryKeyRead(t *testing.T) {
 	}
 
 	_, err = store.KeyRead(params.ctx, kidMissing)
-	if !errors.Is(err, jwkset.ErrKeyNotFound) {
-		t.Fatalf("Should have specific error when reading missing key.\n  Actual: %s\n  Expected: %s", err, jwkset.ErrKeyNotFound)
+	if !errors.Is(err, ErrKeyNotFound) {
+		t.Fatalf("Should have specific error when reading missing key.\n  Actual: %s\n  Expected: %s", err, ErrKeyNotFound)
 	}
 
 	key, err := store.KeyRead(params.ctx, kidWritten)
@@ -101,8 +99,8 @@ func TestMemoryKeyRead(t *testing.T) {
 	}
 
 	_, err = store.KeyRead(params.ctx, kidWritten)
-	if !errors.Is(err, jwkset.ErrKeyNotFound) {
-		t.Fatalf("Should have specific error when reading missing key.\n  Actual: %s\n  Expected: %s", err, jwkset.ErrKeyNotFound)
+	if !errors.Is(err, ErrKeyNotFound) {
+		t.Fatalf("Should have specific error when reading missing key.\n  Actual: %s\n  Expected: %s", err, ErrKeyNotFound)
 	}
 }
 
@@ -169,7 +167,7 @@ func TestMemoryKeyWrite(t *testing.T) {
 }
 
 func setupMemory() (params storageTestParams) {
-	jwkSet := jwkset.NewMemoryStorage()
+	jwkSet := NewMemoryStorage()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	params = storageTestParams{
 		ctx:    ctx,
@@ -179,18 +177,18 @@ func setupMemory() (params storageTestParams) {
 	return params
 }
 
-func newStorageTestJWK(t *testing.T, key any, keyID string) jwkset.JWK {
-	marshal := jwkset.JWKMarshalOptions{
+func newStorageTestJWK(t *testing.T, key any, keyID string) JWK {
+	marshal := JWKMarshalOptions{
 		Private: true,
 	}
-	metadata := jwkset.JWKMetadataOptions{
+	metadata := JWKMetadataOptions{
 		KID: keyID,
 	}
-	options := jwkset.JWKOptions{
+	options := JWKOptions{
 		Marshal:  marshal,
 		Metadata: metadata,
 	}
-	jwk, err := jwkset.NewJWKFromKey(key, options)
+	jwk, err := NewJWKFromKey(key, options)
 	if err != nil {
 		t.Fatalf("Failed to create JWK. %s", err)
 	}

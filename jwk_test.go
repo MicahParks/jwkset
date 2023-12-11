@@ -1,4 +1,4 @@
-package jwkset_test
+package jwkset
 
 import (
 	"context"
@@ -10,15 +10,13 @@ import (
 	"encoding/pem"
 	"testing"
 	"time"
-
-	"github.com/MicahParks/jwkset"
 )
 
 func TestNewJWKFromRawJSON(t *testing.T) {
-	marshalOptions := jwkset.JWKMarshalOptions{
+	marshalOptions := JWKMarshalOptions{
 		Private: true,
 	}
-	jwk, err := jwkset.NewJWKFromRawJSON([]byte(edExpected), marshalOptions, jwkset.JWKValidateOptions{})
+	jwk, err := NewJWKFromRawJSON([]byte(edExpected), marshalOptions, JWKValidateOptions{})
 	if err != nil {
 		t.Fatalf("Failed to create JWK from raw JSON. %s", err)
 	}
@@ -26,7 +24,7 @@ func TestNewJWKFromRawJSON(t *testing.T) {
 		t.Fatalf("Incorrect KID. %s", jwk.Marshal().KID)
 	}
 
-	_, err = jwkset.NewJWKFromRawJSON([]byte("invalid"), jwkset.JWKMarshalOptions{}, jwkset.JWKValidateOptions{})
+	_, err = NewJWKFromRawJSON([]byte("invalid"), JWKMarshalOptions{}, JWKValidateOptions{})
 	if err == nil {
 		t.Fatal("Expected an error.")
 	}
@@ -36,8 +34,11 @@ func TestJSON(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	jwks := jwkset.NewMemoryStorage()
+	jwks := NewMemoryStorage()
+	testJSON(t, ctx, jwks)
+}
 
+func testJSON(t *testing.T, ctx context.Context, jwks Storage) {
 	b, err := base64.RawURLEncoding.DecodeString(x25519PrivateKey)
 	if err != nil {
 		t.Fatalf("Failed to decode ECDH X25519 private key. %s", err)
@@ -46,14 +47,14 @@ func TestJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate ECDH X25519 key. %s", err)
 	}
-	writeKey(ctx, t, jwks, x25519Priv, x25519ID, false)
+	writeKey(ctx, t, jwks, x25519Priv, x25519ID, true)
 
 	block, _ := pem.Decode([]byte(ecPrivateKey))
 	eKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
 		t.Fatalf("Failed to parse EC private key. %s", err)
 	}
-	writeKey(ctx, t, jwks, eKey, eID, false)
+	writeKey(ctx, t, jwks, eKey, eID, true)
 
 	edPriv, err := base64.RawURLEncoding.DecodeString(edPrivateKey)
 	if err != nil {
@@ -64,15 +65,14 @@ func TestJSON(t *testing.T) {
 		t.Fatalf("Failed to decode EdDSA public key. %s", err)
 	}
 	ed := ed25519.PrivateKey(append(edPriv, edPub...))
-	writeKey(ctx, t, jwks, ed, edID, false)
+	writeKey(ctx, t, jwks, ed, edID, true)
 
 	block, _ = pem.Decode([]byte(rsaPrivateKey))
 	rKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
 		t.Fatalf("Failed to parse RSA private key. %s", err)
 	}
-	const rID = "myRSAKey"
-	writeKey(ctx, t, jwks, rKey, rID, false)
+	writeKey(ctx, t, jwks, rKey, rID, true)
 
 	hKey := []byte(hmacSecret)
 	writeKey(ctx, t, jwks, hKey, hID, true)
@@ -84,19 +84,6 @@ func TestJSON(t *testing.T) {
 	compareJSON(t, jsonRepresentation, false)
 
 	jsonRepresentation, err = jwks.JSONPrivate(ctx)
-	if err != nil {
-		t.Fatalf("Failed to get JSON. %s", err)
-	}
-	compareJSON(t, jsonRepresentation, true)
-
-	jwks = jwkset.NewMemoryStorage()
-	writeKey(ctx, t, jwks, x25519Priv, x25519ID, true)
-	writeKey(ctx, t, jwks, eKey, eID, true)
-	writeKey(ctx, t, jwks, ed, edID, true)
-	writeKey(ctx, t, jwks, rKey, rID, true)
-	writeKey(ctx, t, jwks, hKey, hID, true)
-
-	jsonRepresentation, err = jwks.JSON(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get JSON. %s", err)
 	}
@@ -115,13 +102,16 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 	}
 
 	wrongLength := false
+	var expectedKeys int
 	if private && len(keys.Keys) != 5 {
+		expectedKeys = 5
 		wrongLength = true
 	} else if !private && len(keys.Keys) != 4 {
+		expectedKeys = 4
 		wrongLength = true
 	}
 	if wrongLength {
-		t.Fatalf("Expected 3 keys. Got %d. HMAC keys should not have a JSON representation.", len(keys.Keys))
+		t.Fatalf("Expected %d keys. Got %d. HMAC keys should not have a JSON representation.", expectedKeys, len(keys.Keys))
 	}
 
 	for _, key := range keys.Keys {
@@ -132,34 +122,34 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 
 		var expectedJSON json.RawMessage
 		var matchingAttributes []string
-		switch jwkset.KTY(kty) {
-		case jwkset.KtyEC:
+		switch KTY(kty) {
+		case KtyEC:
 			expectedJSON = json.RawMessage(ecExpected)
 			matchingAttributes = []string{"kty", "kid", "crv", "x", "y"}
 			if private {
 				matchingAttributes = append(matchingAttributes, "d")
 			}
-		case jwkset.KtyOKP:
+		case KtyOKP:
 			matchingAttributes = []string{"crv", "kty", "kid", "x"}
 			if private {
 				matchingAttributes = append(matchingAttributes, "d")
 			}
-			switch jwkset.CRV(key["crv"].(string)) {
-			case jwkset.CrvEd25519:
+			switch CRV(key["crv"].(string)) {
+			case CrvEd25519:
 				matchingAttributes = append(matchingAttributes, "alg")
 				expectedJSON = json.RawMessage(edExpected)
-			case jwkset.CrvX25519:
+			case CrvX25519:
 				expectedJSON = json.RawMessage(x25519Expected)
 			default:
 				t.Fatalf("Unknown OKP curve %q.", key["crv"].(string))
 			}
-		case jwkset.KtyRSA:
+		case KtyRSA:
 			expectedJSON = json.RawMessage(rsaExpected)
 			matchingAttributes = []string{"kty", "kid", "n", "e"}
 			if private {
 				matchingAttributes = append(matchingAttributes, "d", "p", "q", "dp", "dq", "qi")
 			}
-		case jwkset.KtyOct:
+		case KtyOct:
 			if private {
 				expectedJSON = json.RawMessage(hmacExpected)
 				matchingAttributes = []string{"kty", "kid", "k"}
@@ -189,18 +179,18 @@ func compareJSON(t *testing.T, actual json.RawMessage, private bool) {
 	}
 }
 
-func writeKey(ctx context.Context, t *testing.T, jwks jwkset.Storage, key any, keyID string, private bool) {
-	marshal := jwkset.JWKMarshalOptions{
+func writeKey(ctx context.Context, t *testing.T, jwks Storage, key any, keyID string, private bool) {
+	marshal := JWKMarshalOptions{
 		Private: private,
 	}
-	metadata := jwkset.JWKMetadataOptions{
+	metadata := JWKMetadataOptions{
 		KID: keyID,
 	}
-	options := jwkset.JWKOptions{
+	options := JWKOptions{
 		Marshal:  marshal,
 		Metadata: metadata,
 	}
-	jwk, err := jwkset.NewJWKFromKey(key, options)
+	jwk, err := NewJWKFromKey(key, options)
 	if err != nil {
 		t.Fatalf("Failed to create JWK from key ID %q. %s", keyID, err)
 	}
@@ -215,6 +205,7 @@ const (
 	eID      = "myECKey"
 	edID     = "myEdDSAKey"
 	hID      = "myHMACKey"
+	rID      = "myRSAKey"
 )
 
 /*
