@@ -44,7 +44,7 @@ func main() {
 		allPEM = s.String()
 	}
 
-	jwks := jwkset.NewMemory()
+	jwks := jwkset.NewMemoryStorage()
 
 	i := 0
 	const kidPrefix = "UniqueKeyID"
@@ -81,7 +81,7 @@ func main() {
 				)
 				os.Exit(1)
 			}
-			err = jwks.Store.WriteKey(ctx, jwk)
+			err = jwks.KeyWrite(ctx, jwk)
 			if err != nil {
 				l.Error("Failed to write JWK.",
 					logErr, err,
@@ -110,7 +110,7 @@ func main() {
 				)
 				os.Exit(1)
 			}
-			err = jwks.Store.WriteKey(ctx, jwk)
+			err = jwks.KeyWrite(ctx, jwk)
 			if err != nil {
 				l.Error("Failed to write JWK.",
 					logErr, err,

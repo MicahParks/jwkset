@@ -1,6 +1,7 @@
 package jwkset
 
 import (
+	"context"
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -74,6 +75,38 @@ type JWKMarshal struct {
 // JWKSMarshal is used to marshal or unmarshal a JSON Web Key Set.
 type JWKSMarshal struct {
 	Keys []JWKMarshal `json:"keys"`
+}
+
+// JWKSlice converts the JWKSMarshal to a []JWK.
+func (j JWKSMarshal) JWKSlice() ([]JWK, error) {
+	slice := make([]JWK, len(j.Keys))
+	for i, key := range j.Keys {
+		marshalOptions := JWKMarshalOptions{
+			Private: true,
+		}
+		jwk, err := keyUnmarshal(key, marshalOptions, JWKValidateOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal JWK: %w", err)
+		}
+		slice[i] = jwk
+	}
+	return slice, nil
+}
+
+// ToStorage converts the JWKSMarshal to a Storage.
+func (j JWKSMarshal) ToStorage() (Storage, error) {
+	m := NewMemoryStorage()
+	jwks, err := j.JWKSlice()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create a slice of JWK from JWKSMarshal: %w", err)
+	}
+	for _, jwk := range jwks {
+		err = m.KeyWrite(context.Background(), jwk)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write JWK to storage: %w", err)
+		}
+	}
+	return m, nil
 }
 
 func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {

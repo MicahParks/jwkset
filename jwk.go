@@ -153,9 +153,8 @@ func NewJWKFromX5C(options JWKOptions) (JWK, error) {
 	if cert.PublicKeyAlgorithm == x509.Ed25519 {
 		if options.Metadata.ALG != "" && options.Metadata.ALG != AlgEdDSA {
 			return JWK{}, fmt.Errorf("%w: ALG in metadata does not match ALG in X.509 certificate", errors.Join(ErrOptions, ErrX509Mismatch))
-		} else {
-			options.Metadata.ALG = AlgEdDSA
 		}
+		options.Metadata.ALG = AlgEdDSA
 	}
 
 	j := JWK{
