@@ -19,7 +19,7 @@ func main() {
 	ctx := context.Background()
 	logger := log.New(os.Stdout, "", 0)
 
-	jwkSet := jwkset.NewMemory()
+	jwkSet := jwkset.NewMemoryStorage()
 
 	// Create an RSA key.
 	key, err := rsa.GenerateKey(rand.Reader, 4096)
@@ -42,7 +42,7 @@ func main() {
 	}
 
 	// Write the key to the JWK Set storage.
-	err = jwkSet.Store.WriteKey(ctx, jwk)
+	err = jwkSet.KeyWrite(ctx, jwk)
 	if err != nil {
 		logger.Fatalf(logFmt, "Failed to store RSA key.", err)
 	}
