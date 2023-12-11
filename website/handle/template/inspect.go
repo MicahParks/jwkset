@@ -22,7 +22,7 @@ func (i *Inspect) ApplyMiddleware(h http.Handler) http.Handler {
 	cache := middleware.CreateCacheControl(middleware.CacheDefaults)
 	return cache(middleware.EncodeGzip(h))
 }
-func (i *Inspect) Authorize(w http.ResponseWriter, r *http.Request) (authorized bool, modified *http.Request, skipTemplate bool) {
+func (i *Inspect) Authorize(_ http.ResponseWriter, r *http.Request) (authorized bool, modified *http.Request, skipTemplate bool) {
 	return true, r, false
 }
 func (i *Inspect) Initialize(s server.Server) error {

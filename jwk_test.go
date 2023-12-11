@@ -35,10 +35,10 @@ func TestJSON(t *testing.T) {
 	defer cancel()
 
 	jwks := NewMemoryStorage()
-	testJSON(t, ctx, jwks)
+	testJSON(ctx, t, jwks)
 }
 
-func testJSON(t *testing.T, ctx context.Context, jwks Storage) {
+func testJSON(ctx context.Context, t *testing.T, jwks Storage) {
 	b, err := base64.RawURLEncoding.DecodeString(x25519PrivateKey)
 	if err != nil {
 		t.Fatalf("Failed to decode ECDH X25519 private key. %s", err)

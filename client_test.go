@@ -99,5 +99,5 @@ func TestClientJSON(t *testing.T) {
 	c := httpClient{
 		given: NewMemoryStorage(),
 	}
-	testJSON(t, context.Background(), c)
+	testJSON(context.Background(), t, c)
 }
