@@ -4,6 +4,10 @@
 
 This is a JWK Set (JSON Web Key Set) implementation written in Golang.
 
+The goal of this project is to provide a complete implementation of JWK and JWK Sets within the constraints of the
+Golang standard library, without implementing any cryptographic algorithms. For example, `Ed25519` is supported, but
+`Ed448` is not, because the Go standard library does not have a high level implementation of `Ed448`.
+
 If you would like to generate or validate a JWK without writing any Golang code, please visit
 the [Generate a JWK Set](#generate-a-jwk-set) section.
 
@@ -25,9 +29,9 @@ for a list of supported cryptographic key types.
 
 ## Website
 
-Please visit [https://jwkset.com](https://jwkset.com) to use the web interface for this project. You can self-host this
-website by following the instructions in the `README.md` in the [website](https://github.com/MicahParks/jwkset/website)
-directory.
+Visit [https://jwkset.com](https://jwkset.com) to use the web interface for this project. You can self-host this website
+by following the instructions in the `README.md` in
+the [website](https://github.com/MicahParks/jwkset/tree/master/website) directory.
 
 ## Command line
 
@@ -43,6 +47,36 @@ go install github.com/MicahParks/jwkset/cmd/jwksetinfer@latest
 
 ```
 jwksetinfer mykey.pem mycert.crt
+```
+
+## Custom server
+
+This project can be used in creating a custom JWK Set server. A good place to start is `examples/http_server/main.go`.
+
+# Golang JWK Set client
+
+If you are using [`github.com/golang-jwt/jwt/v5`](https://github.com/golang-jwt/jwt) take a look
+at [`github.com/MicahParks/keyfunc/v3`](https://github.com/MicahParks/keyfunc).
+
+This project can be used to create JWK Set clients. An HTTP client is provided. See a snippet of the usage
+from `examples/default_http_client/main.go` below.
+
+## Create a JWK Set client from the server's HTTP URL.
+
+```go
+jwks, err := jwkset.NewDefaultHTTPClient([]string{server.URL})
+if err != nil {
+	log.Fatalf("Failed to create client JWK set. Error: %s", err)
+}
+```
+
+## Read a key from the client.
+
+```go
+jwk, err = jwks.KeyRead(ctx, myKeyID)
+if err != nil {
+	log.Fatalf("Failed to read key from client JWK set. Error: %s", err)
+}
 ```
 
 # Supported keys
@@ -79,10 +113,24 @@ not implement any cryptographic algorithms itself.
   like: `failed to validate JWK: marshaled JWK does not match original JWK`. To work around this, please modify the
   JWK's JSON to remove the leading zeros for a proper `Base64urlUInt` encoding. If you need help doing this, please open
   a GitHub issue.
+* `Base64url Encoding` requires that all trailing `=` characters be removed. This project automatically strips any
+  trailing `=` characters in an attempt to be compliant with improper implementations of JWK.
 * This project does not currently support JWK Set encryption using JWE. This would involve implementing the relevant JWE
   specifications. It may be implemented in the future if there is interest. Open a GitHub issue to express interest.
 
-# See also
+# Related projects
 
-* [`github.com/MicahParks/jcp`](https://github.com/MicahParks/jcp)
-* [`github.com/MicahParks/keyfunc`](https://github.com/MicahParks/keyfunc)
+## [`github.com/MicahParks/keyfunc`](https://github.com/MicahParks/keyfunc)
+
+A JWK Set client for the [`github.com/golang-jwt/jwt/v5`](https://github.com/golang-jwt/jwt) project.
+
+## [`github.com/MicahParks/jcp`](https://github.com/MicahParks/jcp)
+
+A JWK Set client proxy. JCP for short. This project is a standalone service that uses keyfunc under the hood. It
+primarily exists for these use cases:
+
+The language or shell a program is written in does not have an adequate JWK Set client. Validate JWTs with curl? Why
+not?
+Restrictive networking policies prevent a program from accessing the remote JWK Set directly.
+Many co-located services need to validate JWTs that were signed by a key that lives in a remote JWK Set.
+If you can integrate keyfunc directly into your program, you likely don't need JCP.

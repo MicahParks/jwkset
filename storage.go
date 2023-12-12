@@ -269,6 +269,26 @@ func NewStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, 
 		return nil
 	}
 
+	if options.RefreshInterval != 0 {
+		go func() { // Refresh goroutine.
+			ticker := time.NewTicker(options.RefreshInterval)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-options.Ctx.Done():
+					return
+				case <-ticker.C:
+					ctx, cancel := context.WithTimeout(options.Ctx, options.HTTPTimeout)
+					err := refresh(ctx)
+					cancel()
+					if err != nil && options.RefreshErrorHandler != nil {
+						options.RefreshErrorHandler(ctx, err)
+					}
+				}
+			}
+		}()
+	}
+
 	ctx, cancel := context.WithTimeout(options.Ctx, options.HTTPTimeout)
 	defer cancel()
 	err := refresh(ctx)
@@ -280,24 +300,6 @@ func NewStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, 
 		}
 		return nil, fmt.Errorf("failed to perform first HTTP request for JWK Set: %w", err)
 	}
-
-	go func() { // Refresh goroutine.
-		ticker := time.NewTicker(options.RefreshInterval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-options.Ctx.Done():
-				return
-			case <-ticker.C:
-				ctx, cancel = context.WithTimeout(options.Ctx, options.HTTPTimeout)
-				err = refresh(ctx)
-				cancel()
-				if err != nil && options.RefreshErrorHandler != nil {
-					options.RefreshErrorHandler(ctx, err)
-				}
-			}
-		}
-	}()
 
 	return store, nil
 }
