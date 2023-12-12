@@ -13,3 +13,5 @@ Use the pre-built Docker container to self-host this website.
 ```
 docker run --rm -p 8080:8080 micahparks/jwksetcom
 ```
+
+You can then find the website hosted at http://localhost:8080
