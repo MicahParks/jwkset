@@ -41,7 +41,14 @@ func NewHTTPClient(options HTTPClientOptions) (Storage, error) {
 	}
 	for u, store := range options.HTTPURLs {
 		if store == nil {
-			options.HTTPURLs[u] = NewMemoryStorage()
+			parsed, err := url.ParseRequestURI(u)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse given URL %q: %w", u, errors.Join(err, ErrNewClient))
+			}
+			options.HTTPURLs[u], err = NewStorageFromHTTP(nil, HTTPClientStorageOptions{})
+			if err != nil {
+				return nil, fmt.Errorf("failed to create HTTP client storage for %q: %w", parsed.String(), errors.Join(err, ErrNewClient))
+			}
 		}
 	}
 	given := options.Given
