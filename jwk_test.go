@@ -38,6 +38,65 @@ func TestJSON(t *testing.T) {
 	testJSON(ctx, t, jwks)
 }
 
+func TestMissingThumbprint(t *testing.T) {
+	testCases := []struct {
+		name           string
+		missingX5T     bool
+		missingX5TS256 bool
+	}{
+		{
+			name:       "MissingX5T",
+			missingX5T: true,
+		},
+		{
+			name:           "MissingX5T#S256",
+			missingX5TS256: true,
+		},
+		{
+			name:           "MissingX5TAndX5T#S256",
+			missingX5T:     true,
+			missingX5TS256: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			block, _ := pem.Decode([]byte(ed25519Cert))
+			cert, err := LoadCertificate(block.Bytes)
+			if err != nil {
+				t.Fatalf("Failed to load certificate. %s", err)
+			}
+			metadata := JWKMetadataOptions{
+				KID: myKeyID,
+			}
+			x509Options := JWKX509Options{
+				X5C: []*x509.Certificate{cert},
+			}
+			options := JWKOptions{
+				Metadata: metadata,
+				X509:     x509Options,
+			}
+			jwk, err := NewJWKFromKey(cert.PublicKey, options)
+			if err != nil {
+				t.Fatalf("Failed to create JWK from key. %s", err)
+			}
+			marshal := jwk.Marshal()
+			if tc.missingX5T {
+				marshal.X5T = ""
+			}
+			if tc.missingX5TS256 {
+				marshal.X5TS256 = ""
+			}
+			jwk, err = NewJWKFromMarshal(marshal, JWKMarshalOptions{}, JWKValidateOptions{})
+			if err != nil {
+				t.Fatalf("Failed to create JWK from marshal. %s", err)
+			}
+			if jwk.Marshal().KID != myKeyID {
+				t.Fatalf("Incorrect KID. %s", jwk.Marshal().KID)
+			}
+		})
+	}
+}
+
 func testJSON(ctx context.Context, t *testing.T, jwks Storage) {
 	b, err := base64.RawURLEncoding.DecodeString(x25519PrivateKey)
 	if err != nil {
