@@ -5,11 +5,11 @@ go 1.21.5
 require (
 	github.com/MicahParks/httphandle v0.5.6
 	github.com/MicahParks/jsontype v0.6.1
+	github.com/MicahParks/jwkset v0.5.5
 	github.com/MicahParks/recaptcha v0.0.5
 )
 
 require (
-	github.com/MicahParks/jwkset v0.3.2-0.20231205231409-8786292b6646 // indirect
 	github.com/MicahParks/templater v0.0.2 // indirect
 	github.com/google/uuid v1.4.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
