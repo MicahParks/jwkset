@@ -301,6 +301,13 @@ func (j JWK) Validate() error {
 		return fmt.Errorf("failed to marshal JSON Web Key: %w", errors.Join(ErrJWKValidation, err))
 	}
 
+	if j.marshal.X5T == "" {
+		marshalled.X5T = ""
+	}
+	if j.marshal.X5TS256 == "" {
+		marshalled.X5TS256 = ""
+	}
+
 	ok := reflect.DeepEqual(j.marshal, marshalled)
 	if !ok {
 		return fmt.Errorf("%w: marshaled JWK does not match original JWK", ErrJWKValidation)
