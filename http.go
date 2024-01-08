@@ -72,6 +72,12 @@ func NewHTTPClient(options HTTPClientOptions) (Storage, error) {
 }
 
 // NewDefaultHTTPClient creates a new JWK Set client with default options from remote HTTP resources.
+//
+// The default behavior is to:
+// 1. Refresh remote HTTP resources every hour.
+// 2. Prioritize keys from remote HTTP resources over keys from the given storage.
+// 3. Refresh remote HTTP resources if a key with an unknown key ID is trying to be read, with a rate limit of 5 minutes.
+// 4. Log to slog.Default() if a refresh fails.
 func NewDefaultHTTPClient(urls []string) (Storage, error) {
 	clientOptions := HTTPClientOptions{
 		HTTPURLs:          make(map[string]Storage),
