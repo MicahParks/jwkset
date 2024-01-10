@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/url"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 var (
@@ -25,13 +27,18 @@ type HTTPClientOptions struct {
 	// PrioritizeHTTP is a flag that indicates whether keys from the HTTP URL should be prioritized over keys from the
 	// given storage.
 	PrioritizeHTTP bool
+	// RefreshUnknownKID is non-nil to indicate that remote HTTP resources should be refreshed if a key with an unknown
+	// key ID is trying to be read. This makes reading methods block until the context is over, a key with the matching
+	// key ID is found in a refreshed remote resource, or all refreshes complete.
+	RefreshUnknownKID *rate.Limiter
 }
 
 // Client is a JWK Set client.
 type httpClient struct {
-	given          Storage
-	httpURLs       map[string]Storage
-	prioritizeHTTP bool
+	given             Storage
+	httpURLs          map[string]Storage
+	prioritizeHTTP    bool
+	refreshUnknownKID *rate.Limiter
 }
 
 // NewHTTPClient creates a new JWK Set client from remote HTTP resources.
@@ -56,17 +63,25 @@ func NewHTTPClient(options HTTPClientOptions) (Storage, error) {
 		given = NewMemoryStorage()
 	}
 	c := httpClient{
-		given:          given,
-		httpURLs:       options.HTTPURLs,
-		prioritizeHTTP: options.PrioritizeHTTP,
+		given:             given,
+		httpURLs:          options.HTTPURLs,
+		prioritizeHTTP:    options.PrioritizeHTTP,
+		refreshUnknownKID: options.RefreshUnknownKID,
 	}
 	return c, nil
 }
 
 // NewDefaultHTTPClient creates a new JWK Set client with default options from remote HTTP resources.
+//
+// The default behavior is to:
+// 1. Refresh remote HTTP resources every hour.
+// 2. Prioritize keys from remote HTTP resources over keys from the given storage.
+// 3. Refresh remote HTTP resources if a key with an unknown key ID is trying to be read, with a rate limit of 5 minutes.
+// 4. Log to slog.Default() if a refresh fails.
 func NewDefaultHTTPClient(urls []string) (Storage, error) {
 	clientOptions := HTTPClientOptions{
-		HTTPURLs: make(map[string]Storage),
+		HTTPURLs:          make(map[string]Storage),
+		RefreshUnknownKID: rate.NewLimiter(rate.Every(5*time.Minute), 1),
 	}
 	for _, u := range urls {
 		parsed, err := url.ParseRequestURI(u)
@@ -145,6 +160,34 @@ func (c httpClient) KeyRead(ctx context.Context, keyID string) (jwk JWK, err err
 			return JWK{}, fmt.Errorf("failed to find JWT key with ID %q in given storage due to error: %w", keyID, err)
 		default:
 			return jwk, nil
+		}
+	}
+	if c.refreshUnknownKID != nil {
+		err = c.refreshUnknownKID.Wait(ctx)
+		if err != nil {
+			return JWK{}, fmt.Errorf("failed to wait for JWK Set refresh rate limiter due to error: %w", err)
+		}
+		for _, store := range c.httpURLs {
+			s, ok := store.(httpStorage)
+			if !ok {
+				continue
+			}
+			err = s.refresh(ctx)
+			if err != nil {
+				if s.options.RefreshErrorHandler != nil {
+					s.options.RefreshErrorHandler(ctx, err)
+				}
+				continue
+			}
+			jwk, err = store.KeyRead(ctx, keyID)
+			switch {
+			case errors.Is(err, ErrKeyNotFound):
+				// Do nothing.
+			case err != nil:
+				return JWK{}, fmt.Errorf("failed to find JWT key with ID %q in HTTP storage due to error: %w", keyID, err)
+			default:
+				return jwk, nil
+			}
 		}
 	}
 	return JWK{}, fmt.Errorf("%w %q", ErrKeyNotFound, keyID)

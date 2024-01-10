@@ -209,6 +209,12 @@ type HTTPClientStorageOptions struct {
 	Storage Storage
 }
 
+type httpStorage struct {
+	options HTTPClientStorageOptions
+	refresh func(ctx context.Context) error
+	Storage
+}
+
 // NewStorageFromHTTP creates a new Storage implementation that processes a remote HTTP resource for a JWK Set. If
 // the RefreshInterval option is not set, the remote HTTP resource will be requested and processed before returning. If
 // the RefreshInterval option is set, a background goroutine will be launched to refresh the remote HTTP resource and
@@ -301,5 +307,11 @@ func NewStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, 
 		return nil, fmt.Errorf("failed to perform first HTTP request for JWK Set: %w", err)
 	}
 
-	return store, nil
+	s := httpStorage{
+		options: options,
+		refresh: refresh,
+		Storage: store,
+	}
+
+	return s, nil
 }
