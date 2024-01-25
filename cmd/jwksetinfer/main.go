@@ -48,9 +48,9 @@ func main() {
 
 	i := 0
 	const kidPrefix = "UniqueKeyID"
-	metadata := jwkset.JWKMetadataOptions{}
 	allPEMB := []byte(allPEM)
 	for {
+		metadata := jwkset.JWKMetadataOptions{}
 		i++
 		block, rest := pem.Decode(allPEMB)
 		if block == nil {
