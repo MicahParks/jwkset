@@ -137,5 +137,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	println(string(b))
+	_, _ = os.Stdout.Write(b)
 }
