@@ -101,7 +101,8 @@ func main() {
 				Private: true,
 			}
 			options := jwkset.JWKOptions{
-				Marshal: marshalOptions,
+				Marshal:  marshalOptions,
+				Metadata: metadata,
 			}
 			jwk, err := jwkset.NewJWKFromKey(key, options)
 			if err != nil {
