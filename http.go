@@ -79,34 +79,7 @@ func NewHTTPClient(options HTTPClientOptions) (Storage, error) {
 // 3. Refresh remote HTTP resources if a key with an unknown key ID is trying to be read, with a rate limit of 5 minutes.
 // 4. Log to slog.Default() if a refresh fails.
 func NewDefaultHTTPClient(urls []string) (Storage, error) {
-	clientOptions := HTTPClientOptions{
-		HTTPURLs:          make(map[string]Storage),
-		RefreshUnknownKID: rate.NewLimiter(rate.Every(5*time.Minute), 1),
-	}
-	for _, u := range urls {
-		parsed, err := url.ParseRequestURI(u)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse given URL %q: %w", u, errors.Join(err, ErrNewClient))
-		}
-		u = parsed.String()
-		refreshErrorHandler := func(ctx context.Context, err error) {
-			slog.Default().ErrorContext(ctx, "Failed to refresh HTTP JWK Set from remote HTTP resource.",
-				"error", err,
-				"url", u,
-			)
-		}
-		options := HTTPClientStorageOptions{
-			NoErrorReturnFirstHTTPReq: true,
-			RefreshErrorHandler:       refreshErrorHandler,
-			RefreshInterval:           time.Hour,
-		}
-		c, err := NewStorageFromHTTP(parsed, options)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create HTTP client storage for %q: %w", u, errors.Join(err, ErrNewClient))
-		}
-		clientOptions.HTTPURLs[u] = c
-	}
-	return NewHTTPClient(clientOptions)
+	return NewDefaultHTTPClientCtx(context.Background(), urls)
 }
 
 // NewDefaultHTTPClientCtx is the same as NewDefaultHTTPClient, but with a context that can end the refresh goroutine.
