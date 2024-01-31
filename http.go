@@ -109,6 +109,39 @@ func NewDefaultHTTPClient(urls []string) (Storage, error) {
 	return NewHTTPClient(clientOptions)
 }
 
+// NewDefaultHTTPClientCtx is the same as NewDefaultHTTPClient, but with a context that can end the refresh goroutine.
+func NewDefaultHTTPClientCtx(ctx context.Context, urls []string) (Storage, error) {
+	clientOptions := HTTPClientOptions{
+		HTTPURLs:          make(map[string]Storage),
+		RefreshUnknownKID: rate.NewLimiter(rate.Every(5*time.Minute), 1),
+	}
+	for _, u := range urls {
+		parsed, err := url.ParseRequestURI(u)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse given URL %q: %w", u, errors.Join(err, ErrNewClient))
+		}
+		u = parsed.String()
+		refreshErrorHandler := func(ctx context.Context, err error) {
+			slog.Default().ErrorContext(ctx, "Failed to refresh HTTP JWK Set from remote HTTP resource.",
+				"error", err,
+				"url", u,
+			)
+		}
+		options := HTTPClientStorageOptions{
+			Ctx:                       ctx,
+			NoErrorReturnFirstHTTPReq: true,
+			RefreshErrorHandler:       refreshErrorHandler,
+			RefreshInterval:           time.Hour,
+		}
+		c, err := NewStorageFromHTTP(parsed, options)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create HTTP client storage for %q: %w", u, errors.Join(err, ErrNewClient))
+		}
+		clientOptions.HTTPURLs[u] = c
+	}
+	return NewHTTPClient(clientOptions)
+}
+
 func (c httpClient) KeyDelete(ctx context.Context, keyID string) (ok bool, err error) {
 	ok, err = c.given.KeyDelete(ctx, keyID)
 	if err != nil && !errors.Is(err, ErrKeyNotFound) {
