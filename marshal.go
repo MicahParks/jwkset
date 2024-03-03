@@ -138,7 +138,6 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 		m.X = bigIntToBase64RawURL(pub.X, l)
 		m.Y = bigIntToBase64RawURL(pub.Y, l)
 		m.KTY = KtyEC
-		println(key.Curve.Params().N.Int64())
 		if options.Marshal.Private {
 			params := key.Curve.Params()
 			f, _ := params.N.Float64()
