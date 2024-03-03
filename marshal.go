@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"slices"
 	"strings"
@@ -130,16 +131,28 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 	case *ecdsa.PrivateKey:
 		pub := key.PublicKey
 		m.CRV = CRV(pub.Curve.Params().Name)
-		m.X = bigIntToBase64RawURL(pub.X)
-		m.Y = bigIntToBase64RawURL(pub.Y)
+		l := uint(pub.Curve.Params().BitSize / 8)
+		if pub.Curve.Params().BitSize%8 != 0 {
+			l++
+		}
+		m.X = bigIntToBase64RawURL(pub.X, l)
+		m.Y = bigIntToBase64RawURL(pub.Y, l)
 		m.KTY = KtyEC
+		println(key.Curve.Params().N.Int64())
 		if options.Marshal.Private {
-			m.D = bigIntToBase64RawURL(key.D)
+			params := key.Curve.Params()
+			f, _ := params.N.Float64()
+			l = uint(math.Ceil(math.Log2(f) / 8))
+			m.D = bigIntToBase64RawURL(key.D, l)
 		}
 	case *ecdsa.PublicKey:
+		l := uint(key.Curve.Params().BitSize / 8)
+		if key.Curve.Params().BitSize%8 != 0 {
+			l++
+		}
 		m.CRV = CRV(key.Curve.Params().Name)
-		m.X = bigIntToBase64RawURL(key.X)
-		m.Y = bigIntToBase64RawURL(key.Y)
+		m.X = bigIntToBase64RawURL(key.X, l)
+		m.Y = bigIntToBase64RawURL(key.Y, l)
 		m.KTY = KtyEC
 	case ed25519.PrivateKey:
 		pub := key.Public().(ed25519.PublicKey)
@@ -157,30 +170,30 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 		m.KTY = KtyOKP
 	case *rsa.PrivateKey:
 		pub := key.PublicKey
-		m.E = bigIntToBase64RawURL(big.NewInt(int64(pub.E)))
-		m.N = bigIntToBase64RawURL(pub.N)
+		m.E = bigIntToBase64RawURL(big.NewInt(int64(pub.E)), 0)
+		m.N = bigIntToBase64RawURL(pub.N, 0)
 		m.KTY = KtyRSA
 		if options.Marshal.Private {
-			m.D = bigIntToBase64RawURL(key.D)
-			m.P = bigIntToBase64RawURL(key.Primes[0])
-			m.Q = bigIntToBase64RawURL(key.Primes[1])
-			m.DP = bigIntToBase64RawURL(key.Precomputed.Dp)
-			m.DQ = bigIntToBase64RawURL(key.Precomputed.Dq)
-			m.QI = bigIntToBase64RawURL(key.Precomputed.Qinv)
+			m.D = bigIntToBase64RawURL(key.D, 0)
+			m.P = bigIntToBase64RawURL(key.Primes[0], 0)
+			m.Q = bigIntToBase64RawURL(key.Primes[1], 0)
+			m.DP = bigIntToBase64RawURL(key.Precomputed.Dp, 0)
+			m.DQ = bigIntToBase64RawURL(key.Precomputed.Dq, 0)
+			m.QI = bigIntToBase64RawURL(key.Precomputed.Qinv, 0)
 			if len(key.Precomputed.CRTValues) > 0 {
 				m.OTH = make([]OtherPrimes, len(key.Precomputed.CRTValues))
 				for i := 0; i < len(key.Precomputed.CRTValues); i++ {
 					m.OTH[i] = OtherPrimes{
-						D: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Exp),
-						T: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Coeff),
-						R: bigIntToBase64RawURL(key.Primes[i+2]),
+						D: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Exp, 0),
+						T: bigIntToBase64RawURL(key.Precomputed.CRTValues[i].Coeff, 0),
+						R: bigIntToBase64RawURL(key.Primes[i+2], 0),
 					}
 				}
 			}
 		}
 	case *rsa.PublicKey:
-		m.E = bigIntToBase64RawURL(big.NewInt(int64(key.E)))
-		m.N = bigIntToBase64RawURL(key.N)
+		m.E = bigIntToBase64RawURL(big.NewInt(int64(key.E)), 0)
+		m.N = bigIntToBase64RawURL(key.N, 0)
 		m.KTY = KtyRSA
 	case []byte:
 		if options.Marshal.Private {
@@ -487,6 +500,13 @@ func base64urlTrailingPadding(s string) ([]byte, error) {
 	return base64.RawURLEncoding.DecodeString(s)
 }
 
-func bigIntToBase64RawURL(i *big.Int) string {
-	return base64.RawURLEncoding.EncodeToString(i.Bytes())
+func bigIntToBase64RawURL(i *big.Int, l uint) string {
+	var b []byte
+	if l != 0 {
+		b = make([]byte, l)
+		i.FillBytes(b)
+	} else {
+		b = i.Bytes()
+	}
+	return base64.RawURLEncoding.EncodeToString(b)
 }
