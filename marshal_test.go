@@ -23,9 +23,9 @@ const (
 	ecdsaP384D    = "P0mnrdElxUwAOcYeRlEz6uUNM6v_Bj4iBB4qxfEQ0xpKiAI5wM1lhzyoXibfWRHo"
 	ecdsaP384X    = "qL8wKJLZT5qowOGc8FMYqMWurcdVL15VxHqYV5JmJYj0EjBiPv14iwUrnhEEHVS9"
 	ecdsaP384Y    = "5qSWUmTjYNREUNCjDyAxu-ymHUGOtnEzO2z_pxtl5vd4W5Eb_9QcK9E9z3G3Xxjp"
-	ecdsaP521D    = "Tid_PALr0BgmGglq_pUf-sIWh0-pzLkuL7ohKYmwsFnC8df7ZLQRjGw-66TmyF_FIUcltdoP-3zl2ijOByxX_y0"
-	ecdsaP521X    = "ARxti_MdbyBVgT4N-08XzYBx5c8ZUPtZXshNHu_AoMwQqXq0WjZznL5b2175hv8nsUvRshjHpHaj_7SWQl5vH9f0"
-	ecdsaP521Y    = "AYx5MdFtiuPA1_IVS0A0z8MhLmQNJOxKd1hnhSRlod1sd7sz17WSXz-DggJwK5gj0qFp9_8dsVvI1Yn688myoImU"
+	ecdsaP521D    = "AZQCR6TJTodh-iJtUxLqQsPTJ4y8eob2QYRKAdo_dfYofYkT9XvpSCDZAQzUSxjpxk9Gdgllot_44y14l4Y0eXP0"
+	ecdsaP521X    = "AToMhlpxuo51_edtiBEGla-cRsvxbsDFSKLtOdhqDS9raVEsvGHFvs18Ft-66tFj5qQwuWt0kLxUZ1bK-rccUs5E"
+	ecdsaP521Y    = "ACH57f11RPlibY_THfimCzB_XJIl-dbTr0JPIlqkh3fyJ5qgBn5d7rrvm7skAJZPksLR9pIsQs_0xI2du20l-yz9"
 	eddsaPrivate  = "5hT6NTzNJyUCaG7mqtq2ru0EsA2z5SwnnkP0pBycP64"
 	eddsaPublic   = "VYk14QSFla7FKnL_okf6TqLIyV2X6DPaDi26UpAMVnM"
 	hmacSecret    = "myHMACSecret"
@@ -174,7 +174,7 @@ func TestUnmarshalECDH(t *testing.T) {
 func TestMarshalECDSA(t *testing.T) {
 	keyOps := []KEYOPS{KeyOpsSign, KeyOpsVerify}
 	checkMarshal := func(marshal JWKMarshal, options JWKOptions) {
-		if marshal.ALG != AlgES256 {
+		if marshal.ALG != AlgES512 {
 			t.Fatal(`Marshaled parameter "alg" does not match original key.`)
 		}
 		if marshal.KID != myKeyID {
@@ -186,11 +186,11 @@ func TestMarshalECDSA(t *testing.T) {
 		if marshal.USE != UseSig {
 			t.Fatal(`Marshaled parameter "use" does not match original key.`)
 		}
-		if marshal.CRV != CrvP256 {
+		if marshal.CRV != CrvP521 {
 			t.Fatal(`Marshaled parameter "crv" does not match original key.`)
 		}
 		if options.Marshal.Private {
-			if marshal.D != ecdsaP256D {
+			if marshal.D != ecdsaP521D {
 				t.Fatal(`Marshaled parameter "d" does not match original key.`)
 			}
 		} else {
@@ -201,17 +201,17 @@ func TestMarshalECDSA(t *testing.T) {
 		if marshal.KTY != KtyEC {
 			t.Fatal(`Marshaled parameter "kty" does not match original key.`)
 		}
-		if marshal.X != ecdsaP256X {
+		if marshal.X != ecdsaP521X {
 			t.Fatal(`Marshaled parameter "x" does not match original key.`)
 		}
-		if marshal.Y != ecdsaP256Y {
+		if marshal.Y != ecdsaP521Y {
 			t.Fatal(`Marshaled parameter "y" does not match original key.`)
 		}
 	}
-	private := makeECDSAP256(t)
+	private := makeECDSAP521(t)
 
 	metadata := JWKMetadataOptions{
-		ALG:    AlgES256,
+		ALG:    AlgES512,
 		KID:    myKeyID,
 		KEYOPS: keyOps,
 		USE:    UseSig,
