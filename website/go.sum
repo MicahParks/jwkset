@@ -2,8 +2,8 @@ github.com/MicahParks/httphandle v0.5.6 h1:C3wbRA45XfVcT+E1n9z52ZXqYjnLKeg+uIwsF
 github.com/MicahParks/httphandle v0.5.6/go.mod h1:b1/C8KRzVj9RumQosDxQJHoU0vwKoicQXfxe8p6B2Bg=
 github.com/MicahParks/jsontype v0.6.1 h1:yFiDEOgSCDT+Es8k17PYZkvpqbZJ9GxJH2ioeVGvgt0=
 github.com/MicahParks/jsontype v0.6.1/go.mod h1:PVeg4g8eHt4QDlhe56X1sWzRuHiVlCg4m0vgkpEso/Y=
-github.com/MicahParks/jwkset v0.5.6 h1:j7DxnWgzNigqpPsplDug1MR2zCzUmi8wdyHhhq/wIk4=
-github.com/MicahParks/jwkset v0.5.6/go.mod h1:6QApSQehWQGJUc1mPbUQ65YByW8IE2eXZeqFImpg4JA=
+github.com/MicahParks/jwkset v0.5.13 h1:vRXsx+b8uaZm1AU6MpavHJXOmuwP36iR+DNmlg2Lx8o=
+github.com/MicahParks/jwkset v0.5.13/go.mod h1:q8ptTGn/Z9c4MwbcfeCDssADeVQb3Pk7PnVxrvi+2QY=
 github.com/MicahParks/recaptcha v0.0.5 h1:RvKq7E1BZJtz5ubSkBun20jXxIsMWt2oZ0ppTJOzX1A=
 github.com/MicahParks/recaptcha v0.0.5/go.mod h1:aFv3iZDDs6Pbi6tRpUm8gofaTUnDxOQ27x5KsK0CZwE=
 github.com/MicahParks/templater v0.0.2 h1:N2korNIqBlfJjK1uYq/OQxVStRyFkMsV4eNG0ZM4VK0=
