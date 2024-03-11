@@ -12,6 +12,11 @@ import (
 	"time"
 )
 
+const (
+	anyStr     = "any"
+	invalidStr = "invalid"
+)
+
 func TestNewJWKFromRawJSON(t *testing.T) {
 	marshalOptions := JWKMarshalOptions{
 		Private: true,
@@ -98,7 +103,61 @@ func TestMissingThumbprint(t *testing.T) {
 }
 
 func TestJWK_Validate(t *testing.T) {
+	jwk := JWK{}
+	err := jwk.Validate()
+	if err == nil {
+		t.Fatalf("Expected to fail validation for empty JWK.")
+	}
 
+	jwk.options.Validate.SkipAll = true
+	err = jwk.Validate()
+	if err != nil {
+		t.Fatalf("Failed to skip validation. %s", err)
+	}
+	jwk.options.Validate.SkipAll = false
+
+	jwk.marshal.KTY = KtyOKP
+	jwk.marshal.USE = invalidStr
+	err = jwk.Validate()
+	if err == nil {
+		t.Fatalf("Expected to fail validation for invalid use.")
+	}
+	jwk.marshal.USE = ""
+
+	jwk.marshal.KEYOPS = []KEYOPS{invalidStr}
+	err = jwk.Validate()
+	if err == nil {
+		t.Fatalf("Expected to fail validation for invalid key operations.")
+	}
+	jwk.marshal.KEYOPS = nil
+
+	jwk.options.Metadata.ALG = AlgEdDSA
+	err = jwk.Validate()
+	if err == nil {
+		t.Fatalf("Expected to fail validation for options not matching algorithm.")
+	}
+	jwk.options.Metadata.ALG = ""
+
+	jwk.options.Metadata.KID = anyStr
+	err = jwk.Validate()
+	if err == nil {
+		t.Fatalf("Expected to fail validation for options not matching key ID.")
+	}
+	jwk.options.Metadata.KID = ""
+
+	jwk.options.Metadata.KEYOPS = []KEYOPS{KeyOpsSign}
+	err = jwk.Validate()
+	if err == nil {
+		t.Fatalf("Expected to fail validation for options not matching key operations.")
+	}
+	jwk.options.Metadata.KEYOPS = nil
+
+	jwk.options.Metadata.USE = UseSig
+	err = jwk.Validate()
+	if err == nil {
+		t.Fatalf("Expected to fail validation for options not matching use.")
+	}
+	jwk.options.Metadata.USE = ""
 }
 
 func testJSON(ctx context.Context, t *testing.T, jwks Storage) {
