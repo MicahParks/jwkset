@@ -309,6 +309,7 @@ func (j JWK) Validate() error {
 		return fmt.Errorf("failed to marshal JSON Web Key: %w", errors.Join(ErrJWKValidation, err))
 	}
 
+	// Remove automatically computed thumbprints if not set in given JWK.
 	if j.marshal.X5T == "" {
 		marshalled.X5T = ""
 	}

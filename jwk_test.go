@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"testing"
 	"time"
 )
@@ -158,6 +159,51 @@ func TestJWK_Validate(t *testing.T) {
 		t.Fatalf("Expected to fail validation for options not matching use.")
 	}
 	jwk.options.Metadata.USE = ""
+}
+
+func TestJWK_Validate_Padding(t *testing.T) {
+	const invalidRSAModulusPadding = `
+{
+  "kty": "RSA",
+  "n": "AOpF5dwoCpmW2Th5kBaKDZmygOlyQSJm3JqwGvPTTViHCs4ZitlLF9za9-DPxP3zoNaryEYlFfLhYOFVS7mUjMGtLNTkLafBSIIoF28sy_z1GruxJ2aFchazBimxI1B0MXTKdIw4V268klrOECO5FIcHar7EV9W0XqToFon3oVvHWw3qkPV4o-A7Gdrh3Yh7vRUE_T5XCLYD9jO41nAqYhWYRGN-Kxu51x6VMa595TXTrpzgYGDba1MLQzB9qcHRIvRskt7Gh8M0zgcyo6c6jvktaEzh0j2kdL2JCAFHhMXUZedRUOpeqkEehpxDDR0Deiz7UPlMe6l8Ots97Wm357bgajDcxnqaGGEF5GIkr7xHw15DrTfOWPY35f0sHjNTOn9AU2bPWTy6oHZPhoFjHdSNp3UOIunnf1eXRlTa7YZ5PLmbFFyjNNSnQdcOHgKx1lJExJqXCAJ2pBkp0dX65uiqCLz4WZBcmCHGToi4mvQ5wpFqgUJ_6N8HXpP5ZLZ-hQ",
+  "e": "AQAB"
+}`
+	jwk, err := NewJWKFromRawJSON([]byte(invalidRSAModulusPadding), JWKMarshalOptions{}, JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create JWK from raw JSON. %s", err)
+	}
+	err = jwk.Validate()
+	if err != nil {
+		t.Fatalf("Failed to validate RSA JWK with acceptably invalid padding. %s", err)
+	}
+	jwk.options.Validate.StrictPadding = true
+	err = jwk.Validate()
+	if !errors.Is(err, ErrPadding) {
+		t.Fatalf("Expected to fail validation for invalid RSA modulus padding.")
+	}
+
+	const invalidECDSAPadding = `
+{
+  "kty": "EC",
+  "crv": "P-521",
+  "x": "aQnZOuwyXH1APmjESTgHLVUH49Ry19Ay7hgHiOB4Nsv5m_JN18wW-ByFtGtHatVJ_OHL5TuLOTSsp8ctniKTn3E",
+  "y": "TZAwFszO_oiyvncIviOJdi8MU8VDfZo8Y3q0Z-AxaPDUFQS8aRDCHUzukj6RCNZsRCWd0HGOayIhV_uQZrB_Xbc",
+  "d": "AZHsd9nLaXHFWH4wjiW5XcCrIO9AWl4Y0aV64kagRFPnWjljC6VxCsFF5IM0vTzCWKdlwFLEIgJO0pfwWlQMXKef"
+}
+`
+	jwk, err = NewJWKFromRawJSON([]byte(invalidECDSAPadding), JWKMarshalOptions{}, JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create JWK from raw JSON. %s", err)
+	}
+	err = jwk.Validate()
+	if err != nil {
+		t.Fatalf("Failed to validate ECDSA JWK with acceptably invalid padding. %s", err)
+	}
+	jwk.options.Validate.StrictPadding = true
+	err = jwk.Validate()
+	if !errors.Is(err, ErrPadding) {
+		t.Fatalf("Expected to fail validation for invalid ECDSA padding.")
+	}
 }
 
 func testJSON(ctx context.Context, t *testing.T, jwks Storage) {
