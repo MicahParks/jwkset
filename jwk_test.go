@@ -97,6 +97,10 @@ func TestMissingThumbprint(t *testing.T) {
 	}
 }
 
+func TestJWK_Validate(t *testing.T) {
+
+}
+
 func testJSON(ctx context.Context, t *testing.T, jwks Storage) {
 	b, err := base64.RawURLEncoding.DecodeString(x25519PrivateKey)
 	if err != nil {

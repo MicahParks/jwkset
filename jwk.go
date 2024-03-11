@@ -340,6 +340,9 @@ func (j JWK) Validate() error {
 			return fmt.Errorf("%w: D in marshal does not match D in marshalled", errors.Join(ErrJWKValidation, err))
 		}
 	case KtyOKP:
+		if j.marshal.X != marshalled.X {
+			return fmt.Errorf("%w: X in marshal does not match X in marshalled", ErrJWKValidation)
+		}
 		if j.marshal.D != marshalled.D {
 			return fmt.Errorf("%w: D in marshal does not match D in marshalled", ErrJWKValidation)
 		}
