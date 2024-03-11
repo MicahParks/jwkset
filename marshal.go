@@ -37,8 +37,8 @@ var (
 // OtherPrimes is for RSA private keys that have more than 2 primes.
 // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7
 type OtherPrimes struct {
-	D string `json:"d,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.2
 	R string `json:"r,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.1
+	D string `json:"d,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.2
 	T string `json:"t,omitempty"` // https://www.rfc-editor.org/rfc/rfc7518#section-6.3.2.7.3
 }
 

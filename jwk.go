@@ -7,15 +7,21 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"net/url"
-	"reflect"
 	"slices"
 	"time"
+)
+
+var (
+	// ErrPadding indicates that there is invalid padding.
+	ErrPadding = errors.New("padding error")
 )
 
 // JWK represents a JSON Web Key.
@@ -67,6 +73,8 @@ type JWKValidateOptions struct {
 	SkipUse bool
 	// SkipX5UScheme is used to skip checking if the X5U URI scheme is https.
 	SkipX5UScheme bool
+	// StrictPadding is used to indicate that the JWK should be validated with strict padding.
+	StrictPadding bool
 }
 
 // JWKMetadataOptions are direct passthroughs into the JWKMarshal.
@@ -221,16 +229,16 @@ func (j JWK) Validate() error {
 		return fmt.Errorf("%w: invalid or unsupported key type %q", ErrJWKValidation, j.marshal.KTY)
 	}
 
+	if !j.options.Validate.SkipUse && !j.marshal.USE.IANARegistered() {
+		return fmt.Errorf("%w: invalid or unsupported key use %q", ErrJWKValidation, j.marshal.USE)
+	}
+
 	if !j.options.Validate.SkipKeyOps {
 		for _, o := range j.marshal.KEYOPS {
 			if !o.IANARegistered() {
 				return fmt.Errorf("%w: invalid or unsupported key_opt %q", ErrJWKValidation, o)
 			}
 		}
-	}
-
-	if !j.options.Validate.SkipUse && !j.marshal.USE.IANARegistered() {
-		return fmt.Errorf("%w: invalid or unsupported key use %q", ErrJWKValidation, j.marshal.USE)
 	}
 
 	if !j.options.Validate.SkipMetadata {
@@ -301,6 +309,7 @@ func (j JWK) Validate() error {
 		return fmt.Errorf("failed to marshal JSON Web Key: %w", errors.Join(ErrJWKValidation, err))
 	}
 
+	// Remove automatically computed thumbprints if not set in given JWK.
 	if j.marshal.X5T == "" {
 		marshalled.X5T = ""
 	}
@@ -308,11 +317,92 @@ func (j JWK) Validate() error {
 		marshalled.X5TS256 = ""
 	}
 
-	ok := reflect.DeepEqual(j.marshal, marshalled)
-	if !ok {
-		return fmt.Errorf("%w: marshaled JWK does not match original JWK", ErrJWKValidation)
+	if j.marshal.X5T != marshalled.X5T {
+		return fmt.Errorf("%w: X5T in marshal does not match X5T in marshalled", ErrJWKValidation)
+	}
+	if j.marshal.X5TS256 != marshalled.X5TS256 {
+		return fmt.Errorf("%w: X5TS256 in marshal does not match X5TS256 in marshalled", ErrJWKValidation)
+	}
+	if j.marshal.CRV != marshalled.CRV {
+		return fmt.Errorf("%w: CRV in marshal does not match CRV in marshalled", ErrJWKValidation)
+	}
+	switch j.marshal.KTY {
+	case KtyEC:
+		err = cmpBase64Int(j.marshal.X, marshalled.X, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: X in marshal does not match X in marshalled", errors.Join(ErrJWKValidation, err))
+		}
+		err = cmpBase64Int(j.marshal.Y, marshalled.Y, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: Y in marshal does not match Y in marshalled", errors.Join(ErrJWKValidation, err))
+		}
+		err = cmpBase64Int(j.marshal.D, marshalled.D, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: D in marshal does not match D in marshalled", errors.Join(ErrJWKValidation, err))
+		}
+	case KtyOKP:
+		if j.marshal.X != marshalled.X {
+			return fmt.Errorf("%w: X in marshal does not match X in marshalled", ErrJWKValidation)
+		}
+		if j.marshal.D != marshalled.D {
+			return fmt.Errorf("%w: D in marshal does not match D in marshalled", ErrJWKValidation)
+		}
+	case KtyRSA:
+		err = cmpBase64Int(j.marshal.D, marshalled.D, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: D in marshal does not match D in marshalled", errors.Join(ErrJWKValidation, err))
+		}
+		err = cmpBase64Int(j.marshal.N, marshalled.N, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: N in marshal does not match N in marshalled", errors.Join(ErrJWKValidation, err))
+		}
+		err = cmpBase64Int(j.marshal.E, marshalled.E, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: E in marshal does not match E in marshalled", errors.Join(ErrJWKValidation, err))
+		}
+		err = cmpBase64Int(j.marshal.P, marshalled.P, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: P in marshal does not match P in marshalled", errors.Join(ErrJWKValidation, err))
+		}
+		err = cmpBase64Int(j.marshal.Q, marshalled.Q, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: Q in marshal does not match Q in marshalled", errors.Join(ErrJWKValidation, err))
+		}
+		err = cmpBase64Int(j.marshal.DP, marshalled.DP, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: DP in marshal does not match DP in marshalled", errors.Join(ErrJWKValidation, err))
+		}
+		err = cmpBase64Int(j.marshal.DQ, marshalled.DQ, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: DQ in marshal does not match DQ in marshalled", errors.Join(ErrJWKValidation, err))
+		}
+		if len(j.marshal.OTH) != len(marshalled.OTH) {
+			return fmt.Errorf("%w: OTH in marshal does not match OTH in marshalled", ErrJWKValidation)
+		}
+		for i, o := range j.marshal.OTH {
+			err = cmpBase64Int(o.R, marshalled.OTH[i].R, j.options.Validate.StrictPadding)
+			if err != nil {
+				return fmt.Errorf("%w: OTH index %d in marshal does not match OTH in marshalled", errors.Join(ErrJWKValidation, err), i)
+			}
+			err = cmpBase64Int(o.D, marshalled.OTH[i].D, j.options.Validate.StrictPadding)
+			if err != nil {
+				return fmt.Errorf("%w: OTH index %d in marshal does not match OTH in marshalled", errors.Join(ErrJWKValidation, err), i)
+			}
+			err = cmpBase64Int(o.T, marshalled.OTH[i].T, j.options.Validate.StrictPadding)
+			if err != nil {
+				return fmt.Errorf("%w: OTH index %d in marshal does not match OTH in marshalled", errors.Join(ErrJWKValidation, err), i)
+			}
+		}
+	case KtyOct:
+		err = cmpBase64Int(j.marshal.K, marshalled.K, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: K in marshal does not match K in marshalled", errors.Join(ErrJWKValidation, err))
+		}
+	default:
+		return fmt.Errorf("%w: invalid or unsupported key type %q", ErrJWKValidation, j.marshal.KTY)
 	}
 
+	// Saved for last because it may involve a network request.
 	if j.marshal.X5U != "" || j.options.X509.X5U != "" {
 		if j.marshal.X5U != j.options.X509.X5U {
 			return fmt.Errorf("%w: X5U in marshal does not match X5U in options", errors.Join(ErrJWKValidation, ErrOptions))
@@ -375,4 +465,29 @@ func DefaultGetX5U(u *url.URL) ([]*x509.Certificate, error) {
 		return nil, fmt.Errorf("failed to parse X5U response body: %w", errors.Join(ErrGetX5U, err))
 	}
 	return certs, nil
+}
+
+func cmpBase64Int(first, second string, strictPadding bool) error {
+	if first == second {
+		return nil
+	}
+	b, err := base64.RawURLEncoding.DecodeString(first)
+	if err != nil {
+		return fmt.Errorf("failed to decode Base64 raw URL decode first string: %w", err)
+	}
+	fLen := len(b)
+	f := new(big.Int).SetBytes(b)
+	b, err = base64.RawURLEncoding.DecodeString(second)
+	if err != nil {
+		return fmt.Errorf("failed to decode Base64 raw URL decode second string: %w", err)
+	}
+	sLen := len(b)
+	s := new(big.Int).SetBytes(b)
+	if f.Cmp(s) != 0 {
+		return fmt.Errorf("%w: the parsed integers do not match", ErrJWKValidation)
+	}
+	if strictPadding && fLen != sLen {
+		return fmt.Errorf("%w: the Base64 raw URL inputs do not have matching padding", errors.Join(ErrJWKValidation, ErrPadding))
+	}
+	return nil
 }
