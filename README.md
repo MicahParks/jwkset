@@ -107,12 +107,9 @@ not implement any cryptographic algorithms itself.
 
 * RFC 8037 adds support for `Ed448`, `X448`, and `secp256k1`, but there is no Golang standard library support for these
   key types.
-* RFC 7518 specifies that `Base64urlUInt` must use the "minimum number of octets" to represent the number. This can lead
-  to a problem with parsing JWK made by other projects that may contain leading zeros in the
-  non-compliant `Base64urlUInt` encoding. This error happens during JWK validation and will look
-  like: `failed to validate JWK: marshaled JWK does not match original JWK`. To work around this, please modify the
-  JWK's JSON to remove the leading zeros for a proper `Base64urlUInt` encoding. If you need help doing this, please open
-  a GitHub issue.
+* In order to be compatible with non-RFC compliant JWK Set providers, this project does not strictly enforce JWK
+  parameters that are integers and have extra or missing leading padding. See the release notes
+  of [`v0.5.15`](https://github.com/MicahParks/jwkset/releases/tag/v0.5.15) for details.
 * `Base64url Encoding` requires that all trailing `=` characters be removed. This project automatically strips any
   trailing `=` characters in an attempt to be compliant with improper implementations of JWK.
 * This project does not currently support JWK Set encryption using JWE. This would involve implementing the relevant JWE
