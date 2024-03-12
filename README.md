@@ -111,7 +111,7 @@ not implement any cryptographic algorithms itself.
   parameters that are integers and have extra or missing leading padding. See the release notes
   of [`v0.5.15`](https://github.com/MicahParks/jwkset/releases/tag/v0.5.15) for details.
 * `Base64url Encoding` requires that all trailing `=` characters be removed. This project automatically strips any
-  trailing `=` characters in an attempt to be compliant with improper implementations of JWK.
+  trailing `=` characters in an attempt to be compatible with improper implementations of JWK.
 * This project does not currently support JWK Set encryption using JWE. This would involve implementing the relevant JWE
   specifications. It may be implemented in the future if there is interest. Open a GitHub issue to express interest.
 
