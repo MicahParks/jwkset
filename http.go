@@ -27,6 +27,8 @@ type HTTPClientOptions struct {
 	// PrioritizeHTTP is a flag that indicates whether keys from the HTTP URL should be prioritized over keys from the
 	// given storage.
 	PrioritizeHTTP bool
+	// RateLimitWaitMax is the timeout for waiting for rate limiting to end.
+	RateLimitWaitMax time.Duration
 	// RefreshUnknownKID is non-nil to indicate that remote HTTP resources should be refreshed if a key with an unknown
 	// key ID is trying to be read. This makes reading methods block until the context is over, a key with the matching
 	// key ID is found in a refreshed remote resource, or all refreshes complete.
@@ -38,6 +40,7 @@ type httpClient struct {
 	given             Storage
 	httpURLs          map[string]Storage
 	prioritizeHTTP    bool
+	rateLimitWaitMax  time.Duration
 	refreshUnknownKID *rate.Limiter
 }
 
@@ -66,6 +69,7 @@ func NewHTTPClient(options HTTPClientOptions) (Storage, error) {
 		given:             given,
 		httpURLs:          options.HTTPURLs,
 		prioritizeHTTP:    options.PrioritizeHTTP,
+		rateLimitWaitMax:  options.RateLimitWaitMax,
 		refreshUnknownKID: options.RefreshUnknownKID,
 	}
 	return c, nil
@@ -86,6 +90,7 @@ func NewDefaultHTTPClient(urls []string) (Storage, error) {
 func NewDefaultHTTPClientCtx(ctx context.Context, urls []string) (Storage, error) {
 	clientOptions := HTTPClientOptions{
 		HTTPURLs:          make(map[string]Storage),
+		RateLimitWaitMax:  time.Minute,
 		RefreshUnknownKID: rate.NewLimiter(rate.Every(5*time.Minute), 1),
 	}
 	for _, u := range urls {
@@ -169,6 +174,11 @@ func (c httpClient) KeyRead(ctx context.Context, keyID string) (jwk JWK, err err
 		}
 	}
 	if c.refreshUnknownKID != nil {
+		var cancel context.CancelFunc = func() {}
+		if c.rateLimitWaitMax > 0 {
+			ctx, cancel = context.WithTimeout(ctx, c.rateLimitWaitMax)
+		}
+		defer cancel()
 		err = c.refreshUnknownKID.Wait(ctx)
 		if err != nil {
 			return JWK{}, fmt.Errorf("failed to wait for JWK Set refresh rate limiter due to error: %w", err)
