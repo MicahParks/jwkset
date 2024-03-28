@@ -33,6 +33,8 @@ type HTTPClientOptions struct {
 	// key ID is trying to be read. This makes reading methods block until the context is over, a key with the matching
 	// key ID is found in a refreshed remote resource, or all refreshes complete.
 	RefreshUnknownKID *rate.Limiter
+
+	storageOptions []HTTPClientStorageOption
 }
 
 // Client is a JWK Set client.
@@ -82,16 +84,19 @@ func NewHTTPClient(options HTTPClientOptions) (Storage, error) {
 // 2. Prioritize keys from remote HTTP resources over keys from the given storage.
 // 3. Refresh remote HTTP resources if a key with an unknown key ID is trying to be read, with a rate limit of 5 minutes.
 // 4. Log to slog.Default() if a refresh fails.
-func NewDefaultHTTPClient(urls []string) (Storage, error) {
-	return NewDefaultHTTPClientCtx(context.Background(), urls)
+func NewDefaultHTTPClient(urls []string, opts ...HTTPClientOption) (Storage, error) {
+	return NewDefaultHTTPClientCtx(context.Background(), urls, opts...)
 }
 
 // NewDefaultHTTPClientCtx is the same as NewDefaultHTTPClient, but with a context that can end the refresh goroutine.
-func NewDefaultHTTPClientCtx(ctx context.Context, urls []string) (Storage, error) {
-	clientOptions := HTTPClientOptions{
+func NewDefaultHTTPClientCtx(ctx context.Context, urls []string, opts ...HTTPClientOption) (Storage, error) {
+	clientOptions := &HTTPClientOptions{
 		HTTPURLs:          make(map[string]Storage),
 		RateLimitWaitMax:  time.Minute,
 		RefreshUnknownKID: rate.NewLimiter(rate.Every(5*time.Minute), 1),
+	}
+	for _, opt := range opts {
+		opt(clientOptions)
 	}
 	for _, u := range urls {
 		parsed, err := url.ParseRequestURI(u)
@@ -105,19 +110,22 @@ func NewDefaultHTTPClientCtx(ctx context.Context, urls []string) (Storage, error
 				"url", u,
 			)
 		}
-		options := HTTPClientStorageOptions{
+		options := &HTTPClientStorageOptions{
 			Ctx:                       ctx,
 			NoErrorReturnFirstHTTPReq: true,
 			RefreshErrorHandler:       refreshErrorHandler,
 			RefreshInterval:           time.Hour,
 		}
-		c, err := NewStorageFromHTTP(parsed, options)
+		for _, opt := range clientOptions.storageOptions {
+			opt(options)
+		}
+		c, err := NewStorageFromHTTP(parsed, *options)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create HTTP client storage for %q: %w", u, errors.Join(err, ErrNewClient))
 		}
 		clientOptions.HTTPURLs[u] = c
 	}
-	return NewHTTPClient(clientOptions)
+	return NewHTTPClient(*clientOptions)
 }
 
 func (c httpClient) KeyDelete(ctx context.Context, keyID string) (ok bool, err error) {
