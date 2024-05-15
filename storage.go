@@ -295,6 +295,12 @@ func NewStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, 
 		}()
 	}
 
+	s := httpStorage{
+		options: options,
+		refresh: refresh,
+		Storage: store,
+	}
+
 	ctx, cancel := context.WithTimeout(options.Ctx, options.HTTPTimeout)
 	defer cancel()
 	err := refresh(ctx)
@@ -304,15 +310,9 @@ func NewStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, 
 			if options.RefreshErrorHandler != nil {
 				options.RefreshErrorHandler(ctx, err)
 			}
-			return store, nil
+			return s, nil
 		}
 		return nil, fmt.Errorf("failed to perform first HTTP request for JWK Set: %w", err)
-	}
-
-	s := httpStorage{
-		options: options,
-		refresh: refresh,
-		Storage: store,
 	}
 
 	return s, nil
