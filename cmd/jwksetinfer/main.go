@@ -6,10 +6,13 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"log/slog"
 	"os"
-	"strconv"
 	"strings"
+
+	"github.com/golang-module/dongle"
+	"github.com/lithammer/shortuuid/v3"
 
 	"github.com/MicahParks/jwkset"
 )
@@ -23,31 +26,60 @@ func main() {
 	defer cancel()
 	l := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
-	allPEM := os.Getenv("PEM")
-	if allPEM == "" {
-		s := strings.Builder{}
-		if len(os.Args) < 2 {
-			l.Error("Please provide a list of PEM encoded files as CLI arguments or set the PEM environment variable.")
-			os.Exit(1)
-		}
-		for _, fileName := range os.Args[1:] {
-			b, err := os.ReadFile(fileName)
-			if err != nil {
-				l.Error("Failed to read file.",
-					"fileName", fileName,
-				)
-				os.Exit(1)
-			}
-			s.Write(bytes.TrimSpace(b))
-			s.WriteRune('\n')
-		}
-		allPEM = s.String()
+	flags := os.Args[1:]
+	if len(flags) < 1 {
+		printUsage()
+		return
 	}
+
+	switch flags[0] {
+	case "genkid":
+		genkid()
+		return
+	case "genjwks":
+		err := genjwks(ctx, flags)
+		if err != nil {
+			l.Error("Failed to generate JWKS.", err)
+		}
+		return
+	default:
+		printUsage()
+		return
+	}
+}
+
+func printUsage() {
+	fmt.Println(`
+	generate kid:
+	  genkid
+	  
+	generate encoded jwk:
+	  genjwks <kid> <file1 .pem or .crt> <file2 .pem or .crt> ... `)
+}
+
+func genkid() {
+	fmt.Println("kid:")
+	fmt.Println(shortuuid.New())
+}
+
+func genjwks(ctx context.Context, flags []string) error {
+	kid := flags[1]
+	allPEM := ""
+	s := strings.Builder{}
+
+	for _, fileName := range flags[2:] {
+		b, err := os.ReadFile(fileName)
+		if err != nil {
+			return fmt.Errorf("failed to read file: %w", err)
+		}
+		s.Write(bytes.TrimSpace(b))
+		s.WriteRune('\n')
+	}
+	allPEM = s.String()
 
 	jwks := jwkset.NewMemoryStorage()
 
 	i := 0
-	const kidPrefix = "UniqueKeyID"
 	allPEMB := []byte(allPEM)
 	for {
 		metadata := jwkset.JWKMetadataOptions{}
@@ -56,17 +88,19 @@ func main() {
 		if block == nil {
 			break
 		}
+
+		fmt.Printf("Processing PEM: %v \n", i)
+		fmt.Printf("kid: %v \n\n", kid)
+		fmt.Printf("ˇˇˇ Please copy the following jwk to env ˇˇˇ\n\n")
+
 		allPEMB = rest
 		switch block.Type {
 		case "CERTIFICATE":
 			cert, err := jwkset.LoadCertificate(block.Bytes)
 			if err != nil {
-				l.Error("Failed to load certificates.",
-					logErr, err,
-				)
-				os.Exit(1)
+				return fmt.Errorf("failed to load certificates: %w", err)
 			}
-			metadata.KID = kidPrefix + strconv.Itoa(i)
+			metadata.KID = kid
 			x509Options := jwkset.JWKX509Options{
 				X5C: []*x509.Certificate{cert},
 			}
@@ -76,27 +110,18 @@ func main() {
 			}
 			jwk, err := jwkset.NewJWKFromX5C(options)
 			if err != nil {
-				l.Error("Failed to create JWK from X5C.",
-					logErr, err,
-				)
-				os.Exit(1)
+				return fmt.Errorf("failed to create JWK from X5C: %w", err)
 			}
 			err = jwks.KeyWrite(ctx, jwk)
 			if err != nil {
-				l.Error("Failed to write JWK.",
-					logErr, err,
-				)
-				os.Exit(1)
+				return fmt.Errorf("failed to write JWK: %w", err)
 			}
 		default:
 			key, err := jwkset.LoadX509KeyInfer(block)
 			if err != nil {
-				l.Error("Failed to load X509 key.",
-					logErr, err,
-				)
-				os.Exit(1)
+				return fmt.Errorf("failed to load X509 key: %w", err)
 			}
-			metadata.KID = kidPrefix + strconv.Itoa(i)
+			metadata.KID = kid
 			marshalOptions := jwkset.JWKMarshalOptions{
 				Private: true,
 			}
@@ -106,36 +131,20 @@ func main() {
 			}
 			jwk, err := jwkset.NewJWKFromKey(key, options)
 			if err != nil {
-				l.Error("Failed to create JWK from key.",
-					logErr, err,
-				)
-				os.Exit(1)
+				return fmt.Errorf("failed to create JWK from key: %w", err)
 			}
-			err = jwks.KeyWrite(ctx, jwk)
+
+			marshal := jwk.Marshal()
+			b, err := json.Marshal(marshal)
 			if err != nil {
-				l.Error("Failed to write JWK.",
-					logErr, err,
-				)
-				os.Exit(1)
+				return fmt.Errorf("failed to marshal JSON: %w", err)
 			}
+
+			str := dongle.Encode.FromBytes(b).ByBase64URL().ToString()
+			fmt.Println(str)
 		}
-	}
 
-	marshal, err := jwks.Marshal(ctx)
-	if err != nil {
-		l.Error("Failed to marshal JWK set.",
-			logErr, err,
-		)
-		os.Exit(1)
+		fmt.Printf("\n")
 	}
-
-	b, err := json.MarshalIndent(marshal, "", "  ")
-	if err != nil {
-		l.Error("Failed to marshal JSON.",
-			logErr, err,
-		)
-		os.Exit(1)
-	}
-
-	_, _ = os.Stdout.Write(b)
+	return nil
 }
