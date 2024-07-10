@@ -92,6 +92,11 @@ func genjwks(ctx context.Context, flags []string) error {
 		fmt.Printf("Processing PEM: %v \n", i)
 		fmt.Printf("kid: %v \n\n", kid)
 		fmt.Printf("ˇˇˇ Please copy the following jwk to env ˇˇˇ\n\n")
+		use := "sig"
+		alg := "RS256"
+		if strings.Contains(block.Type, "PRIVATE") {
+			use = "enc"
+		}
 
 		allPEMB = rest
 		switch block.Type {
@@ -101,6 +106,8 @@ func genjwks(ctx context.Context, flags []string) error {
 				return fmt.Errorf("failed to load certificates: %w", err)
 			}
 			metadata.KID = kid
+			metadata.ALG = jwkset.ALG(alg)
+			metadata.USE = jwkset.USE(use)
 			x509Options := jwkset.JWKX509Options{
 				X5C: []*x509.Certificate{cert},
 			}
@@ -122,6 +129,8 @@ func genjwks(ctx context.Context, flags []string) error {
 				return fmt.Errorf("failed to load X509 key: %w", err)
 			}
 			metadata.KID = kid
+			metadata.ALG = jwkset.ALG(alg)
+			metadata.USE = jwkset.USE(use)
 			marshalOptions := jwkset.JWKMarshalOptions{
 				Private: true,
 			}
