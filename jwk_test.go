@@ -44,24 +44,62 @@ func TestJSON(t *testing.T) {
 	testJSON(ctx, t, jwks)
 }
 
-func TestMissingThumbprint(t *testing.T) {
+func TestThumbprint(t *testing.T) {
+	type thumbprintScenario int
+	const (
+		thumbprintScenarioCorrect thumbprintScenario = iota
+		thumbprintScenarioIncorrect
+		thumbprintScenarioMissing
+		thumbprintScenarioNoCert
+	)
 	testCases := []struct {
-		name           string
-		missingX5T     bool
-		missingX5TS256 bool
+		name            string
+		x5tScenario     thumbprintScenario
+		x5tS256Scenario thumbprintScenario
 	}{
 		{
-			name:       "MissingX5T",
-			missingX5T: true,
+			name: "CorrectX5TAndX5T#S256",
 		},
 		{
-			name:           "MissingX5T#S256",
-			missingX5TS256: true,
+			name:        "MissingX5T",
+			x5tScenario: thumbprintScenarioMissing,
 		},
 		{
-			name:           "MissingX5TAndX5T#S256",
-			missingX5T:     true,
-			missingX5TS256: true,
+			name:            "MissingX5T#S256",
+			x5tS256Scenario: thumbprintScenarioMissing,
+		},
+		{
+			name:            "MissingX5TAndX5T#S256",
+			x5tScenario:     thumbprintScenarioMissing,
+			x5tS256Scenario: thumbprintScenarioMissing,
+		},
+		{
+			name:        "IncorrectX5T",
+			x5tScenario: thumbprintScenarioIncorrect,
+		},
+		{
+			name:            "IncorrectX5T#S256",
+			x5tS256Scenario: thumbprintScenarioIncorrect,
+		},
+		{
+			name:            "IncorrectX5TAndX5T#S256",
+			x5tScenario:     thumbprintScenarioIncorrect,
+			x5tS256Scenario: thumbprintScenarioIncorrect,
+		},
+		{
+			name:            "NoCertX5T",
+			x5tScenario:     thumbprintScenarioNoCert,
+			x5tS256Scenario: thumbprintScenarioMissing,
+		},
+		{
+			name:            "NoCertX5T#S256",
+			x5tScenario:     thumbprintScenarioMissing,
+			x5tS256Scenario: thumbprintScenarioNoCert,
+		},
+		{
+			name:            "NoCertX5TAndX5T#S256",
+			x5tScenario:     thumbprintScenarioNoCert,
+			x5tS256Scenario: thumbprintScenarioNoCert,
 		},
 	}
 	for _, tc := range testCases {
@@ -86,14 +124,31 @@ func TestMissingThumbprint(t *testing.T) {
 				t.Fatalf("Failed to create JWK from key. %s", err)
 			}
 			marshal := jwk.Marshal()
-			if tc.missingX5T {
+			switch tc.x5tScenario {
+			case thumbprintScenarioCorrect:
+				// Do nothing.
+			case thumbprintScenarioIncorrect:
+				marshal.X5T = invalidStr
+			case thumbprintScenarioMissing:
 				marshal.X5T = ""
+			case thumbprintScenarioNoCert:
+				marshal.X5C = nil
 			}
-			if tc.missingX5TS256 {
+			switch tc.x5tS256Scenario {
+			case thumbprintScenarioCorrect:
+				// Do nothing.
+			case thumbprintScenarioIncorrect:
+				marshal.X5TS256 = invalidStr
+			case thumbprintScenarioMissing:
 				marshal.X5TS256 = ""
+			case thumbprintScenarioNoCert:
+				marshal.X5C = nil
 			}
 			jwk, err = NewJWKFromMarshal(marshal, JWKMarshalOptions{}, JWKValidateOptions{})
 			if err != nil {
+				if tc.x5tScenario == thumbprintScenarioIncorrect || tc.x5tS256Scenario == thumbprintScenarioIncorrect {
+					return
+				}
 				t.Fatalf("Failed to create JWK from marshal. %s", err)
 			}
 			if jwk.Marshal().KID != myKeyID {
