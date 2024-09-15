@@ -317,10 +317,11 @@ func (j JWK) Validate() error {
 		marshalled.X5TS256 = ""
 	}
 
-	if j.marshal.X5T != marshalled.X5T {
+	canComputeThumbprint := len(j.marshal.X5C) > 0
+	if j.marshal.X5T != marshalled.X5T && canComputeThumbprint {
 		return fmt.Errorf("%w: X5T in marshal does not match X5T in marshalled", ErrJWKValidation)
 	}
-	if j.marshal.X5TS256 != marshalled.X5TS256 {
+	if j.marshal.X5TS256 != marshalled.X5TS256 && canComputeThumbprint {
 		return fmt.Errorf("%w: X5TS256 in marshal does not match X5TS256 in marshalled", ErrJWKValidation)
 	}
 	if j.marshal.CRV != marshalled.CRV {
