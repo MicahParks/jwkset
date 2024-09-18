@@ -207,6 +207,9 @@ type HTTPClientStorageOptions struct {
 	//
 	// This defaults to NewMemoryStorage().
 	Storage Storage
+
+	// ValidateOptions are the options to use when validating the JWKs.
+	ValidateOptions JWKValidateOptions
 }
 
 type httpStorage struct {
@@ -263,7 +266,7 @@ func NewStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, 
 			marshalOptions := JWKMarshalOptions{
 				Private: true,
 			}
-			jwk, err := NewJWKFromMarshal(marshal, marshalOptions, JWKValidateOptions{})
+			jwk, err := NewJWKFromMarshal(marshal, marshalOptions, options.ValidateOptions)
 			if err != nil {
 				return fmt.Errorf("failed to create JWK from JWK Marshal: %w", err)
 			}
