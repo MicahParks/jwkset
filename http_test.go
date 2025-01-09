@@ -5,6 +5,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -141,6 +142,119 @@ func TestClient(t *testing.T) {
 	jwk, err = clientStore.KeyRead(shortCtx, otherOtherKey)
 	if err == nil || !strings.HasSuffix(err.Error(), "rate: Wait(n=1) would exceed context deadline") {
 		t.Fatalf("Expected to exceed context deadline, but got %s.", err)
+	}
+}
+
+func TestClientCacheReplacement(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	kid := "my-key-id"
+	secret := []byte("my-hmac-secret")
+	serverStore := NewMemoryStorage()
+	marshalOptions := JWKMarshalOptions{
+		Private: true,
+	}
+	metadata := JWKMetadataOptions{
+		KID: kid,
+	}
+	options := JWKOptions{
+		Marshal:  marshalOptions,
+		Metadata: metadata,
+	}
+	jwk, err := NewJWKFromKey(secret, options)
+	if err != nil {
+		t.Fatalf("Failed to create a JWK from the given HMAC secret.\nError: %s", err)
+	}
+	err = serverStore.KeyWrite(ctx, jwk)
+	if err != nil {
+		t.Fatalf("Failed to write the given JWK to the store.\nError: %s", err)
+	}
+	rawJWKS, err := serverStore.JSON(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get the JSON.\nError: %s", err)
+	}
+
+	rawJWKSMux := sync.RWMutex{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rawJWKSMux.RLock()
+		defer rawJWKSMux.RUnlock()
+		_, _ = w.Write(rawJWKS)
+	}))
+
+	u, err := url.ParseRequestURI(server.URL)
+	if err != nil {
+		t.Fatalf("Failed to parse the URL.\nError: %s", err)
+	}
+
+	refreshInterval := 50 * time.Millisecond
+	httpOptions := HTTPClientStorageOptions{
+		Ctx:             ctx,
+		RefreshInterval: refreshInterval,
+	}
+	clientStore, err := NewStorageFromHTTP(u, httpOptions)
+	if err != nil {
+		t.Fatalf("Failed to create a new HTTP client.\nError: %s", err)
+	}
+
+	jwk, err = clientStore.KeyRead(ctx, kid)
+	if err != nil {
+		t.Fatalf("Failed to read the JWK.\nError: %s", err)
+	}
+
+	if !bytes.Equal(jwk.Key().([]byte), secret) {
+		t.Fatalf("The key read from the HTTP client did not match the original key.")
+	}
+
+	jwks, err := clientStore.KeyReadAll(ctx)
+	if err != nil {
+		t.Fatalf("Failed to read all the JWKs.\nError: %s", err)
+	}
+	if len(jwks) != 1 {
+		t.Fatalf("Expected to read 1 JWK, but got %d.", len(jwks))
+	}
+	if !bytes.Equal(jwks[0].Key().([]byte), secret) {
+		t.Fatalf("The key read from the HTTP client did not match the original key.")
+	}
+
+	otherKeyID := myKeyID + "2"
+	options.Metadata.KID = otherKeyID
+	otherSecret := []byte("my-other-hmac-secret")
+	jwk, err = NewJWKFromKey(otherSecret, options)
+	if err != nil {
+		t.Fatalf("Failed to create a JWK from the given HMAC secret.\nError: %s", err)
+	}
+	err = serverStore.KeyWrite(ctx, jwk)
+	if err != nil {
+		t.Fatalf("Failed to write the given JWK to the store.\nError: %s", err)
+	}
+	ok, err := serverStore.KeyDelete(ctx, kid)
+	if err != nil {
+		t.Fatalf("Failed to delete the given JWK from the store.\nError: %s", err)
+	}
+	if !ok {
+		t.Fatalf("Expected the key to be deleted.")
+	}
+	rawJWKSMux.Lock()
+	rawJWKS, err = serverStore.JSON(ctx)
+	rawJWKSMux.Unlock()
+	if err != nil {
+		t.Fatalf("Failed to get the JSON.\nError: %s", err)
+	}
+	time.Sleep(2 * refreshInterval)
+
+	jwks, err = clientStore.KeyReadAll(ctx)
+	if err != nil {
+		t.Fatalf("Failed to read the JWK.\nError: %s", err)
+	}
+	if len(jwks) != 1 {
+		t.Fatalf("Expected to read 1 JWK, but got %d.", len(jwks))
+	}
+	if jwks[0].marshal.KID != otherKeyID {
+		t.Fatalf("The key read from the HTTP client did not match the original key.")
+	}
+	if !bytes.Equal(jwks[0].Key().([]byte), otherSecret) {
+		t.Fatalf("The key read from the HTTP client did not match the original key.")
 	}
 }
 
