@@ -77,6 +77,13 @@ func TestMemoryKeyRead(t *testing.T) {
 	if !bytes.Equal(key.Key().([]byte), hmacKey1) {
 		t.Fatalf("Read key does not match written key.")
 	}
+	ok, err := store.KeyDelete(params.ctx, kidWritten)
+	if err != nil {
+		t.Fatalf("Failed to delete written key. %s", err)
+	}
+	if !ok {
+		t.Fatalf("Failed to delete written key.")
+	}
 
 	jwk = newStorageTestJWK(t, hmacKey2, kidWritten)
 	err = store.KeyWrite(params.ctx, jwk)
@@ -93,9 +100,12 @@ func TestMemoryKeyRead(t *testing.T) {
 		t.Fatalf("Read key does not match written key.")
 	}
 
-	_, err = store.KeyDelete(params.ctx, kidWritten)
+	ok, err = store.KeyDelete(params.ctx, kidWritten)
 	if err != nil {
 		t.Fatalf("Failed to delete written key. %s", err)
+	}
+	if !ok {
+		t.Fatalf("Failed to delete written key.")
 	}
 
 	_, err = store.KeyRead(params.ctx, kidWritten)

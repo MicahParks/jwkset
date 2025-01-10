@@ -72,11 +72,6 @@ func (m *MemoryJWKSet) KeyDelete(_ context.Context, keyID string) (ok bool, err 
 	}
 	return ok, nil
 }
-func (m *MemoryJWKSet) KeyDeleteAll() {
-	m.mux.Lock()
-	defer m.mux.Unlock()
-	m.set = make([]JWK, 0)
-}
 func (m *MemoryJWKSet) KeyRead(_ context.Context, keyID string) (JWK, error) {
 	m.mux.RLock()
 	defer m.mux.RUnlock()
@@ -95,16 +90,9 @@ func (m *MemoryJWKSet) KeyReadAll(_ context.Context) ([]JWK, error) {
 func (m *MemoryJWKSet) KeyWrite(_ context.Context, jwk JWK) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	for i, j := range m.set {
-		if j.Marshal().KID == jwk.Marshal().KID {
-			m.set[i] = jwk
-			return nil
-		}
-	}
 	m.set = append(m.set, jwk)
 	return nil
 }
-
 func (m *MemoryJWKSet) JSON(ctx context.Context) (json.RawMessage, error) {
 	jwks, err := m.Marshal(ctx)
 	if err != nil {
@@ -259,8 +247,10 @@ func NewStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, 
 		if err != nil {
 			return fmt.Errorf("failed to decode JWK Set response: %w", err)
 		}
-		store.KeyDeleteAll() // Clear local cache in case of key revocation.
-		for _, marshal := range jwks.Keys {
+		store.mux.Lock()
+		defer store.mux.Unlock()
+		store.set = make([]JWK, len(jwks.Keys)) // Clear local cache in case of key revocation.
+		for i, marshal := range jwks.Keys {
 			marshalOptions := JWKMarshalOptions{
 				Private: true,
 			}
@@ -268,10 +258,7 @@ func NewStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, 
 			if err != nil {
 				return fmt.Errorf("failed to create JWK from JWK Marshal: %w", err)
 			}
-			err = store.KeyWrite(options.Ctx, jwk)
-			if err != nil {
-				return fmt.Errorf("failed to write JWK to memory storage: %w", err)
-			}
+			store.set[i] = jwk
 		}
 		return nil
 	}
