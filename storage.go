@@ -258,7 +258,7 @@ func NewStorageFromHTTP(u *url.URL, options HTTPClientStorageOptions) (Storage, 
 		}
 		store.mux.Lock()
 		defer store.mux.Unlock()
-		store.set = make([]JWK, 0)
+		store.set = make([]JWK, 0) // Clear local cache in case of key revocation.
 		for _, marshal := range jwks.Keys {
 			marshalOptions := JWKMarshalOptions{
 				Private: true,
