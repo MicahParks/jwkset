@@ -5,7 +5,7 @@ go 1.21.5
 require (
 	github.com/MicahParks/httphandle v0.5.8
 	github.com/MicahParks/jsontype v0.6.1
-	github.com/MicahParks/jwkset v0.7.0
+	github.com/MicahParks/jwkset v0.8.0
 	github.com/MicahParks/recaptcha v0.0.5
 )
 
