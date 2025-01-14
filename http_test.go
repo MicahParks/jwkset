@@ -5,7 +5,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -181,18 +180,14 @@ func TestClientCacheReplacement(t *testing.T) {
 		defer rawJWKSMux.RUnlock()
 		_, _ = w.Write(rawJWKS)
 	}))
-
-	u, err := url.ParseRequestURI(server.URL)
-	if err != nil {
-		t.Fatalf("Failed to parse the URL.\nError: %s", err)
-	}
+	defer server.Close()
 
 	refreshInterval := 50 * time.Millisecond
 	httpOptions := HTTPClientStorageOptions{
 		Ctx:             ctx,
 		RefreshInterval: refreshInterval,
 	}
-	clientStore, err := NewStorageFromHTTP(u, httpOptions)
+	clientStore, err := NewStorageFromHTTP(server.URL, httpOptions)
 	if err != nil {
 		t.Fatalf("Failed to create a new HTTP client.\nError: %s", err)
 	}
@@ -254,6 +249,64 @@ func TestClientCacheReplacement(t *testing.T) {
 		t.Fatalf("The key read from the HTTP client did not match the original key.")
 	}
 	if !bytes.Equal(jwks[0].Key().([]byte), otherSecret) {
+		t.Fatalf("The key read from the HTTP client did not match the original key.")
+	}
+}
+
+func TestClientHTTPURLs(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	kid := "my-key-id"
+	secret := []byte("my-hmac-secret")
+	serverStore := NewMemoryStorage()
+	marshalOptions := JWKMarshalOptions{
+		Private: true,
+	}
+	metadata := JWKMetadataOptions{
+		KID: kid,
+	}
+	options := JWKOptions{
+		Marshal:  marshalOptions,
+		Metadata: metadata,
+	}
+	jwk, err := NewJWKFromKey(secret, options)
+	if err != nil {
+		t.Fatalf("Failed to create a JWK from the given HMAC secret.\nError: %s", err)
+	}
+	err = serverStore.KeyWrite(ctx, jwk)
+	if err != nil {
+		t.Fatalf("Failed to write the given JWK to the store.\nError: %s", err)
+	}
+	rawJWKS, err := serverStore.JSON(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get the JSON.\nError: %s", err)
+	}
+
+	rawJWKSMux := sync.RWMutex{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rawJWKSMux.RLock()
+		defer rawJWKSMux.RUnlock()
+		_, _ = w.Write(rawJWKS)
+	}))
+	defer server.Close()
+
+	clientOptions := HTTPClientOptions{
+		HTTPURLs: map[string]Storage{server.URL: nil},
+	}
+	store, err := NewHTTPClient(clientOptions)
+	if err != nil {
+		t.Fatalf("Failed to create a new HTTP client.\nError: %s", err)
+	}
+
+	jwks, err := store.KeyReadAll(ctx)
+	if err != nil {
+		t.Fatalf("Failed to read the JWK.\nError: %s", err)
+	}
+	if len(jwks) != 1 {
+		t.Fatalf("Expected to read 1 JWK, but got %d.", len(jwks))
+	}
+	if !bytes.Equal(jwks[0].Key().([]byte), secret) {
 		t.Fatalf("The key read from the HTTP client did not match the original key.")
 	}
 }
