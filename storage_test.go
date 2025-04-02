@@ -158,6 +158,52 @@ func TestMemoryKeyReadAll(t *testing.T) {
 	}
 }
 
+func TestMemoryKeyReplaceAll(t *testing.T) {
+	params := setupMemory()
+	defer params.cancel()
+	store := params.jwks
+
+	jwk1 := newStorageTestJWK(t, hmacKey1, kidWritten)
+	err := store.KeyWrite(params.ctx, jwk1)
+	if err != nil {
+		t.Fatalf("Failed to write key 1.\nError: %s", err)
+	}
+
+	jwk2 := newStorageTestJWK(t, hmacKey2, kidWritten2)
+	err = store.KeyWrite(params.ctx, jwk2)
+	if err != nil {
+		t.Fatalf("Failed to write key 2.\nError: %s", err)
+	}
+
+	keys, err := store.KeyReadAll(params.ctx)
+	if err != nil {
+		t.Fatalf("Failed to read all keys.\nError: %s", err)
+	}
+	if len(keys) != 2 {
+		t.Fatalf("Expected 2 keys before replace, got %d.", len(keys))
+	}
+
+	given := newStorageTestJWK(t, []byte("new key"), "new-kid")
+	err = store.KeyReplaceAll(params.ctx, []JWK{given})
+	if err != nil {
+		t.Fatalf("Failed to replace all keys.\nError: %s", err)
+	}
+
+	keys, err = store.KeyReadAll(params.ctx)
+	if err != nil {
+		t.Fatalf("Failed to read all keys after replace.\nError: %s", err)
+	}
+	if len(keys) != 1 {
+		t.Fatalf("Expected 1 key after replace, got %d.", len(keys))
+	}
+	if keys[0].Marshal().KID != "new-kid" {
+		t.Fatalf("Unexpected key ID after replace. Got %q, expected %q.", keys[0].Marshal().KID, "new-kid")
+	}
+	if !bytes.Equal(keys[0].Key().([]byte), []byte("new key")) {
+		t.Fatalf("Unexpected key material after replace.")
+	}
+}
+
 func TestMemoryKeyWrite(t *testing.T) {
 	params := setupMemory()
 	defer params.cancel()
