@@ -29,8 +29,8 @@ type Storage interface {
 	// KeyReadAll reads a snapshot of all keys from storage. As with ReadKey, any pointers returned should be
 	// considered read-only.
 	KeyReadAll(ctx context.Context) ([]JWK, error)
-	// KeyReplaceAll replaces all the keys in storage.
-	KeyReplaceAll(ctx context.Context, replaceWith []JWK) error
+	// KeyReplaceAll replaces all the keys in storage. All existing keys will be deleted and replaced with the given.
+	KeyReplaceAll(ctx context.Context, given []JWK) error
 	// KeyWrite writes a key to the storage. If the key already exists, it will be overwritten. After writing a key,
 	// any pointers written should be considered owned by the underlying storage.
 	KeyWrite(ctx context.Context, jwk JWK) error
@@ -89,10 +89,10 @@ func (m *MemoryJWKSet) KeyReadAll(_ context.Context) ([]JWK, error) {
 	defer m.mux.RUnlock()
 	return slices.Clone(m.set), nil
 }
-func (m *MemoryJWKSet) KeyReplaceAll(_ context.Context, replaceWith []JWK) error {
+func (m *MemoryJWKSet) KeyReplaceAll(_ context.Context, given []JWK) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	m.set = replaceWith
+	m.set = given
 	return nil
 }
 func (m *MemoryJWKSet) KeyWrite(_ context.Context, jwk JWK) error {
@@ -267,7 +267,7 @@ func NewStorageFromHTTP(remoteJWKSetURL string, options HTTPClientStorageOptions
 		if err != nil {
 			return fmt.Errorf("failed to decode JWK Set response: %w", err)
 		}
-		replaceWith := make([]JWK, len(jwks.Keys))
+		newSet := make([]JWK, len(jwks.Keys))
 		for i, marshal := range jwks.Keys {
 			marshalOptions := JWKMarshalOptions{
 				Private: true,
@@ -276,9 +276,9 @@ func NewStorageFromHTTP(remoteJWKSetURL string, options HTTPClientStorageOptions
 			if err != nil {
 				return fmt.Errorf("failed to create JWK from JWK Marshal: %w", err)
 			}
-			replaceWith[i] = jwk
+			newSet[i] = jwk
 		}
-		err = store.KeyReplaceAll(ctx, replaceWith) // Clear local cache in case of key revocation.
+		err = store.KeyReplaceAll(ctx, newSet) // Clear local cache in case of key revocation.
 		if err != nil {
 			return fmt.Errorf("failed to delete all keys from storage: %w", err)
 		}

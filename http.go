@@ -213,8 +213,8 @@ func (c httpClient) KeyReadAll(ctx context.Context) ([]JWK, error) {
 	}
 	return jwks, nil
 }
-func (c httpClient) KeyReplaceAll(ctx context.Context, replaceWith []JWK) error {
-	err := c.given.KeyReplaceAll(ctx, replaceWith)
+func (c httpClient) KeyReplaceAll(ctx context.Context, given []JWK) error {
+	err := c.given.KeyReplaceAll(ctx, given)
 	if err != nil {
 		return fmt.Errorf("failed to delete all keys from given storage due to error: %w", err)
 	}
