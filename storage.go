@@ -23,14 +23,14 @@ var (
 type Storage interface {
 	// KeyDelete deletes a key from the storage. It will return ok as true if the key was present for deletion.
 	KeyDelete(ctx context.Context, keyID string) (ok bool, err error)
-	// KeyDeleteAll deletes all keys from the storage. It will return ok as true if any keys were present for deletion.
-	KeyDeleteAll(ctx context.Context) error
 	// KeyRead reads a key from the storage. If the key is not present, it returns ErrKeyNotFound. Any pointers returned
 	// should be considered read-only.
 	KeyRead(ctx context.Context, keyID string) (JWK, error)
 	// KeyReadAll reads a snapshot of all keys from storage. As with ReadKey, any pointers returned should be
 	// considered read-only.
 	KeyReadAll(ctx context.Context) ([]JWK, error)
+	// KeyReplaceAll replaces all the keys in storage.
+	KeyReplaceAll(ctx context.Context, replaceWith []JWK) error
 	// KeyWrite writes a key to the storage. If the key already exists, it will be overwritten. After writing a key,
 	// any pointers written should be considered owned by the underlying storage.
 	KeyWrite(ctx context.Context, jwk JWK) error
@@ -74,15 +74,6 @@ func (m *MemoryJWKSet) KeyDelete(_ context.Context, keyID string) (ok bool, err 
 	}
 	return ok, nil
 }
-func (m *MemoryJWKSet) KeyDeleteAll(_ context.Context) error {
-	m.mux.Lock()
-	defer m.mux.Unlock()
-	if len(m.set) == 0 {
-		return nil
-	}
-	m.set = make([]JWK, 0)
-	return nil
-}
 func (m *MemoryJWKSet) KeyRead(_ context.Context, keyID string) (JWK, error) {
 	m.mux.RLock()
 	defer m.mux.RUnlock()
@@ -97,6 +88,12 @@ func (m *MemoryJWKSet) KeyReadAll(_ context.Context) ([]JWK, error) {
 	m.mux.RLock()
 	defer m.mux.RUnlock()
 	return slices.Clone(m.set), nil
+}
+func (m *MemoryJWKSet) KeyReplaceAll(_ context.Context, replaceWith []JWK) error {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	m.set = replaceWith
+	return nil
 }
 func (m *MemoryJWKSet) KeyWrite(_ context.Context, jwk JWK) error {
 	m.mux.Lock()
@@ -242,7 +239,10 @@ func NewStorageFromHTTP(remoteJWKSetURL string, options HTTPClientStorageOptions
 	if options.HTTPMethod == "" {
 		options.HTTPMethod = http.MethodGet
 	}
-	store := NewMemoryStorage()
+	store := options.Storage
+	if store == nil {
+		store = NewMemoryStorage()
+	}
 	_, err := url.ParseRequestURI(remoteJWKSetURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse given URL %q: %w", remoteJWKSetURL, err)
@@ -267,9 +267,7 @@ func NewStorageFromHTTP(remoteJWKSetURL string, options HTTPClientStorageOptions
 		if err != nil {
 			return fmt.Errorf("failed to decode JWK Set response: %w", err)
 		}
-		store.mux.Lock()
-		defer store.mux.Unlock()
-		store.set = make([]JWK, len(jwks.Keys)) // Clear local cache in case of key revocation.
+		replaceWith := make([]JWK, len(jwks.Keys))
 		for i, marshal := range jwks.Keys {
 			marshalOptions := JWKMarshalOptions{
 				Private: true,
@@ -278,7 +276,11 @@ func NewStorageFromHTTP(remoteJWKSetURL string, options HTTPClientStorageOptions
 			if err != nil {
 				return fmt.Errorf("failed to create JWK from JWK Marshal: %w", err)
 			}
-			store.set[i] = jwk
+			replaceWith[i] = jwk
+		}
+		err = store.KeyReplaceAll(ctx, replaceWith) // Clear local cache in case of key revocation.
+		if err != nil {
+			return fmt.Errorf("failed to delete all keys from storage: %w", err)
 		}
 		return nil
 	}
