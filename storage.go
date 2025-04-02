@@ -23,6 +23,8 @@ var (
 type Storage interface {
 	// KeyDelete deletes a key from the storage. It will return ok as true if the key was present for deletion.
 	KeyDelete(ctx context.Context, keyID string) (ok bool, err error)
+	// KeyDeleteAll deletes all keys from the storage. It will return ok as true if any keys were present for deletion.
+	KeyDeleteAll(ctx context.Context) error
 	// KeyRead reads a key from the storage. If the key is not present, it returns ErrKeyNotFound. Any pointers returned
 	// should be considered read-only.
 	KeyRead(ctx context.Context, keyID string) (JWK, error)
@@ -71,6 +73,15 @@ func (m *MemoryJWKSet) KeyDelete(_ context.Context, keyID string) (ok bool, err 
 		}
 	}
 	return ok, nil
+}
+func (m *MemoryJWKSet) KeyDeleteAll(_ context.Context) error {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	if len(m.set) == 0 {
+		return nil
+	}
+	m.set = make([]JWK, 0)
+	return nil
 }
 func (m *MemoryJWKSet) KeyRead(_ context.Context, keyID string) (JWK, error) {
 	m.mux.RLock()
@@ -195,6 +206,11 @@ type HTTPClientStorageOptions struct {
 	//
 	// Provide the Ctx option to end the goroutine when it's no longer needed.
 	RefreshInterval time.Duration
+
+	// Storage is the underlying storage implementation to use.
+	//
+	// This defaults to NewMemoryStorage().
+	Storage Storage
 
 	// ValidateOptions are the options to use when validating the JWKs.
 	ValidateOptions JWKValidateOptions

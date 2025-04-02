@@ -130,6 +130,24 @@ func (c httpClient) KeyDelete(ctx context.Context, keyID string) (ok bool, err e
 	}
 	return false, nil
 }
+func (c httpClient) KeyDeleteAll(ctx context.Context) error {
+	err := c.given.KeyDeleteAll(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete all keys from given storage due to error: %w", err)
+	}
+	var returnErr error
+	for _, store := range c.httpURLs {
+		err = store.KeyDeleteAll(ctx)
+		if err != nil {
+			if returnErr == nil {
+				returnErr = fmt.Errorf("failed to delete all keys: %w", err)
+			} else {
+				returnErr = errors.Join(returnErr, err)
+			}
+		}
+	}
+	return returnErr
+}
 func (c httpClient) KeyRead(ctx context.Context, keyID string) (jwk JWK, err error) {
 	if !c.prioritizeHTTP {
 		jwk, err = c.given.KeyRead(ctx, keyID)

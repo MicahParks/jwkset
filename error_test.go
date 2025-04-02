@@ -17,6 +17,9 @@ type storageError struct{}
 func (s storageError) KeyDelete(_ context.Context, _ string) (ok bool, err error) {
 	return false, errStorage
 }
+func (s storageError) KeyDeleteAll(_ context.Context) error {
+	return errStorage
+}
 func (s storageError) KeyRead(_ context.Context, _ string) (JWK, error) {
 	return JWK{}, errStorage
 }
