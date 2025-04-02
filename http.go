@@ -222,11 +222,7 @@ func (c httpClient) KeyReplaceAll(ctx context.Context, given []JWK) error {
 	for _, store := range c.httpURLs {
 		err = store.KeyReplaceAll(ctx, make([]JWK, 0))
 		if err != nil {
-			if returnErr == nil {
-				returnErr = fmt.Errorf("failed to delete all keys: %w", err)
-			} else {
-				returnErr = errors.Join(returnErr, fmt.Errorf("failed to delete all keys: %w", err))
-			}
+			returnErr = errors.Join(returnErr, fmt.Errorf("failed to delete all keys: %w", err))
 		}
 	}
 	return returnErr
