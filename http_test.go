@@ -324,3 +324,74 @@ func TestClientJSON(t *testing.T) {
 	}
 	testJSON(context.Background(), t, c)
 }
+
+func TestHTTPClientKeyReplaceAll(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	givenStore := NewMemoryStorage()
+	givenKey := newStorageTestJWK(t, hmacKey1, kidWritten)
+	err := givenStore.KeyWrite(ctx, givenKey)
+	if err != nil {
+		t.Fatalf("Failed to write key to given store.\nError: %s", err)
+	}
+
+	httpStore := NewMemoryStorage()
+	httpKey := newStorageTestJWK(t, hmacKey2, kidWritten2)
+	err = httpStore.KeyWrite(ctx, httpKey)
+	if err != nil {
+		t.Fatalf("Failed to write key to HTTP store.\nError: %s", err)
+	}
+
+	client := httpClient{
+		given:    givenStore,
+		httpURLs: map[string]Storage{"https://example.com": httpStore},
+	}
+
+	keys, err := client.KeyReadAll(ctx)
+	if err != nil {
+		t.Fatalf("Failed to read all keys before replace.\nError: %s", err)
+	}
+	if len(keys) != 2 {
+		t.Fatalf("Expected 2 keys before replace, got %d.", len(keys))
+	}
+
+	newKey := newStorageTestJWK(t, []byte("new key"), "new-kid")
+	err = client.KeyReplaceAll(ctx, []JWK{newKey})
+	if err != nil {
+		t.Fatalf("KeyReplaceAll failed.\nError: %s", err)
+	}
+
+	givenKeys, err := givenStore.KeyReadAll(ctx)
+	if err != nil {
+		t.Fatalf("Failed to read all keys from given store after replace.\nError: %s", err)
+	}
+	if len(givenKeys) != 1 {
+		t.Fatalf("Expected 1 key in given store after replace, got %d.", len(givenKeys))
+	}
+	if givenKeys[0].Marshal().KID != "new-kid" {
+		t.Fatalf("Unexpected key ID in given store after replace. Got %q, expected %q.", givenKeys[0].Marshal().KID, "new-kid")
+	}
+
+	httpKeys, err := httpStore.KeyReadAll(ctx)
+	if err != nil {
+		t.Fatalf("Failed to read all keys from HTTP store after replace.\nError: %s", err)
+	}
+	if len(httpKeys) != 0 {
+		t.Fatalf("Expected 0 keys in HTTP store after replace, got %d.", len(httpKeys))
+	}
+
+	allKeys, err := client.KeyReadAll(ctx)
+	if err != nil {
+		t.Fatalf("Failed to read all keys after replace.\nError: %s", err)
+	}
+	if len(allKeys) != 1 {
+		t.Fatalf("Expected 1 key after replace, got %d.", len(allKeys))
+	}
+	if allKeys[0].Marshal().KID != "new-kid" {
+		t.Fatalf("Unexpected key ID after replace. Got %q, expected %q.", allKeys[0].Marshal().KID, "new-kid")
+	}
+	if !bytes.Equal(allKeys[0].Key().([]byte), []byte("new key")) {
+		t.Fatalf("Unexpected key material after replace.")
+	}
+}
