@@ -1,4 +1,4 @@
-module github.con/MicahParks/jwkset/cmd/jwksetinfer
+module github.com/MicahParks/jwkset/cmd/jwksetinfer
 
 go 1.21
 
