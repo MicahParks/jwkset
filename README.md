@@ -40,7 +40,7 @@ Gather your PEM encoded keys or certificates and use the `cmd/jwksetinfer` comma
 **Install**
 
 ```
-go install github.com/MicahParks/jwkset/cmd/jwksetinfer@latest
+go install github.com/MicahParks/jwkset/cmd/jwksettool@latest
 ```
 
 **Usage**
