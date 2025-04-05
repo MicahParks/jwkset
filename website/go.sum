@@ -4,6 +4,8 @@ github.com/MicahParks/jsontype v0.6.1 h1:yFiDEOgSCDT+Es8k17PYZkvpqbZJ9GxJH2ioeVG
 github.com/MicahParks/jsontype v0.6.1/go.mod h1:PVeg4g8eHt4QDlhe56X1sWzRuHiVlCg4m0vgkpEso/Y=
 github.com/MicahParks/jwkset v0.8.0 h1:jHtclI38Gibmu17XMI6+6/UB59srp58pQVxePHRK5o8=
 github.com/MicahParks/jwkset v0.8.0/go.mod h1:fVrj6TmG1aKlJEeceAz7JsXGTXEn72zP1px3us53JrA=
+github.com/MicahParks/jwkset v0.9.1 h1:nbRJmBYphDuzgSrlq0SG6CZ2QCJB0Be9R98TEWxLjGw=
+github.com/MicahParks/jwkset v0.9.1/go.mod h1:U2oRhRaLgDCLjtpGL2GseNKGmZtLs/3O7p+OZaL5vo0=
 github.com/MicahParks/recaptcha v0.0.5 h1:RvKq7E1BZJtz5ubSkBun20jXxIsMWt2oZ0ppTJOzX1A=
 github.com/MicahParks/recaptcha v0.0.5/go.mod h1:aFv3iZDDs6Pbi6tRpUm8gofaTUnDxOQ27x5KsK0CZwE=
 github.com/MicahParks/templater v0.0.3 h1:RzWpZMVWMaO+1Uolla1lCLNlwkmusbQQjAXLSCKZnYo=
