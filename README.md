@@ -35,7 +35,7 @@ the [website](https://github.com/MicahParks/jwkset/tree/master/website) director
 
 ## Command line
 
-Gather your PEM encoded keys or certificates and use the `cmd/jwksetinfer` command line tool to generate a JWK Set.
+Gather your PEM encoded keys or certificates and use the `cmd/jwksettool` command line tool to generate a JWK Set.
 
 **Install**
 
@@ -46,7 +46,7 @@ go install github.com/MicahParks/jwkset/cmd/jwksettool@latest
 **Usage**
 
 ```
-jwksetinfer mykey.pem mycert.crt
+jwksettool mykey.pem mycert.crt
 ```
 
 ## Custom server
