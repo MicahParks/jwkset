@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"math/big"
 	"testing"
 	"time"
 )
@@ -258,6 +259,71 @@ func TestJWK_Validate_Padding(t *testing.T) {
 	err = jwk.Validate()
 	if !errors.Is(err, ErrPadding) {
 		t.Fatalf("Expected to fail validation for invalid ECDSA padding.")
+	}
+}
+
+func TestCmpBase64Int(t *testing.T) {
+	intA := int64(123_456_789)
+	bytesA := big.NewInt(intA).Bytes()
+	intB := int64(987_654_321)
+	bytesB := big.NewInt(intB).Bytes()
+	testCases := []struct {
+		name    string
+		first   string
+		second  string
+		strict  bool
+		wantErr bool
+	}{
+		{
+			name:    "SameStrict",
+			first:   base64.RawURLEncoding.EncodeToString(bytesA),
+			second:  base64.RawURLEncoding.EncodeToString(bytesA),
+			strict:  true,
+			wantErr: false,
+		},
+		{
+			name:    "SameNotStrict",
+			first:   base64.RawURLEncoding.EncodeToString(bytesA),
+			second:  base64.RawURLEncoding.EncodeToString(bytesA),
+			strict:  false,
+			wantErr: false,
+		},
+		{
+			name:    "DifferentPaddingStrict",
+			first:   base64.RawURLEncoding.EncodeToString(bytesA),
+			second:  base64.URLEncoding.EncodeToString(bytesA),
+			strict:  true,
+			wantErr: true,
+		},
+		{
+			name:    "DifferentPaddingNotStrict",
+			first:   base64.RawURLEncoding.EncodeToString(bytesA),
+			second:  base64.URLEncoding.EncodeToString(bytesA),
+			strict:  false,
+			wantErr: false,
+		},
+		{
+			name:    "DifferentStrict",
+			first:   base64.RawURLEncoding.EncodeToString(bytesA),
+			second:  base64.RawURLEncoding.EncodeToString(bytesB),
+			strict:  true,
+			wantErr: true,
+		},
+		{
+			name:    "DifferentNotStrict",
+			first:   base64.RawURLEncoding.EncodeToString(bytesA),
+			second:  base64.RawURLEncoding.EncodeToString(bytesB),
+			strict:  false,
+			wantErr: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := cmpBase64Int(tc.first, tc.second, tc.strict)
+			if tc.wantErr == (err == nil) {
+				t.Fatalf("Expected error %v, got %v", tc.wantErr, err)
+			}
+		})
 	}
 }
 
