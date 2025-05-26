@@ -67,6 +67,10 @@ func main() {
 				os.Exit(1)
 			}
 			metadata.KID = kidPrefix + strconv.Itoa(i)
+			use := determineUse(cert.KeyUsage)
+			if len(use) > 0 {
+				metadata.USE = use
+			}
 			x509Options := jwkset.JWKX509Options{
 				X5C: []*x509.Certificate{cert},
 			}
@@ -138,4 +142,39 @@ func main() {
 	}
 
 	_, _ = os.Stdout.Write(b)
+}
+
+// simple utility method to abstract bitmap logic for KeyUsage
+func hasKeyUsage(b, flag x509.KeyUsage) bool {
+	return b&flag != 0
+}
+
+func hasAnyKeyUsage(b x509.KeyUsage, flags ...x509.KeyUsage) bool {
+	for _, flag := range flags {
+		if hasKeyUsage(b, flag) {
+			return true
+		}
+	}
+	return false
+}
+
+/* 
+Determine the value of the 'use' parameter in a JWK from the given KeyUsage.
+
+From RFC 7517:
+  When a key is used to wrap another key and a public key use
+   designation for the first key is desired, the "enc" (encryption) key
+   use value is used, since key wrapping is a kind of encryption.  The
+   "enc" value is also to be used for public keys used for key agreement
+   operations.
+*/
+func determineUse(keyUsage x509.KeyUsage) jwkset.USE {
+	use := jwkset.USE("")
+	if hasAnyKeyUsage(keyUsage, x509.KeyUsageDataEncipherment, x509.KeyUsageKeyEncipherment, x509.KeyUsageKeyAgreement) {
+		use = jwkset.UseEnc
+	} else 
+	if hasAnyKeyUsage(keyUsage, x509.KeyUsageDigitalSignature, x509.KeyUsageCRLSign, x509.KeyUsageCertSign, x509.KeyUsageContentCommitment) {
+		use = jwkset.UseSig
+	} 
+	return use
 }
