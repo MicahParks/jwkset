@@ -67,10 +67,7 @@ func main() {
 				os.Exit(1)
 			}
 			metadata.KID = kidPrefix + strconv.Itoa(i)
-			use := determineUse(cert.KeyUsage)
-			if len(use) > 0 {
-				metadata.USE = use
-			}
+			metadata.USE = determineUse(cert.KeyUsage)
 			x509Options := jwkset.JWKX509Options{
 				X5C: []*x509.Certificate{cert},
 			}
@@ -158,23 +155,23 @@ func hasAnyKeyUsage(b x509.KeyUsage, flags ...x509.KeyUsage) bool {
 	return false
 }
 
-/* 
-Determine the value of the 'use' parameter in a JWK from the given KeyUsage.
-
-From RFC 7517:
-  When a key is used to wrap another key and a public key use
-   designation for the first key is desired, the "enc" (encryption) key
-   use value is used, since key wrapping is a kind of encryption.  The
-   "enc" value is also to be used for public keys used for key agreement
-   operations.
-*/
-func determineUse(keyUsage x509.KeyUsage) jwkset.USE {
-	use := jwkset.USE("")
-	if hasAnyKeyUsage(keyUsage, x509.KeyUsageDataEncipherment, x509.KeyUsageKeyEncipherment, x509.KeyUsageKeyAgreement) {
+// determineUse determines the value of the 'use' parameter in a JWK from the given KeyUsage.
+// https://www.rfc-editor.org/rfc/rfc7517#section-4.2
+func determineUse(keyUsage x509.KeyUsage) (use jwkset.USE) {
+	var enc, sig bool
+	if hasAnyKeyUsage(keyUsage, x509.KeyUsageKeyEncipherment, x509.KeyUsageDataEncipherment, x509.KeyUsageKeyAgreement, x509.KeyUsageEncipherOnly, x509.KeyUsageDecipherOnly) {
+		enc = true
+	}
+	if hasAnyKeyUsage(keyUsage, x509.KeyUsageDigitalSignature, x509.KeyUsageContentCommitment, x509.KeyUsageCertSign, x509.KeyUsageCRLSign) {
+		sig = true
+	}
+	switch {
+	case enc && sig:
+		// No IANA registered value for both. Do not set use parameter.
+	case enc:
 		use = jwkset.UseEnc
-	} else 
-	if hasAnyKeyUsage(keyUsage, x509.KeyUsageDigitalSignature, x509.KeyUsageCRLSign, x509.KeyUsageCertSign, x509.KeyUsageContentCommitment) {
+	case sig:
 		use = jwkset.UseSig
-	} 
+	}
 	return use
 }
