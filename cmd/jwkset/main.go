@@ -141,14 +141,9 @@ func main() {
 	_, _ = os.Stdout.Write(b)
 }
 
-// simple utility method to abstract bitmap logic for KeyUsage
-func hasKeyUsage(b, flag x509.KeyUsage) bool {
-	return b&flag != 0
-}
-
 func hasAnyKeyUsage(b x509.KeyUsage, flags ...x509.KeyUsage) bool {
 	for _, flag := range flags {
-		if hasKeyUsage(b, flag) {
+		if b&flag != 0 {
 			return true
 		}
 	}
