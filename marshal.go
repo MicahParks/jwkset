@@ -251,7 +251,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 		case CrvP521:
 			publicKey.Curve = elliptic.P521()
 		default:
-			return JWK{}, fmt.Errorf("%w: unsupported curve type %q", ErrKeyUnmarshalParameter, marshal.CRV)
+			return JWK{}, fmt.Errorf("%w: %w: unsupported curve type %q", ErrKeyUnmarshalParameter, ErrUnsupportedKey, marshal.CRV)
 		}
 		marshalCopy.CRV = marshal.CRV
 		marshalCopy.X = marshal.X
@@ -324,7 +324,7 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 				}
 			}
 		default:
-			return JWK{}, fmt.Errorf("%w: unsupported curve type %q", ErrKeyUnmarshalParameter, marshal.CRV)
+			return JWK{}, fmt.Errorf("%w: %w: unsupported curve type %q", ErrKeyUnmarshalParameter, ErrUnsupportedKey, marshal.CRV)
 		}
 	case KtyRSA:
 		if marshal.N == "" || marshal.E == "" {

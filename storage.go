@@ -204,6 +204,10 @@ type HTTPClientStorageOptions struct {
 	// Provide the Ctx option to end the goroutine when it's no longer needed.
 	RefreshInterval time.Duration
 
+	// RequireSupportedKeys will refuse to process a JWK Set if it contains an unsupported key. If false, unsupported
+	// keys, like Ed448, will be ignored.
+	RequireSupportedKeys bool
+
 	// Storage is the underlying storage implementation to use.
 	//
 	// This defaults to NewMemoryStorage().
@@ -267,16 +271,19 @@ func NewStorageFromHTTP(remoteJWKSetURL string, options HTTPClientStorageOptions
 		if err != nil {
 			return fmt.Errorf("failed to decode JWK Set response: %w", err)
 		}
-		newSet := make([]JWK, len(jwks.Keys))
-		for i, marshal := range jwks.Keys {
+		newSet := make([]JWK, 0)
+		for _, marshal := range jwks.Keys {
 			marshalOptions := JWKMarshalOptions{
 				Private: true,
 			}
 			jwk, err := NewJWKFromMarshal(marshal, marshalOptions, options.ValidateOptions)
-			if err != nil {
+			switch {
+			case !options.RequireSupportedKeys && errors.Is(err, ErrUnsupportedKey):
+				continue
+			case err != nil:
 				return fmt.Errorf("failed to create JWK from JWK Marshal: %w", err)
 			}
-			newSet[i] = jwk
+			newSet = append(newSet, jwk)
 		}
 		err = store.KeyReplaceAll(ctx, newSet) // Clear local cache in case of key revocation.
 		if err != nil {
