@@ -3,6 +3,8 @@ package jwkset
 import (
 	"bytes"
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -393,5 +395,64 @@ func TestHTTPClientKeyReplaceAll(t *testing.T) {
 	}
 	if !bytes.Equal(allKeys[0].Key().([]byte), []byte("new key")) {
 		t.Fatalf("Unexpected key material after replace.")
+	}
+}
+
+func TestClientUnsupportedKey(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	validKID := "valid-key-id"
+	unsupportedKID := "unsupported-key-id"
+	serverStore := NewMemoryStorage()
+
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("Failed to generate Ed25519 key.\nError: %s", err)
+	}
+
+	jwk, err := NewJWKFromKey(pub, JWKOptions{Metadata: JWKMetadataOptions{KID: validKID, ALG: AlgEdDSA}})
+	if err != nil {
+		t.Fatalf("Failed to create JWK from Ed25519 key.\nError: %s", err)
+	}
+	err = serverStore.KeyWrite(ctx, jwk)
+	if err != nil {
+		t.Fatalf("Failed to write Ed25519 JWK to store.\nError: %s", err)
+	}
+
+	jwk.marshal.KID = unsupportedKID
+	jwk.marshal.CRV = "Ed448" // Unsupported curve type.
+	err = serverStore.KeyWrite(ctx, jwk)
+	if err != nil {
+		t.Fatalf("Failed to write unsupported JWK to store.\nError: %s", err)
+	}
+
+	rawJWKS, err := serverStore.JSON(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get JWKS JSON: %s", err)
+	}
+
+	rawJWKSMux := sync.RWMutex{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rawJWKSMux.RLock()
+		defer rawJWKSMux.RUnlock()
+		_, _ = w.Write(rawJWKS)
+	}))
+	defer server.Close()
+
+	clientStore, err := NewDefaultHTTPClient([]string{server.URL})
+	if err != nil {
+		t.Fatalf("Failed to create HTTP client: %s", err)
+	}
+
+	jwks, err := clientStore.KeyReadAll(ctx)
+	if err != nil {
+		t.Fatalf("Failed to read all JWKs: %s", err)
+	}
+	if len(jwks) != 1 {
+		t.Fatalf("Expected 1 valid JWK, got %d", len(jwks))
+	}
+	if jwks[0].options.Metadata.KID != validKID {
+		t.Fatalf("Expected only the valid key to be present")
 	}
 }
