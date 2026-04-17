@@ -1,7 +1,7 @@
 package jwksetcom
 
 import (
-	hhconst "github.com/MicahParks/httphandle/constant"
+	hhconst "github.com/MicahParks/jwkset/website/internal/httphandle/constant"
 )
 
 const (

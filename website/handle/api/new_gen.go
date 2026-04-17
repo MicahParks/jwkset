@@ -13,12 +13,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/MicahParks/httphandle/api"
-	hhconst "github.com/MicahParks/httphandle/constant"
 	jt "github.com/MicahParks/jsontype"
 	"github.com/MicahParks/jwkset"
 
 	jsc "github.com/MicahParks/jwkset/website"
+	"github.com/MicahParks/jwkset/website/internal/httphandle/api"
+	hhconst "github.com/MicahParks/jwkset/website/internal/httphandle/constant"
 	"github.com/MicahParks/jwkset/website/server"
 )
 

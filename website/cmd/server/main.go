@@ -6,13 +6,12 @@ import (
 	"net/http"
 	"time"
 
-	hh "github.com/MicahParks/httphandle"
-	hhconst "github.com/MicahParks/httphandle/constant"
-	"github.com/MicahParks/httphandle/middleware"
-
 	jsc "github.com/MicahParks/jwkset/website"
 	"github.com/MicahParks/jwkset/website/handle/api"
 	"github.com/MicahParks/jwkset/website/handle/template"
+	hh "github.com/MicahParks/jwkset/website/internal/httphandle"
+	hhconst "github.com/MicahParks/jwkset/website/internal/httphandle/constant"
+	"github.com/MicahParks/jwkset/website/internal/httphandle/middleware"
 	"github.com/MicahParks/jwkset/website/server"
 )
 

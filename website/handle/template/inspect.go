@@ -3,10 +3,9 @@ package template
 import (
 	"net/http"
 
-	hh "github.com/MicahParks/httphandle"
-	"github.com/MicahParks/httphandle/middleware"
-
 	jsc "github.com/MicahParks/jwkset/website"
+	hh "github.com/MicahParks/jwkset/website/internal/httphandle"
+	"github.com/MicahParks/jwkset/website/internal/httphandle/middleware"
 	"github.com/MicahParks/jwkset/website/server"
 )
 
