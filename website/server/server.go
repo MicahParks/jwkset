@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"strings"
 
-	hh "github.com/MicahParks/httphandle"
-	hhconst "github.com/MicahParks/httphandle/constant"
 	"github.com/MicahParks/recaptcha"
+
+	hh "github.com/MicahParks/jwkset/website/internal/httphandle"
+	hhconst "github.com/MicahParks/jwkset/website/internal/httphandle/constant"
 
 	jsc "github.com/MicahParks/jwkset/website"
 )

@@ -4,11 +4,11 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/MicahParks/httphandle/api"
-	hhconst "github.com/MicahParks/httphandle/constant"
-	"github.com/MicahParks/httphandle/middleware/ctxkey"
 	"github.com/MicahParks/recaptcha"
 
+	"github.com/MicahParks/jwkset/website/internal/httphandle/api"
+	hhconst "github.com/MicahParks/jwkset/website/internal/httphandle/constant"
+	"github.com/MicahParks/jwkset/website/internal/httphandle/middleware/ctxkey"
 	"github.com/MicahParks/jwkset/website/server"
 )
 
