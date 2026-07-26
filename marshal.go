@@ -22,6 +22,8 @@ import (
 var (
 	// ErrGetX5U indicates there was an error getting the X5U remote resource.
 	ErrGetX5U = errors.New("failed to get X5U via given URI")
+	// ErrInvalidKey indicates that a key's material is cryptographically invalid.
+	ErrInvalidKey = errors.New("invalid key")
 	// ErrJWKValidation indicates that a JWK failed to validate.
 	ErrJWKValidation = errors.New("failed to validate JWK")
 	// ErrKeyUnmarshalParameter indicates that a JWK's attributes are invalid and cannot be unmarshaled.
@@ -129,6 +131,10 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 			m.D = base64.RawURLEncoding.EncodeToString(priv)
 		}
 	case *ecdsa.PrivateKey:
+		err := validateECDSAPrivateKey(key)
+		if err != nil {
+			return JWKMarshal{}, err
+		}
 		pub := key.PublicKey
 		m.CRV = CRV(pub.Curve.Params().Name)
 		l := uint(pub.Curve.Params().BitSize / 8)
@@ -145,6 +151,10 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 			m.D = bigIntToBase64RawURL(key.D, l)
 		}
 	case *ecdsa.PublicKey:
+		err := validateECDSAPublicKey(key)
+		if err != nil {
+			return JWKMarshal{}, err
+		}
 		l := uint(key.Curve.Params().BitSize / 8)
 		if key.Curve.Params().BitSize%8 != 0 {
 			l++
@@ -253,6 +263,10 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 		default:
 			return JWK{}, fmt.Errorf("%w: %w: unsupported curve type %q", ErrKeyUnmarshalParameter, ErrUnsupportedKey, marshal.CRV)
 		}
+		err = validateECDSAPublicKey(publicKey)
+		if err != nil {
+			return JWK{}, fmt.Errorf("%w: %w", ErrKeyUnmarshalParameter, err)
+		}
 		marshalCopy.CRV = marshal.CRV
 		marshalCopy.X = marshal.X
 		marshalCopy.Y = marshal.Y
@@ -264,6 +278,10 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 			privateKey := &ecdsa.PrivateKey{
 				PublicKey: *publicKey,
 				D:         new(big.Int).SetBytes(d),
+			}
+			err = validateECDSAPrivateKey(privateKey)
+			if err != nil {
+				return JWK{}, fmt.Errorf("%w: %w", ErrKeyUnmarshalParameter, err)
 			}
 			key = privateKey
 			marshalCopy.D = marshal.D
@@ -497,6 +515,24 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 func base64urlTrailingPadding(s string) ([]byte, error) {
 	s = strings.TrimRight(s, "=")
 	return base64.RawURLEncoding.DecodeString(s)
+}
+
+func validateECDSAPublicKey(pub *ecdsa.PublicKey) error {
+	if pub.Curve == nil || pub.X == nil || pub.Y == nil || !pub.Curve.IsOnCurve(pub.X, pub.Y) {
+		return fmt.Errorf("%w: %s point is not on the specified curve", ErrInvalidKey, KtyEC)
+	}
+	return nil
+}
+
+func validateECDSAPrivateKey(key *ecdsa.PrivateKey) error {
+	err := validateECDSAPublicKey(&key.PublicKey)
+	if err != nil {
+		return err
+	}
+	if key.D == nil || key.D.Sign() != 1 || key.D.Cmp(key.Curve.Params().N) >= 0 {
+		return fmt.Errorf(`%w: %s key parameter "d" is out of range for the specified curve`, ErrInvalidKey, KtyEC)
+	}
+	return nil
 }
 
 func bigIntToBase64RawURL(i *big.Int, l uint) string {

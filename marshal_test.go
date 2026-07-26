@@ -323,6 +323,113 @@ func TestUnmarshalECDSA(t *testing.T) {
 	marshal.Y = ecdsaP521Y
 }
 
+func TestMarshalECDSAInvalid(t *testing.T) {
+	_, err := NewJWKFromKey(&ecdsa.PublicKey{
+		Curve: elliptic.P256(),
+		X:     new(big.Int).Lsh(big.NewInt(1), 300),
+		Y:     big.NewInt(2),
+	}, JWKOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "x" is too large for the curve. %s`, err)
+	}
+
+	private := makeECDSAP256(t)
+	public := private.PublicKey
+	public.Y = new(big.Int).Add(public.Y, big.NewInt(1))
+	_, err = NewJWKFromKey(&public, JWKOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf("Should get ErrInvalidKey when the point is not on the curve. %s", err)
+	}
+
+	_, err = NewJWKFromKey(&ecdsa.PublicKey{}, JWKOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf("Should get ErrInvalidKey when the curve is nil. %s", err)
+	}
+
+	options := JWKOptions{}
+	options.Marshal.Private = true
+	private = makeECDSAP256(t)
+	private.D = private.PublicKey.Curve.Params().N
+	_, err = NewJWKFromKey(private, options)
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "d" is not less than the curve order. %s`, err)
+	}
+
+	private = makeECDSAP256(t)
+	private.D = nil
+	_, err = NewJWKFromKey(private, options)
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "d" is nil. %s`, err)
+	}
+}
+
+func TestUnmarshalECDSAInvalid(t *testing.T) {
+	appendByte := func(s string) string {
+		raw, err := base64.RawURLEncoding.DecodeString(s)
+		if err != nil {
+			t.Fatalf("Failed to decode Base64URL test constant. %s", err)
+		}
+		return base64.RawURLEncoding.EncodeToString(append(raw, 0xFF))
+	}
+	plusOne := func(s string) string {
+		raw, err := base64.RawURLEncoding.DecodeString(s)
+		if err != nil {
+			t.Fatalf("Failed to decode Base64URL test constant. %s", err)
+		}
+		i := new(big.Int).SetBytes(raw)
+		i.Add(i, big.NewInt(1))
+		b := make([]byte, len(raw))
+		i.FillBytes(b)
+		return base64.RawURLEncoding.EncodeToString(b)
+	}
+
+	marshalOptions := JWKMarshalOptions{
+		Private: true,
+	}
+	valid := JWKMarshal{
+		CRV: CrvP256,
+		D:   ecdsaP256D,
+		KTY: KtyEC,
+		X:   ecdsaP256X,
+		Y:   ecdsaP256Y,
+	}
+
+	marshal := valid
+	marshal.X = appendByte(marshal.X)
+	_, err := NewJWKFromMarshal(marshal, marshalOptions, JWKValidateOptions{})
+	if !errors.Is(err, ErrKeyUnmarshalParameter) || !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "x" is too large for the curve. %s`, err)
+	}
+
+	marshal = valid
+	marshal.Y = appendByte(marshal.Y)
+	_, err = NewJWKFromMarshal(marshal, marshalOptions, JWKValidateOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "y" is too large for the curve. %s`, err)
+	}
+
+	marshal = valid
+	marshal.Y = plusOne(marshal.Y)
+	_, err = NewJWKFromMarshal(marshal, marshalOptions, JWKValidateOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf("Should get ErrInvalidKey when the point is not on the curve. %s", err)
+	}
+
+	marshal = valid
+	marshal.D = appendByte(marshal.D)
+	_, err = NewJWKFromMarshal(marshal, marshalOptions, JWKValidateOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "d" is too large for the curve. %s`, err)
+	}
+
+	marshal = valid
+	marshal.D = base64.RawURLEncoding.EncodeToString(make([]byte, 32))
+	_, err = NewJWKFromMarshal(marshal, marshalOptions, JWKValidateOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "d" is zero. %s`, err)
+	}
+}
+
 func TestMarshalEdDSA(t *testing.T) {
 	checkJWK := func(marshal JWKMarshal, options JWKOptions) {
 		if marshal.ALG != AlgEdDSA {
