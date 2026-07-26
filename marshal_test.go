@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"math/big"
+	"reflect"
 	"slices"
 	"testing"
 )
@@ -479,6 +480,21 @@ func TestMarshalEdDSA(t *testing.T) {
 	checkJWK(jwk.Marshal(), options)
 }
 
+func TestMarshalEdDSAInvalid(t *testing.T) {
+	for _, l := range []int{0, 3, 31, 40, 63, 65} {
+		_, err := NewJWKFromKey(ed25519.PrivateKey(make([]byte, l)), JWKOptions{})
+		if !errors.Is(err, ErrInvalidKey) {
+			t.Fatalf("Should get ErrInvalidKey for a %d byte Ed25519 private key. %s", l, err)
+		}
+	}
+	for _, l := range []int{0, 3, 31, 33, 64} {
+		_, err := NewJWKFromKey(ed25519.PublicKey(make([]byte, l)), JWKOptions{})
+		if !errors.Is(err, ErrInvalidKey) {
+			t.Fatalf("Should get ErrInvalidKey for a %d byte Ed25519 public key. %s", l, err)
+		}
+	}
+}
+
 func TestUnmarshalEdDSA(t *testing.T) {
 	private := makeEdDSA(t)
 
@@ -719,6 +735,59 @@ func TestMarshalRSA(t *testing.T) {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
 	}
 	checkMarshal(jwk.Marshal(), options)
+}
+
+func TestMarshalRSAInvalid(t *testing.T) {
+	options := JWKOptions{}
+	options.Marshal.Private = true
+
+	private := makeRSA(t)
+	precomputedMarshal := newJWK(t, private, options).Marshal()
+
+	noPre := &rsa.PrivateKey{PublicKey: private.PublicKey, D: private.D, Primes: private.Primes}
+	jwk := newJWK(t, noPre, options)
+	if !reflect.DeepEqual(jwk.Marshal(), precomputedMarshal) {
+		t.Fatal("Marshal of a key without precomputed values should match the precomputed key's marshal.")
+	}
+	if noPre.Precomputed.Dp != nil {
+		t.Fatal("Marshalling should not mutate the given key by precomputing it.")
+	}
+
+	badCRT := &rsa.PrivateKey{PublicKey: private.PublicKey, D: private.D, Primes: private.Primes}
+	badCRT.Precomputed = private.Precomputed
+	badCRT.Precomputed.CRTValues = private.Precomputed.CRTValues[:1]
+	jwk = newJWK(t, badCRT, options)
+	if !reflect.DeepEqual(jwk.Marshal(), precomputedMarshal) {
+		t.Fatal("Marshal of a key with incomplete CRT values should match the precomputed key's marshal.")
+	}
+
+	noD := &rsa.PrivateKey{PublicKey: private.PublicKey, Primes: private.Primes}
+	_, err := NewJWKFromKey(noD, options)
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "d" is nil. %s`, err)
+	}
+
+	onePrime := &rsa.PrivateKey{PublicKey: private.PublicKey, D: private.D, Primes: private.Primes[:1]}
+	_, err = NewJWKFromKey(onePrime, options)
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf("Should get ErrInvalidKey when the key has fewer than 2 primes. %s", err)
+	}
+
+	badPrimes := &rsa.PrivateKey{PublicKey: private.PublicKey, D: private.D, Primes: []*big.Int{big.NewInt(3), big.NewInt(5)}}
+	_, err = NewJWKFromKey(badPrimes, options)
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf("Should get ErrInvalidKey when the primes do not multiply to the modulus. %s", err)
+	}
+
+	_, err = NewJWKFromKey(&rsa.PublicKey{E: 65537}, JWKOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "n" is nil. %s`, err)
+	}
+
+	_, err = NewJWKFromKey(&rsa.PublicKey{N: private.N, E: 0}, JWKOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "e" is out of range. %s`, err)
+	}
 }
 
 func TestUnmarshalRSA(t *testing.T) {

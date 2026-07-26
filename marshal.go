@@ -164,6 +164,9 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 		m.Y = bigIntToBase64RawURL(key.Y, l)
 		m.KTY = KtyEC
 	case ed25519.PrivateKey:
+		if len(key) != ed25519.PrivateKeySize {
+			return JWKMarshal{}, fmt.Errorf("%w: %s private key should be %d bytes", ErrInvalidKey, CrvEd25519, ed25519.PrivateKeySize)
+		}
 		pub := key.Public().(ed25519.PublicKey)
 		m.ALG = AlgEdDSA
 		m.CRV = CrvEd25519
@@ -173,16 +176,24 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 			m.D = base64.RawURLEncoding.EncodeToString(key[:32])
 		}
 	case ed25519.PublicKey:
+		if len(key) != ed25519.PublicKeySize {
+			return JWKMarshal{}, fmt.Errorf("%w: %s public key should be %d bytes", ErrInvalidKey, CrvEd25519, ed25519.PublicKeySize)
+		}
 		m.ALG = AlgEdDSA
 		m.CRV = CrvEd25519
 		m.X = base64.RawURLEncoding.EncodeToString(key)
 		m.KTY = KtyOKP
 	case *rsa.PrivateKey:
+		err := validateRSAPrivateKey(key)
+		if err != nil {
+			return JWKMarshal{}, err
+		}
 		pub := key.PublicKey
 		m.E = bigIntToBase64RawURL(big.NewInt(int64(pub.E)), 0)
 		m.N = bigIntToBase64RawURL(pub.N, 0)
 		m.KTY = KtyRSA
 		if options.Marshal.Private {
+			key = rsaPrecomputed(key)
 			m.D = bigIntToBase64RawURL(key.D, 0)
 			m.P = bigIntToBase64RawURL(key.Primes[0], 0)
 			m.Q = bigIntToBase64RawURL(key.Primes[1], 0)
@@ -201,6 +212,10 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 			}
 		}
 	case *rsa.PublicKey:
+		err := validateRSAPublicKey(key)
+		if err != nil {
+			return JWKMarshal{}, err
+		}
 		m.E = bigIntToBase64RawURL(big.NewInt(int64(key.E)), 0)
 		m.N = bigIntToBase64RawURL(key.N, 0)
 		m.KTY = KtyRSA
@@ -533,6 +548,65 @@ func validateECDSAPrivateKey(key *ecdsa.PrivateKey) error {
 		return fmt.Errorf(`%w: %s key parameter "d" is out of range for the specified curve`, ErrInvalidKey, KtyEC)
 	}
 	return nil
+}
+
+func validateRSAPublicKey(pub *rsa.PublicKey) error {
+	if pub.N == nil {
+		return fmt.Errorf(`%w: %s key parameter "n" is required`, ErrInvalidKey, KtyRSA)
+	}
+	if pub.E < 2 || pub.E > math.MaxInt32 {
+		return fmt.Errorf(`%w: %s key parameter "e" is out of range`, ErrInvalidKey, KtyRSA)
+	}
+	return nil
+}
+
+func validateRSAPrivateKey(key *rsa.PrivateKey) error {
+	err := validateRSAPublicKey(&key.PublicKey)
+	if err != nil {
+		return err
+	}
+	if key.D == nil {
+		return fmt.Errorf(`%w: %s key parameter "d" is required`, ErrInvalidKey, KtyRSA)
+	}
+	if len(key.Primes) < 2 {
+		return fmt.Errorf("%w: %s key requires at least 2 primes", ErrInvalidKey, KtyRSA)
+	}
+	for _, prime := range key.Primes {
+		if prime == nil {
+			return fmt.Errorf("%w: %s key has a nil prime", ErrInvalidKey, KtyRSA)
+		}
+	}
+	err = key.Validate()
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrInvalidKey, err)
+	}
+	return nil
+}
+
+// rsaPrecomputed returns a key whose precomputed values are complete enough to marshal. The given
+// key is never mutated; if its precomputed values are absent or incomplete, a shallow copy is
+// precomputed instead so concurrent users of the original key do not race.
+func rsaPrecomputed(key *rsa.PrivateKey) *rsa.PrivateKey {
+	pre := key.Precomputed
+	complete := pre.Dp != nil && pre.Dq != nil && pre.Qinv != nil && len(pre.CRTValues) == len(key.Primes)-2
+	if complete {
+		for _, crt := range pre.CRTValues {
+			if crt.Exp == nil || crt.Coeff == nil || crt.R == nil {
+				complete = false
+				break
+			}
+		}
+	}
+	if complete {
+		return key
+	}
+	c := &rsa.PrivateKey{
+		PublicKey: key.PublicKey,
+		D:         key.D,
+		Primes:    key.Primes,
+	}
+	c.Precompute()
+	return c
 }
 
 func bigIntToBase64RawURL(i *big.Int, l uint) string {
