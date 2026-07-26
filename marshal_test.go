@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"math/big"
+	"reflect"
 	"slices"
 	"testing"
 )
@@ -323,6 +324,113 @@ func TestUnmarshalECDSA(t *testing.T) {
 	marshal.Y = ecdsaP521Y
 }
 
+func TestMarshalECDSAInvalid(t *testing.T) {
+	_, err := NewJWKFromKey(&ecdsa.PublicKey{
+		Curve: elliptic.P256(),
+		X:     new(big.Int).Lsh(big.NewInt(1), 300),
+		Y:     big.NewInt(2),
+	}, JWKOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "x" is too large for the curve. %s`, err)
+	}
+
+	private := makeECDSAP256(t)
+	public := private.PublicKey
+	public.Y = new(big.Int).Add(public.Y, big.NewInt(1))
+	_, err = NewJWKFromKey(&public, JWKOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf("Should get ErrInvalidKey when the point is not on the curve. %s", err)
+	}
+
+	_, err = NewJWKFromKey(&ecdsa.PublicKey{}, JWKOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf("Should get ErrInvalidKey when the curve is nil. %s", err)
+	}
+
+	options := JWKOptions{}
+	options.Marshal.Private = true
+	private = makeECDSAP256(t)
+	private.D = private.PublicKey.Curve.Params().N
+	_, err = NewJWKFromKey(private, options)
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "d" is not less than the curve order. %s`, err)
+	}
+
+	private = makeECDSAP256(t)
+	private.D = nil
+	_, err = NewJWKFromKey(private, options)
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "d" is nil. %s`, err)
+	}
+}
+
+func TestUnmarshalECDSAInvalid(t *testing.T) {
+	appendByte := func(s string) string {
+		raw, err := base64.RawURLEncoding.DecodeString(s)
+		if err != nil {
+			t.Fatalf("Failed to decode Base64URL test constant. %s", err)
+		}
+		return base64.RawURLEncoding.EncodeToString(append(raw, 0xFF))
+	}
+	plusOne := func(s string) string {
+		raw, err := base64.RawURLEncoding.DecodeString(s)
+		if err != nil {
+			t.Fatalf("Failed to decode Base64URL test constant. %s", err)
+		}
+		i := new(big.Int).SetBytes(raw)
+		i.Add(i, big.NewInt(1))
+		b := make([]byte, len(raw))
+		i.FillBytes(b)
+		return base64.RawURLEncoding.EncodeToString(b)
+	}
+
+	marshalOptions := JWKMarshalOptions{
+		Private: true,
+	}
+	valid := JWKMarshal{
+		CRV: CrvP256,
+		D:   ecdsaP256D,
+		KTY: KtyEC,
+		X:   ecdsaP256X,
+		Y:   ecdsaP256Y,
+	}
+
+	marshal := valid
+	marshal.X = appendByte(marshal.X)
+	_, err := NewJWKFromMarshal(marshal, marshalOptions, JWKValidateOptions{})
+	if !errors.Is(err, ErrKeyUnmarshalParameter) || !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "x" is too large for the curve. %s`, err)
+	}
+
+	marshal = valid
+	marshal.Y = appendByte(marshal.Y)
+	_, err = NewJWKFromMarshal(marshal, marshalOptions, JWKValidateOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "y" is too large for the curve. %s`, err)
+	}
+
+	marshal = valid
+	marshal.Y = plusOne(marshal.Y)
+	_, err = NewJWKFromMarshal(marshal, marshalOptions, JWKValidateOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf("Should get ErrInvalidKey when the point is not on the curve. %s", err)
+	}
+
+	marshal = valid
+	marshal.D = appendByte(marshal.D)
+	_, err = NewJWKFromMarshal(marshal, marshalOptions, JWKValidateOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "d" is too large for the curve. %s`, err)
+	}
+
+	marshal = valid
+	marshal.D = base64.RawURLEncoding.EncodeToString(make([]byte, 32))
+	_, err = NewJWKFromMarshal(marshal, marshalOptions, JWKValidateOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "d" is zero. %s`, err)
+	}
+}
+
 func TestMarshalEdDSA(t *testing.T) {
 	checkJWK := func(marshal JWKMarshal, options JWKOptions) {
 		if marshal.ALG != AlgEdDSA {
@@ -370,6 +478,21 @@ func TestMarshalEdDSA(t *testing.T) {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
 	}
 	checkJWK(jwk.Marshal(), options)
+}
+
+func TestMarshalEdDSAInvalid(t *testing.T) {
+	for _, l := range []int{0, 3, 31, 40, 63, 65} {
+		_, err := NewJWKFromKey(ed25519.PrivateKey(make([]byte, l)), JWKOptions{})
+		if !errors.Is(err, ErrInvalidKey) {
+			t.Fatalf("Should get ErrInvalidKey for a %d byte Ed25519 private key. %s", l, err)
+		}
+	}
+	for _, l := range []int{0, 3, 31, 33, 64} {
+		_, err := NewJWKFromKey(ed25519.PublicKey(make([]byte, l)), JWKOptions{})
+		if !errors.Is(err, ErrInvalidKey) {
+			t.Fatalf("Should get ErrInvalidKey for a %d byte Ed25519 public key. %s", l, err)
+		}
+	}
 }
 
 func TestUnmarshalEdDSA(t *testing.T) {
@@ -612,6 +735,59 @@ func TestMarshalRSA(t *testing.T) {
 		t.Fatalf("Failed to marshal key with correct options. %s", err)
 	}
 	checkMarshal(jwk.Marshal(), options)
+}
+
+func TestMarshalRSAInvalid(t *testing.T) {
+	options := JWKOptions{}
+	options.Marshal.Private = true
+
+	private := makeRSA(t)
+	precomputedMarshal := newJWK(t, private, options).Marshal()
+
+	noPre := &rsa.PrivateKey{PublicKey: private.PublicKey, D: private.D, Primes: private.Primes}
+	jwk := newJWK(t, noPre, options)
+	if !reflect.DeepEqual(jwk.Marshal(), precomputedMarshal) {
+		t.Fatal("Marshal of a key without precomputed values should match the precomputed key's marshal.")
+	}
+	if noPre.Precomputed.Dp != nil {
+		t.Fatal("Marshalling should not mutate the given key by precomputing it.")
+	}
+
+	badCRT := &rsa.PrivateKey{PublicKey: private.PublicKey, D: private.D, Primes: private.Primes}
+	badCRT.Precomputed = private.Precomputed
+	badCRT.Precomputed.CRTValues = private.Precomputed.CRTValues[:1]
+	jwk = newJWK(t, badCRT, options)
+	if !reflect.DeepEqual(jwk.Marshal(), precomputedMarshal) {
+		t.Fatal("Marshal of a key with incomplete CRT values should match the precomputed key's marshal.")
+	}
+
+	noD := &rsa.PrivateKey{PublicKey: private.PublicKey, Primes: private.Primes}
+	_, err := NewJWKFromKey(noD, options)
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "d" is nil. %s`, err)
+	}
+
+	onePrime := &rsa.PrivateKey{PublicKey: private.PublicKey, D: private.D, Primes: private.Primes[:1]}
+	_, err = NewJWKFromKey(onePrime, options)
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf("Should get ErrInvalidKey when the key has fewer than 2 primes. %s", err)
+	}
+
+	badPrimes := &rsa.PrivateKey{PublicKey: private.PublicKey, D: private.D, Primes: []*big.Int{big.NewInt(3), big.NewInt(5)}}
+	_, err = NewJWKFromKey(badPrimes, options)
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf("Should get ErrInvalidKey when the primes do not multiply to the modulus. %s", err)
+	}
+
+	_, err = NewJWKFromKey(&rsa.PublicKey{E: 65537}, JWKOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "n" is nil. %s`, err)
+	}
+
+	_, err = NewJWKFromKey(&rsa.PublicKey{N: private.N, E: 0}, JWKOptions{})
+	if !errors.Is(err, ErrInvalidKey) {
+		t.Fatalf(`Should get ErrInvalidKey when parameter "e" is out of range. %s`, err)
+	}
 }
 
 func TestUnmarshalRSA(t *testing.T) {
