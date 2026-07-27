@@ -342,11 +342,13 @@ func (j JWK) Validate() error {
 			return fmt.Errorf("%w: D in marshal does not match D in marshalled", errors.Join(ErrJWKValidation, err))
 		}
 	case KtyOKP:
-		if j.marshal.X != marshalled.X {
-			return fmt.Errorf("%w: X in marshal does not match X in marshalled", ErrJWKValidation)
+		err = cmpBase64Octet(j.marshal.X, marshalled.X, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: X in marshal does not match X in marshalled", errors.Join(ErrJWKValidation, err))
 		}
-		if j.marshal.D != marshalled.D {
-			return fmt.Errorf("%w: D in marshal does not match D in marshalled", ErrJWKValidation)
+		err = cmpBase64Octet(j.marshal.D, marshalled.D, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: D in marshal does not match D in marshalled", errors.Join(ErrJWKValidation, err))
 		}
 	case KtyRSA:
 		err = cmpBase64Int(j.marshal.D, marshalled.D, j.options.Validate.StrictPadding)
@@ -505,6 +507,37 @@ func cmpBase64Int(first, second string, strictPadding bool) error {
 	}
 	if strictPadding && fLen != sLen {
 		return fmt.Errorf("%w: the Base64 raw URL inputs do not have matching padding", errors.Join(ErrJWKValidation, ErrPadding))
+	}
+	return nil
+}
+
+func cmpBase64Octet(first, second string, strictPadding bool) error {
+	if first == second {
+		return nil
+	}
+	var f, s []byte
+	var err error
+	if strictPadding {
+		f, err = base64.RawURLEncoding.DecodeString(first)
+		if err != nil {
+			return fmt.Errorf("failed to decode Base64 raw URL decode first string: %w", err)
+		}
+		s, err = base64.RawURLEncoding.DecodeString(second)
+		if err != nil {
+			return fmt.Errorf("failed to decode Base64 raw URL decode second string: %w", err)
+		}
+	} else {
+		f, err = base64urlTrailingPadding(first)
+		if err != nil {
+			return fmt.Errorf("failed to decode Base64 URL (remove trailing padding) decode first string: %w", err)
+		}
+		s, err = base64urlTrailingPadding(second)
+		if err != nil {
+			return fmt.Errorf("failed to decode Base64 URL (remove trailing padding) decode second string: %w", err)
+		}
+	}
+	if !bytes.Equal(f, s) {
+		return fmt.Errorf("%w: the parsed octets do not match", ErrJWKValidation)
 	}
 	return nil
 }

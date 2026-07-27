@@ -262,6 +262,28 @@ func TestJWK_Validate_Padding(t *testing.T) {
 	}
 }
 
+func TestJWK_Validate_Padding_OKP(t *testing.T) {
+	const invalidOKPPadding = `
+{
+  "kty": "OKP",
+  "crv": "Ed25519",
+  "x": "8vD0Rexp6F8V6JbRvp3KXa5mJeVd9IrGh9fwwhgInfk="
+}`
+	jwk, err := NewJWKFromRawJSON([]byte(invalidOKPPadding), JWKMarshalOptions{}, JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create JWK from raw JSON. %s", err)
+	}
+	err = jwk.Validate()
+	if err != nil {
+		t.Fatalf("Failed to validate OKP JWK with acceptably invalid padding. %s", err)
+	}
+	jwk.options.Validate.StrictPadding = true
+	err = jwk.Validate()
+	if err == nil {
+		t.Fatalf("Expected to fail validation for invalid OKP padding.")
+	}
+}
+
 func TestCmpBase64Int(t *testing.T) {
 	intA := int64(123_456_789)
 	bytesA := big.NewInt(intA).Bytes()
