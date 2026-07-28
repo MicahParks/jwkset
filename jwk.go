@@ -397,7 +397,7 @@ func (j JWK) Validate() error {
 			}
 		}
 	case KtyOct:
-		err = cmpBase64Int(j.marshal.K, marshalled.K, j.options.Validate.StrictPadding)
+		err = cmpBase64Octet(j.marshal.K, marshalled.K, j.options.Validate.StrictPadding)
 		if err != nil {
 			return fmt.Errorf("%w: K in marshal does not match K in marshalled", errors.Join(ErrJWKValidation, err))
 		}

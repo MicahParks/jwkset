@@ -326,6 +326,27 @@ func TestJWK_Validate_Padding_OKP(t *testing.T) {
 	}
 }
 
+func TestJWK_Validate_Padding_Oct(t *testing.T) {
+	const invalidOctPadding = `
+{
+  "kty": "oct",
+  "k": "GawgguFyGrWKav7AX4VKUg=="
+}`
+	jwk, err := NewJWKFromRawJSON([]byte(invalidOctPadding), JWKMarshalOptions{Private: true}, JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create JWK from raw JSON. %s", err)
+	}
+	err = jwk.Validate()
+	if err != nil {
+		t.Fatalf("Failed to validate oct JWK with acceptably invalid padding. %s", err)
+	}
+	jwk.options.Validate.StrictPadding = true
+	err = jwk.Validate()
+	if err == nil {
+		t.Fatalf("Expected to fail validation for invalid oct padding.")
+	}
+}
+
 func TestCmpBase64Int(t *testing.T) {
 	intA := int64(123_456_789)
 	bytesA := big.NewInt(intA).Bytes()
