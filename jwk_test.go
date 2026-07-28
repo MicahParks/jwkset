@@ -324,6 +324,47 @@ func TestJWK_Validate_Padding_OKP(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected to fail validation for non-zero trailing bits in OKP key.")
 	}
+
+	const invalidX25519Padding = `
+{
+  "kty": "OKP",
+  "crv": "X25519",
+  "x": "fGMcCrO_gWS7rva_PpXiS7D5-2OppjZQLlZmdRUSN0g="
+}`
+	jwk, err = NewJWKFromRawJSON([]byte(invalidX25519Padding), JWKMarshalOptions{}, JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create JWK from raw JSON. %s", err)
+	}
+	err = jwk.Validate()
+	if err != nil {
+		t.Fatalf("Failed to validate X25519 JWK with acceptably invalid padding. %s", err)
+	}
+	jwk.options.Validate.StrictPadding = true
+	err = jwk.Validate()
+	if err == nil {
+		t.Fatalf("Expected to fail validation for invalid X25519 padding.")
+	}
+
+	const invalidX25519PrivatePadding = `
+{
+  "kty": "OKP",
+  "crv": "X25519",
+  "x": "fGMcCrO_gWS7rva_PpXiS7D5-2OppjZQLlZmdRUSN0g=",
+  "d": "GIu7AbclXA1FtVswPBUileBckbJu2B9UUhZPTebrox4="
+}`
+	jwk, err = NewJWKFromRawJSON([]byte(invalidX25519PrivatePadding), JWKMarshalOptions{Private: true}, JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create JWK from raw JSON. %s", err)
+	}
+	err = jwk.Validate()
+	if err != nil {
+		t.Fatalf("Failed to validate private X25519 JWK with acceptably invalid padding. %s", err)
+	}
+	jwk.options.Validate.StrictPadding = true
+	err = jwk.Validate()
+	if err == nil {
+		t.Fatalf("Expected to fail validation for invalid private X25519 padding.")
+	}
 }
 
 func TestJWK_Validate_Padding_Oct(t *testing.T) {
@@ -438,6 +479,86 @@ func TestCmpBase64Int(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := cmpBase64Int(tc.first, tc.second, tc.strict)
+			if tc.wantErr == (err == nil) {
+				t.Fatalf("Expected error %v, got %v", tc.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestCmpBase64Octet(t *testing.T) {
+	octetsA := []byte{0x07, 0x5B, 0xCD, 0x15}
+	octetsB := []byte{0x07, 0x5B, 0xCD, 0x16}
+	// The canonical encoding of octetsA is "B1vNFQ". The final character of trailingBitsA differs from the canonical
+	// encoding only in its unused trailing bits, so it decodes to octetsA unless strict decoding is used.
+	const trailingBitsA = "B1vNFR"
+	testCases := []struct {
+		name    string
+		first   string
+		second  string
+		strict  bool
+		wantErr bool
+	}{
+		{
+			name:    "SameStrict",
+			first:   base64.RawURLEncoding.EncodeToString(octetsA),
+			second:  base64.RawURLEncoding.EncodeToString(octetsA),
+			strict:  true,
+			wantErr: false,
+		},
+		{
+			name:    "SameNotStrict",
+			first:   base64.RawURLEncoding.EncodeToString(octetsA),
+			second:  base64.RawURLEncoding.EncodeToString(octetsA),
+			strict:  false,
+			wantErr: false,
+		},
+		{
+			name:    "DifferentPaddingStrict",
+			first:   base64.RawURLEncoding.EncodeToString(octetsA),
+			second:  base64.URLEncoding.EncodeToString(octetsA),
+			strict:  true,
+			wantErr: true,
+		},
+		{
+			name:    "DifferentPaddingNotStrict",
+			first:   base64.RawURLEncoding.EncodeToString(octetsA),
+			second:  base64.URLEncoding.EncodeToString(octetsA),
+			strict:  false,
+			wantErr: false,
+		},
+		{
+			name:    "DifferentStrict",
+			first:   base64.RawURLEncoding.EncodeToString(octetsA),
+			second:  base64.RawURLEncoding.EncodeToString(octetsB),
+			strict:  true,
+			wantErr: true,
+		},
+		{
+			name:    "DifferentNotStrict",
+			first:   base64.RawURLEncoding.EncodeToString(octetsA),
+			second:  base64.RawURLEncoding.EncodeToString(octetsB),
+			strict:  false,
+			wantErr: true,
+		},
+		{
+			name:    "TrailingBitsStrict",
+			first:   trailingBitsA,
+			second:  base64.RawURLEncoding.EncodeToString(octetsA),
+			strict:  true,
+			wantErr: true,
+		},
+		{
+			name:    "TrailingBitsNotStrict",
+			first:   trailingBitsA,
+			second:  base64.RawURLEncoding.EncodeToString(octetsA),
+			strict:  false,
+			wantErr: false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := cmpBase64Octet(tc.first, tc.second, tc.strict)
 			if tc.wantErr == (err == nil) {
 				t.Fatalf("Expected error %v, got %v", tc.wantErr, err)
 			}
