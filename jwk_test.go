@@ -282,6 +282,48 @@ func TestJWK_Validate_Padding_OKP(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected to fail validation for invalid OKP padding.")
 	}
+
+	const invalidOKPPrivatePadding = `
+{
+  "kty": "OKP",
+  "crv": "Ed25519",
+  "x": "44Z2r8ZJX6rvWYzXXoxt0IaDnXdubKCXAqNq8-0Q9Yg=",
+  "d": "M-KPMMAB7n7FYx0r-ZUYuOtUeCymFzsr0p6b_60HWWc="
+}`
+	jwk, err = NewJWKFromRawJSON([]byte(invalidOKPPrivatePadding), JWKMarshalOptions{Private: true}, JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create JWK from raw JSON. %s", err)
+	}
+	err = jwk.Validate()
+	if err != nil {
+		t.Fatalf("Failed to validate private OKP JWK with acceptably invalid padding. %s", err)
+	}
+	jwk.options.Validate.StrictPadding = true
+	err = jwk.Validate()
+	if err == nil {
+		t.Fatalf("Expected to fail validation for invalid private OKP padding.")
+	}
+
+	// The final base64url character differs from the canonical encoding only in its unused trailing bits.
+	const invalidOKPTrailingBits = `
+{
+  "kty": "OKP",
+  "crv": "Ed25519",
+  "x": "8vD0Rexp6F8V6JbRvp3KXa5mJeVd9IrGh9fwwhgInfl"
+}`
+	jwk, err = NewJWKFromRawJSON([]byte(invalidOKPTrailingBits), JWKMarshalOptions{}, JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create JWK from raw JSON. %s", err)
+	}
+	err = jwk.Validate()
+	if err != nil {
+		t.Fatalf("Failed to validate OKP JWK with acceptably non-zero trailing bits. %s", err)
+	}
+	jwk.options.Validate.StrictPadding = true
+	err = jwk.Validate()
+	if err == nil {
+		t.Fatalf("Expected to fail validation for non-zero trailing bits in OKP key.")
+	}
 }
 
 func TestCmpBase64Int(t *testing.T) {

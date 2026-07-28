@@ -477,7 +477,7 @@ func cmpBase64Int(first, second string, strictPadding bool) error {
 	var b []byte
 	var err error
 	if strictPadding {
-		b, err = base64.RawURLEncoding.DecodeString(first)
+		b, err = base64.RawURLEncoding.Strict().DecodeString(first)
 		if err != nil {
 			return fmt.Errorf("failed to decode Base64 raw URL decode first string: %w", err)
 		}
@@ -490,7 +490,7 @@ func cmpBase64Int(first, second string, strictPadding bool) error {
 	fLen := len(b)
 	f := new(big.Int).SetBytes(b)
 	if strictPadding {
-		b, err = base64.RawURLEncoding.DecodeString(second)
+		b, err = base64.RawURLEncoding.Strict().DecodeString(second)
 		if err != nil {
 			return fmt.Errorf("failed to decode Base64 raw URL decode second string: %w", err)
 		}
@@ -518,11 +518,11 @@ func cmpBase64Octet(first, second string, strictPadding bool) error {
 	var f, s []byte
 	var err error
 	if strictPadding {
-		f, err = base64.RawURLEncoding.DecodeString(first)
+		f, err = base64.RawURLEncoding.Strict().DecodeString(first)
 		if err != nil {
 			return fmt.Errorf("failed to decode Base64 raw URL decode first string: %w", err)
 		}
-		s, err = base64.RawURLEncoding.DecodeString(second)
+		s, err = base64.RawURLEncoding.Strict().DecodeString(second)
 		if err != nil {
 			return fmt.Errorf("failed to decode Base64 raw URL decode second string: %w", err)
 		}
