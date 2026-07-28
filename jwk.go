@@ -318,11 +318,15 @@ func (j JWK) Validate() error {
 	}
 
 	canComputeThumbprint := len(j.marshal.X5C) > 0
-	if j.marshal.X5T != marshalled.X5T && canComputeThumbprint {
-		return fmt.Errorf("%w: X5T in marshal does not match X5T in marshalled", ErrJWKValidation)
-	}
-	if j.marshal.X5TS256 != marshalled.X5TS256 && canComputeThumbprint {
-		return fmt.Errorf("%w: X5TS256 in marshal does not match X5TS256 in marshalled", ErrJWKValidation)
+	if canComputeThumbprint {
+		err = cmpBase64Octet(j.marshal.X5T, marshalled.X5T, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: X5T in marshal does not match X5T in marshalled", errors.Join(ErrJWKValidation, err))
+		}
+		err = cmpBase64Octet(j.marshal.X5TS256, marshalled.X5TS256, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: X5TS256 in marshal does not match X5TS256 in marshalled", errors.Join(ErrJWKValidation, err))
+		}
 	}
 	if j.marshal.CRV != marshalled.CRV {
 		return fmt.Errorf("%w: CRV in marshal does not match CRV in marshalled", ErrJWKValidation)

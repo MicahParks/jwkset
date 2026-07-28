@@ -347,6 +347,39 @@ func TestJWK_Validate_Padding_Oct(t *testing.T) {
 	}
 }
 
+func TestJWK_Validate_Padding_Thumbprint(t *testing.T) {
+	block, _ := pem.Decode([]byte(ed25519Cert))
+	cert, err := LoadCertificate(block.Bytes)
+	if err != nil {
+		t.Fatalf("Failed to load certificate. %s", err)
+	}
+	options := JWKOptions{
+		X509: JWKX509Options{
+			X5C: []*x509.Certificate{cert},
+		},
+	}
+	jwk, err := NewJWKFromKey(cert.PublicKey, options)
+	if err != nil {
+		t.Fatalf("Failed to create JWK from key. %s", err)
+	}
+	marshal := jwk.Marshal()
+	marshal.X5T += "="
+	marshal.X5TS256 += "="
+	jwk, err = NewJWKFromMarshal(marshal, JWKMarshalOptions{}, JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create JWK from marshal with padded thumbprints. %s", err)
+	}
+	err = jwk.Validate()
+	if err != nil {
+		t.Fatalf("Failed to validate JWK with acceptably invalid thumbprint padding. %s", err)
+	}
+	jwk.options.Validate.StrictPadding = true
+	err = jwk.Validate()
+	if err == nil {
+		t.Fatalf("Expected to fail validation for invalid thumbprint padding.")
+	}
+}
+
 func TestCmpBase64Int(t *testing.T) {
 	intA := int64(123_456_789)
 	bytesA := big.NewInt(intA).Bytes()
