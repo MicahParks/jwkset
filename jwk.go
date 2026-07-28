@@ -318,11 +318,15 @@ func (j JWK) Validate() error {
 	}
 
 	canComputeThumbprint := len(j.marshal.X5C) > 0
-	if j.marshal.X5T != marshalled.X5T && canComputeThumbprint {
-		return fmt.Errorf("%w: X5T in marshal does not match X5T in marshalled", ErrJWKValidation)
-	}
-	if j.marshal.X5TS256 != marshalled.X5TS256 && canComputeThumbprint {
-		return fmt.Errorf("%w: X5TS256 in marshal does not match X5TS256 in marshalled", ErrJWKValidation)
+	if canComputeThumbprint {
+		err = cmpBase64Octet(j.marshal.X5T, marshalled.X5T, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: X5T in marshal does not match X5T in marshalled", errors.Join(ErrJWKValidation, err))
+		}
+		err = cmpBase64Octet(j.marshal.X5TS256, marshalled.X5TS256, j.options.Validate.StrictPadding)
+		if err != nil {
+			return fmt.Errorf("%w: X5TS256 in marshal does not match X5TS256 in marshalled", errors.Join(ErrJWKValidation, err))
+		}
 	}
 	if j.marshal.CRV != marshalled.CRV {
 		return fmt.Errorf("%w: CRV in marshal does not match CRV in marshalled", ErrJWKValidation)
@@ -397,7 +401,7 @@ func (j JWK) Validate() error {
 			}
 		}
 	case KtyOct:
-		err = cmpBase64Int(j.marshal.K, marshalled.K, j.options.Validate.StrictPadding)
+		err = cmpBase64Octet(j.marshal.K, marshalled.K, j.options.Validate.StrictPadding)
 		if err != nil {
 			return fmt.Errorf("%w: K in marshal does not match K in marshalled", errors.Join(ErrJWKValidation, err))
 		}
@@ -477,7 +481,7 @@ func cmpBase64Int(first, second string, strictPadding bool) error {
 	var b []byte
 	var err error
 	if strictPadding {
-		b, err = base64.RawURLEncoding.DecodeString(first)
+		b, err = base64.RawURLEncoding.Strict().DecodeString(first)
 		if err != nil {
 			return fmt.Errorf("failed to decode Base64 raw URL decode first string: %w", err)
 		}
@@ -490,7 +494,7 @@ func cmpBase64Int(first, second string, strictPadding bool) error {
 	fLen := len(b)
 	f := new(big.Int).SetBytes(b)
 	if strictPadding {
-		b, err = base64.RawURLEncoding.DecodeString(second)
+		b, err = base64.RawURLEncoding.Strict().DecodeString(second)
 		if err != nil {
 			return fmt.Errorf("failed to decode Base64 raw URL decode second string: %w", err)
 		}
@@ -518,11 +522,11 @@ func cmpBase64Octet(first, second string, strictPadding bool) error {
 	var f, s []byte
 	var err error
 	if strictPadding {
-		f, err = base64.RawURLEncoding.DecodeString(first)
+		f, err = base64.RawURLEncoding.Strict().DecodeString(first)
 		if err != nil {
 			return fmt.Errorf("failed to decode Base64 raw URL decode first string: %w", err)
 		}
-		s, err = base64.RawURLEncoding.DecodeString(second)
+		s, err = base64.RawURLEncoding.Strict().DecodeString(second)
 		if err != nil {
 			return fmt.Errorf("failed to decode Base64 raw URL decode second string: %w", err)
 		}

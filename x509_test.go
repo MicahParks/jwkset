@@ -14,35 +14,30 @@ import (
 )
 
 func TestNewJWKFromX5C(t *testing.T) {
-	testCases := []struct {
-		name    string
+	testCases := map[string]struct {
 		raw     []byte
 		keyType any
 	}{
-		{
-			name:    "EC",
+		"EC": {
 			raw:     []byte(ec521Cert),
 			keyType: &ecdsa.PublicKey{},
 		},
-		{
-			name:    "EdDSA",
+		"EdDSA": {
 			raw:     []byte(ed25519Cert),
 			keyType: ed25519.PublicKey{},
 		},
-		{
-			name:    "RSA",
+		"RSA": {
 			raw:     []byte(rsa4096Cert),
 			keyType: &rsa.PublicKey{},
 		},
-		{
-			name:    "Chain",
+		"Chain": {
 			raw:     []byte(ec521Cert + ed25519Cert + rsa4096Cert),
 			keyType: &ecdsa.PublicKey{},
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
 			certs, err := LoadCertificates(testCase.raw)
 			if err != nil {
 				t.Fatal("Failed to load certificates:", err)
@@ -93,26 +88,35 @@ func TestDefaultGetX5U(t *testing.T) {
 }
 
 func TestLoadCertificate(t *testing.T) {
-	b := loadPEM(t, ec521Cert)
-	cert, err := LoadCertificate(b.Bytes)
-	if err != nil {
-		t.Fatal("Failed to load certificate:", err)
+	testCases := map[string]struct {
+		rawPEM  string
+		keyType any
+	}{
+		"EC": {
+			rawPEM:  ec521Cert,
+			keyType: &ecdsa.PublicKey{},
+		},
+		"EdDSA": {
+			rawPEM:  ed25519Cert,
+			keyType: ed25519.PublicKey{},
+		},
+		"RSA": {
+			rawPEM:  rsa4096Cert,
+			keyType: &rsa.PublicKey{},
+		},
 	}
-	_ = cert.PublicKey.(*ecdsa.PublicKey)
-
-	b = loadPEM(t, ed25519Cert)
-	cert, err = LoadCertificate(b.Bytes)
-	if err != nil {
-		t.Fatal("Failed to load certificate:", err)
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			b := loadPEM(t, tc.rawPEM)
+			cert, err := LoadCertificate(b.Bytes)
+			if err != nil {
+				t.Fatal("Failed to load certificate:", err)
+			}
+			if reflect.TypeOf(cert.PublicKey) != reflect.TypeOf(tc.keyType) {
+				t.Fatal("Wrong public key type:", reflect.TypeOf(cert.PublicKey))
+			}
+		})
 	}
-	_ = cert.PublicKey.(ed25519.PublicKey)
-
-	b = loadPEM(t, rsa4096Cert)
-	cert, err = LoadCertificate(b.Bytes)
-	if err != nil {
-		t.Fatal("Failed to load certificate:", err)
-	}
-	_ = cert.PublicKey.(*rsa.PublicKey)
 }
 
 func TestLoadCertificates(t *testing.T) {
@@ -130,80 +134,77 @@ func TestLoadCertificates(t *testing.T) {
 }
 
 func TestLoadX509KeyInfer(t *testing.T) {
-	b := loadPEM(t, ec521Pub)
-	key, err := LoadX509KeyInfer(b)
-	if err != nil {
-		t.Fatal("Failed to load public EC 521 X509 key:", err)
+	testCases := map[string]struct {
+		rawPEM  string // When empty, an empty PEM block is used.
+		keyType any    // When nil, an error is expected.
+		errIs   error  // When non-nil, the returned error must match this error.
+	}{
+		"ECP521Public": {
+			rawPEM:  ec521Pub,
+			keyType: &ecdsa.PublicKey{},
+		},
+		"EdDSAPublic": {
+			rawPEM:  ed25519Pub,
+			keyType: ed25519.PublicKey{},
+		},
+		"RSA4096Public": {
+			rawPEM:  rsa4096Pub,
+			keyType: &rsa.PublicKey{},
+		},
+		"ECP521Private": {
+			rawPEM:  ec521Priv,
+			keyType: &ecdsa.PrivateKey{},
+		},
+		"EdDSAPrivate": {
+			rawPEM:  ed25519Priv,
+			keyType: ed25519.PrivateKey{},
+		},
+		"RSA4096Private": {
+			rawPEM:  rsa4096Priv,
+			keyType: &rsa.PrivateKey{},
+		},
+		"RSA2048PKCS1Private": {
+			rawPEM:  rsa2048PKCS1Priv,
+			keyType: &rsa.PrivateKey{},
+		},
+		"RSA2048PKCS1Public": {
+			rawPEM:  rsa2048PKCS1Pub,
+			keyType: &rsa.PublicKey{},
+		},
+		"ECP256SEC1Private": {
+			rawPEM:  ec256SEC1Priv,
+			keyType: &ecdsa.PrivateKey{},
+		},
+		"EmptyBlock": {
+			errIs: ErrX509Infer,
+		},
+		"MismatchedHeader": {
+			rawPEM: strings.ReplaceAll(rsa2048PKCS1Priv, "RSA PRIVATE KEY", "PRIVATE KEY"),
+		},
 	}
-	_ = key.(*ecdsa.PublicKey)
-
-	b = loadPEM(t, ed25519Pub)
-	key, err = LoadX509KeyInfer(b)
-	if err != nil {
-		t.Fatal("Failed to load public EdDSA X509 key:", err)
-	}
-	_ = key.(ed25519.PublicKey)
-
-	b = loadPEM(t, rsa4096Pub)
-	key, err = LoadX509KeyInfer(b)
-	if err != nil {
-		t.Fatal("Failed to load public RSA 4096 X509 key:", err)
-	}
-	_ = key.(*rsa.PublicKey)
-
-	b = loadPEM(t, ec521Priv)
-	key, err = LoadX509KeyInfer(b)
-	if err != nil {
-		t.Fatal("Failed to load private EC 521 X509 key:", err)
-	}
-	_ = key.(*ecdsa.PrivateKey)
-
-	b = loadPEM(t, ed25519Priv)
-	key, err = LoadX509KeyInfer(b)
-	if err != nil {
-		t.Fatal("Failed to load private EdDSA X509 key:", err)
-	}
-	_ = key.(ed25519.PrivateKey)
-
-	b = loadPEM(t, rsa4096Priv)
-	key, err = LoadX509KeyInfer(b)
-	if err != nil {
-		t.Fatal("Failed to load private RSA 4096 X509 key:", err)
-	}
-	_ = key.(*rsa.PrivateKey)
-
-	b = loadPEM(t, rsa2048PKCS1Priv)
-	key, err = LoadX509KeyInfer(b)
-	if err != nil {
-		t.Fatal("Failed to load private RSA 2048 PKCS1 X509 key:", err)
-	}
-	_ = key.(*rsa.PrivateKey)
-
-	b = loadPEM(t, rsa2048PKCS1Pub)
-	key, err = LoadX509KeyInfer(b)
-	if err != nil {
-		t.Fatal("Failed to load public RSA 2048 PKCS1 X509 key:", err)
-	}
-	_ = key.(*rsa.PublicKey)
-
-	b = loadPEM(t, ec256SEC1Priv)
-	key, err = LoadX509KeyInfer(b)
-	if err != nil {
-		t.Fatal("Failed to load private EC P256 X509 key:", err)
-	}
-	_ = key.(*ecdsa.PrivateKey)
-
-	b = &pem.Block{}
-	_, err = LoadX509KeyInfer(b)
-	if !errors.Is(err, ErrX509Infer) {
-		t.Fatal("Should have failed to infer X509 key type:", err)
-	}
-
-	replaced := strings.ReplaceAll(rsa2048PKCS1Priv, "RSA PRIVATE KEY", "PRIVATE KEY")
-	b = loadPEM(t, replaced)
-	_, err = LoadX509KeyInfer(b)
-	if err == nil {
-		t.Fatal("Should have failed to infer X509 key type.")
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			b := &pem.Block{}
+			if tc.rawPEM != "" {
+				b = loadPEM(t, tc.rawPEM)
+			}
+			key, err := LoadX509KeyInfer(b)
+			if tc.keyType == nil {
+				if err == nil {
+					t.Fatal("Should have failed to infer X509 key type.")
+				}
+				if tc.errIs != nil && !errors.Is(err, tc.errIs) {
+					t.Fatal("Wrong error for failed X509 key type inference:", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal("Failed to load X509 key:", err)
+			}
+			if reflect.TypeOf(key) != reflect.TypeOf(tc.keyType) {
+				t.Fatal("Wrong key type:", reflect.TypeOf(key))
+			}
+		})
 	}
 }
 

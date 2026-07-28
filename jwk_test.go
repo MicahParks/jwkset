@@ -53,58 +53,46 @@ func TestThumbprint(t *testing.T) {
 		thumbprintScenarioMissing
 		thumbprintScenarioNoCert
 	)
-	testCases := []struct {
-		name            string
+	testCases := map[string]struct {
 		x5tScenario     thumbprintScenario
 		x5tS256Scenario thumbprintScenario
 	}{
-		{
-			name: "CorrectX5TAndX5T#S256",
-		},
-		{
-			name:        "MissingX5T",
+		"CorrectX5TAndX5T#S256": {},
+		"MissingX5T": {
 			x5tScenario: thumbprintScenarioMissing,
 		},
-		{
-			name:            "MissingX5T#S256",
+		"MissingX5T#S256": {
 			x5tS256Scenario: thumbprintScenarioMissing,
 		},
-		{
-			name:            "MissingX5TAndX5T#S256",
+		"MissingX5TAndX5T#S256": {
 			x5tScenario:     thumbprintScenarioMissing,
 			x5tS256Scenario: thumbprintScenarioMissing,
 		},
-		{
-			name:        "IncorrectX5T",
+		"IncorrectX5T": {
 			x5tScenario: thumbprintScenarioIncorrect,
 		},
-		{
-			name:            "IncorrectX5T#S256",
+		"IncorrectX5T#S256": {
 			x5tS256Scenario: thumbprintScenarioIncorrect,
 		},
-		{
-			name:            "IncorrectX5TAndX5T#S256",
+		"IncorrectX5TAndX5T#S256": {
 			x5tScenario:     thumbprintScenarioIncorrect,
 			x5tS256Scenario: thumbprintScenarioIncorrect,
 		},
-		{
-			name:            "NoCertX5T",
+		"NoCertX5T": {
 			x5tScenario:     thumbprintScenarioNoCert,
 			x5tS256Scenario: thumbprintScenarioMissing,
 		},
-		{
-			name:            "NoCertX5T#S256",
+		"NoCertX5T#S256": {
 			x5tScenario:     thumbprintScenarioMissing,
 			x5tS256Scenario: thumbprintScenarioNoCert,
 		},
-		{
-			name:            "NoCertX5TAndX5T#S256",
+		"NoCertX5TAndX5T#S256": {
 			x5tScenario:     thumbprintScenarioNoCert,
 			x5tS256Scenario: thumbprintScenarioNoCert,
 		},
 	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
 			block, _ := pem.Decode([]byte(ed25519Cert))
 			cert, err := LoadCertificate(block.Bytes)
 			if err != nil {
@@ -218,27 +206,22 @@ func TestJWK_Validate(t *testing.T) {
 }
 
 func TestJWK_Validate_Padding(t *testing.T) {
-	const invalidRSAModulusPadding = `
+	testCases := map[string]struct {
+		rawJSON        string
+		marshalOptions JWKMarshalOptions
+		strictErrIs    error // When non-nil, the strict padding validation error must match this error.
+	}{
+		"RSAModulus": {
+			rawJSON: `
 {
   "kty": "RSA",
   "n": "AOpF5dwoCpmW2Th5kBaKDZmygOlyQSJm3JqwGvPTTViHCs4ZitlLF9za9-DPxP3zoNaryEYlFfLhYOFVS7mUjMGtLNTkLafBSIIoF28sy_z1GruxJ2aFchazBimxI1B0MXTKdIw4V268klrOECO5FIcHar7EV9W0XqToFon3oVvHWw3qkPV4o-A7Gdrh3Yh7vRUE_T5XCLYD9jO41nAqYhWYRGN-Kxu51x6VMa595TXTrpzgYGDba1MLQzB9qcHRIvRskt7Gh8M0zgcyo6c6jvktaEzh0j2kdL2JCAFHhMXUZedRUOpeqkEehpxDDR0Deiz7UPlMe6l8Ots97Wm357bgajDcxnqaGGEF5GIkr7xHw15DrTfOWPY35f0sHjNTOn9AU2bPWTy6oHZPhoFjHdSNp3UOIunnf1eXRlTa7YZ5PLmbFFyjNNSnQdcOHgKx1lJExJqXCAJ2pBkp0dX65uiqCLz4WZBcmCHGToi4mvQ5wpFqgUJ_6N8HXpP5ZLZ-hQ",
   "e": "AQAB"
-}`
-	jwk, err := NewJWKFromRawJSON([]byte(invalidRSAModulusPadding), JWKMarshalOptions{}, JWKValidateOptions{})
-	if err != nil {
-		t.Fatalf("Failed to create JWK from raw JSON. %s", err)
-	}
-	err = jwk.Validate()
-	if err != nil {
-		t.Fatalf("Failed to validate RSA JWK with acceptably invalid padding. %s", err)
-	}
-	jwk.options.Validate.StrictPadding = true
-	err = jwk.Validate()
-	if !errors.Is(err, ErrPadding) {
-		t.Fatalf("Expected to fail validation for invalid RSA modulus padding.")
-	}
-
-	const invalidECDSAPadding = `
+}`,
+			strictErrIs: ErrPadding,
+		},
+		"ECDSA": {
+			rawJSON: `
 {
   "kty": "EC",
   "crv": "P-521",
@@ -246,41 +229,115 @@ func TestJWK_Validate_Padding(t *testing.T) {
   "y": "TZAwFszO_oiyvncIviOJdi8MU8VDfZo8Y3q0Z-AxaPDUFQS8aRDCHUzukj6RCNZsRCWd0HGOayIhV_uQZrB_Xbc",
   "d": "AZHsd9nLaXHFWH4wjiW5XcCrIO9AWl4Y0aV64kagRFPnWjljC6VxCsFF5IM0vTzCWKdlwFLEIgJO0pfwWlQMXKef"
 }
-`
-	jwk, err = NewJWKFromRawJSON([]byte(invalidECDSAPadding), JWKMarshalOptions{}, JWKValidateOptions{})
-	if err != nil {
-		t.Fatalf("Failed to create JWK from raw JSON. %s", err)
-	}
-	err = jwk.Validate()
-	if err != nil {
-		t.Fatalf("Failed to validate ECDSA JWK with acceptably invalid padding. %s", err)
-	}
-	jwk.options.Validate.StrictPadding = true
-	err = jwk.Validate()
-	if !errors.Is(err, ErrPadding) {
-		t.Fatalf("Expected to fail validation for invalid ECDSA padding.")
-	}
-}
-
-func TestJWK_Validate_Padding_OKP(t *testing.T) {
-	const invalidOKPPadding = `
+`,
+			strictErrIs: ErrPadding,
+		},
+		"Ed25519": {
+			rawJSON: `
 {
   "kty": "OKP",
   "crv": "Ed25519",
   "x": "8vD0Rexp6F8V6JbRvp3KXa5mJeVd9IrGh9fwwhgInfk="
-}`
-	jwk, err := NewJWKFromRawJSON([]byte(invalidOKPPadding), JWKMarshalOptions{}, JWKValidateOptions{})
+}`,
+		},
+		"Ed25519Private": {
+			rawJSON: `
+{
+  "kty": "OKP",
+  "crv": "Ed25519",
+  "x": "44Z2r8ZJX6rvWYzXXoxt0IaDnXdubKCXAqNq8-0Q9Yg=",
+  "d": "M-KPMMAB7n7FYx0r-ZUYuOtUeCymFzsr0p6b_60HWWc="
+}`,
+			marshalOptions: JWKMarshalOptions{Private: true},
+		},
+		// The final base64url character of "x" differs from the canonical encoding only in its unused trailing bits.
+		"Ed25519TrailingBits": {
+			rawJSON: `
+{
+  "kty": "OKP",
+  "crv": "Ed25519",
+  "x": "8vD0Rexp6F8V6JbRvp3KXa5mJeVd9IrGh9fwwhgInfl"
+}`,
+		},
+		"X25519": {
+			rawJSON: `
+{
+  "kty": "OKP",
+  "crv": "X25519",
+  "x": "fGMcCrO_gWS7rva_PpXiS7D5-2OppjZQLlZmdRUSN0g="
+}`,
+		},
+		"X25519Private": {
+			rawJSON: `
+{
+  "kty": "OKP",
+  "crv": "X25519",
+  "x": "fGMcCrO_gWS7rva_PpXiS7D5-2OppjZQLlZmdRUSN0g=",
+  "d": "GIu7AbclXA1FtVswPBUileBckbJu2B9UUhZPTebrox4="
+}`,
+			marshalOptions: JWKMarshalOptions{Private: true},
+		},
+		"Oct": {
+			rawJSON: `
+{
+  "kty": "oct",
+  "k": "GawgguFyGrWKav7AX4VKUg=="
+}`,
+			marshalOptions: JWKMarshalOptions{Private: true},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			jwk, err := NewJWKFromRawJSON([]byte(tc.rawJSON), tc.marshalOptions, JWKValidateOptions{})
+			if err != nil {
+				t.Fatalf("Failed to create JWK from raw JSON. %s", err)
+			}
+			err = jwk.Validate()
+			if err != nil {
+				t.Fatalf("Failed to validate JWK with acceptably invalid padding. %s", err)
+			}
+			jwk.options.Validate.StrictPadding = true
+			err = jwk.Validate()
+			if err == nil {
+				t.Fatalf("Expected to fail validation for invalid padding.")
+			}
+			if tc.strictErrIs != nil && !errors.Is(err, tc.strictErrIs) {
+				t.Fatalf("Expected strict padding validation error to match %s. Got: %s", tc.strictErrIs, err)
+			}
+		})
+	}
+}
+
+func TestJWK_Validate_Padding_Thumbprint(t *testing.T) {
+	block, _ := pem.Decode([]byte(ed25519Cert))
+	cert, err := LoadCertificate(block.Bytes)
 	if err != nil {
-		t.Fatalf("Failed to create JWK from raw JSON. %s", err)
+		t.Fatalf("Failed to load certificate. %s", err)
+	}
+	options := JWKOptions{
+		X509: JWKX509Options{
+			X5C: []*x509.Certificate{cert},
+		},
+	}
+	jwk, err := NewJWKFromKey(cert.PublicKey, options)
+	if err != nil {
+		t.Fatalf("Failed to create JWK from key. %s", err)
+	}
+	marshal := jwk.Marshal()
+	marshal.X5T += "="
+	marshal.X5TS256 += "="
+	jwk, err = NewJWKFromMarshal(marshal, JWKMarshalOptions{}, JWKValidateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create JWK from marshal with padded thumbprints. %s", err)
 	}
 	err = jwk.Validate()
 	if err != nil {
-		t.Fatalf("Failed to validate OKP JWK with acceptably invalid padding. %s", err)
+		t.Fatalf("Failed to validate JWK with acceptably invalid thumbprint padding. %s", err)
 	}
 	jwk.options.Validate.StrictPadding = true
 	err = jwk.Validate()
 	if err == nil {
-		t.Fatalf("Expected to fail validation for invalid OKP padding.")
+		t.Fatalf("Expected to fail validation for invalid thumbprint padding.")
 	}
 }
 
@@ -289,59 +346,122 @@ func TestCmpBase64Int(t *testing.T) {
 	bytesA := big.NewInt(intA).Bytes()
 	intB := int64(987_654_321)
 	bytesB := big.NewInt(intB).Bytes()
-	testCases := []struct {
-		name    string
+	testCases := map[string]struct {
 		first   string
 		second  string
 		strict  bool
 		wantErr bool
 	}{
-		{
-			name:    "SameStrict",
+		"SameStrict": {
 			first:   base64.RawURLEncoding.EncodeToString(bytesA),
 			second:  base64.RawURLEncoding.EncodeToString(bytesA),
 			strict:  true,
 			wantErr: false,
 		},
-		{
-			name:    "SameNotStrict",
+		"SameNotStrict": {
 			first:   base64.RawURLEncoding.EncodeToString(bytesA),
 			second:  base64.RawURLEncoding.EncodeToString(bytesA),
 			strict:  false,
 			wantErr: false,
 		},
-		{
-			name:    "DifferentPaddingStrict",
+		"DifferentPaddingStrict": {
 			first:   base64.RawURLEncoding.EncodeToString(bytesA),
 			second:  base64.URLEncoding.EncodeToString(bytesA),
 			strict:  true,
 			wantErr: true,
 		},
-		{
-			name:    "DifferentPaddingNotStrict",
+		"DifferentPaddingNotStrict": {
 			first:   base64.RawURLEncoding.EncodeToString(bytesA),
 			second:  base64.URLEncoding.EncodeToString(bytesA),
 			strict:  false,
 			wantErr: false,
 		},
-		{
-			name:    "DifferentStrict",
+		"DifferentStrict": {
 			first:   base64.RawURLEncoding.EncodeToString(bytesA),
 			second:  base64.RawURLEncoding.EncodeToString(bytesB),
 			strict:  true,
 			wantErr: true,
 		},
-		{
-			name:    "DifferentNotStrict",
+		"DifferentNotStrict": {
 			first:   base64.RawURLEncoding.EncodeToString(bytesA),
 			second:  base64.RawURLEncoding.EncodeToString(bytesB),
 			strict:  false,
 			wantErr: true,
 		},
 	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
 			err := cmpBase64Int(tc.first, tc.second, tc.strict)
+			if tc.wantErr == (err == nil) {
+				t.Fatalf("Expected error %v, got %v", tc.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestCmpBase64Octet(t *testing.T) {
+	octetsA := []byte{0x07, 0x5B, 0xCD, 0x15}
+	octetsB := []byte{0x07, 0x5B, 0xCD, 0x16}
+	testCases := map[string]struct {
+		first   string
+		second  string
+		strict  bool
+		wantErr bool
+	}{
+		"SameStrict": {
+			first:   base64.RawURLEncoding.EncodeToString(octetsA),
+			second:  base64.RawURLEncoding.EncodeToString(octetsA),
+			strict:  true,
+			wantErr: false,
+		},
+		"SameNotStrict": {
+			first:   base64.RawURLEncoding.EncodeToString(octetsA),
+			second:  base64.RawURLEncoding.EncodeToString(octetsA),
+			strict:  false,
+			wantErr: false,
+		},
+		"DifferentPaddingStrict": {
+			first:   base64.RawURLEncoding.EncodeToString(octetsA),
+			second:  base64.URLEncoding.EncodeToString(octetsA),
+			strict:  true,
+			wantErr: true,
+		},
+		"DifferentPaddingNotStrict": {
+			first:   base64.RawURLEncoding.EncodeToString(octetsA),
+			second:  base64.URLEncoding.EncodeToString(octetsA),
+			strict:  false,
+			wantErr: false,
+		},
+		"DifferentStrict": {
+			first:   base64.RawURLEncoding.EncodeToString(octetsA),
+			second:  base64.RawURLEncoding.EncodeToString(octetsB),
+			strict:  true,
+			wantErr: true,
+		},
+		"DifferentNotStrict": {
+			first:   base64.RawURLEncoding.EncodeToString(octetsA),
+			second:  base64.RawURLEncoding.EncodeToString(octetsB),
+			strict:  false,
+			wantErr: true,
+		},
+		// The canonical encoding of octetsA is "B1vNFQ". The final character of "B1vNFR" differs from the canonical
+		// encoding only in its unused trailing bits, so it decodes to octetsA unless strict decoding is used.
+		"TrailingBitsStrict": {
+			first:   "B1vNFR",
+			second:  base64.RawURLEncoding.EncodeToString(octetsA),
+			strict:  true,
+			wantErr: true,
+		},
+		"TrailingBitsNotStrict": {
+			first:   "B1vNFR",
+			second:  base64.RawURLEncoding.EncodeToString(octetsA),
+			strict:  false,
+			wantErr: false,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := cmpBase64Octet(tc.first, tc.second, tc.strict)
 			if tc.wantErr == (err == nil) {
 				t.Fatalf("Expected error %v, got %v", tc.wantErr, err)
 			}
