@@ -206,13 +206,22 @@ func TestJWK_Validate(t *testing.T) {
 }
 
 func TestJWK_Validate_Padding(t *testing.T) {
-	const invalidRSAModulusPadding = `
+	testCases := map[string]struct {
+		rawJSON        string
+		marshalOptions JWKMarshalOptions
+		strictErrIs    error // When non-nil, the strict padding validation error must match this error.
+	}{
+		"RSAModulus": {
+			rawJSON: `
 {
   "kty": "RSA",
   "n": "AOpF5dwoCpmW2Th5kBaKDZmygOlyQSJm3JqwGvPTTViHCs4ZitlLF9za9-DPxP3zoNaryEYlFfLhYOFVS7mUjMGtLNTkLafBSIIoF28sy_z1GruxJ2aFchazBimxI1B0MXTKdIw4V268klrOECO5FIcHar7EV9W0XqToFon3oVvHWw3qkPV4o-A7Gdrh3Yh7vRUE_T5XCLYD9jO41nAqYhWYRGN-Kxu51x6VMa595TXTrpzgYGDba1MLQzB9qcHRIvRskt7Gh8M0zgcyo6c6jvktaEzh0j2kdL2JCAFHhMXUZedRUOpeqkEehpxDDR0Deiz7UPlMe6l8Ots97Wm357bgajDcxnqaGGEF5GIkr7xHw15DrTfOWPY35f0sHjNTOn9AU2bPWTy6oHZPhoFjHdSNp3UOIunnf1eXRlTa7YZ5PLmbFFyjNNSnQdcOHgKx1lJExJqXCAJ2pBkp0dX65uiqCLz4WZBcmCHGToi4mvQ5wpFqgUJ_6N8HXpP5ZLZ-hQ",
   "e": "AQAB"
-}`
-	const invalidECDSAPadding = `
+}`,
+			strictErrIs: ErrPadding,
+		},
+		"ECDSA": {
+			rawJSON: `
 {
   "kty": "EC",
   "crv": "P-521",
@@ -220,77 +229,60 @@ func TestJWK_Validate_Padding(t *testing.T) {
   "y": "TZAwFszO_oiyvncIviOJdi8MU8VDfZo8Y3q0Z-AxaPDUFQS8aRDCHUzukj6RCNZsRCWd0HGOayIhV_uQZrB_Xbc",
   "d": "AZHsd9nLaXHFWH4wjiW5XcCrIO9AWl4Y0aV64kagRFPnWjljC6VxCsFF5IM0vTzCWKdlwFLEIgJO0pfwWlQMXKef"
 }
-`
-	const invalidEd25519Padding = `
+`,
+			strictErrIs: ErrPadding,
+		},
+		"Ed25519": {
+			rawJSON: `
 {
   "kty": "OKP",
   "crv": "Ed25519",
   "x": "8vD0Rexp6F8V6JbRvp3KXa5mJeVd9IrGh9fwwhgInfk="
-}`
-	const invalidEd25519PrivatePadding = `
+}`,
+		},
+		"Ed25519Private": {
+			rawJSON: `
 {
   "kty": "OKP",
   "crv": "Ed25519",
   "x": "44Z2r8ZJX6rvWYzXXoxt0IaDnXdubKCXAqNq8-0Q9Yg=",
   "d": "M-KPMMAB7n7FYx0r-ZUYuOtUeCymFzsr0p6b_60HWWc="
-}`
-	// The final base64url character differs from the canonical encoding only in its unused trailing bits.
-	const invalidEd25519TrailingBits = `
+}`,
+			marshalOptions: JWKMarshalOptions{Private: true},
+		},
+		// The final base64url character of "x" differs from the canonical encoding only in its unused trailing bits.
+		"Ed25519TrailingBits": {
+			rawJSON: `
 {
   "kty": "OKP",
   "crv": "Ed25519",
   "x": "8vD0Rexp6F8V6JbRvp3KXa5mJeVd9IrGh9fwwhgInfl"
-}`
-	const invalidX25519Padding = `
+}`,
+		},
+		"X25519": {
+			rawJSON: `
 {
   "kty": "OKP",
   "crv": "X25519",
   "x": "fGMcCrO_gWS7rva_PpXiS7D5-2OppjZQLlZmdRUSN0g="
-}`
-	const invalidX25519PrivatePadding = `
+}`,
+		},
+		"X25519Private": {
+			rawJSON: `
 {
   "kty": "OKP",
   "crv": "X25519",
   "x": "fGMcCrO_gWS7rva_PpXiS7D5-2OppjZQLlZmdRUSN0g=",
   "d": "GIu7AbclXA1FtVswPBUileBckbJu2B9UUhZPTebrox4="
-}`
-	const invalidOctPadding = `
-{
-  "kty": "oct",
-  "k": "GawgguFyGrWKav7AX4VKUg=="
-}`
-	testCases := map[string]struct {
-		rawJSON        string
-		marshalOptions JWKMarshalOptions
-		strictErrIs    error // When non-nil, the strict padding validation error must match this error.
-	}{
-		"RSAModulus": {
-			rawJSON:     invalidRSAModulusPadding,
-			strictErrIs: ErrPadding,
-		},
-		"ECDSA": {
-			rawJSON:     invalidECDSAPadding,
-			strictErrIs: ErrPadding,
-		},
-		"Ed25519": {
-			rawJSON: invalidEd25519Padding,
-		},
-		"Ed25519Private": {
-			rawJSON:        invalidEd25519PrivatePadding,
-			marshalOptions: JWKMarshalOptions{Private: true},
-		},
-		"Ed25519TrailingBits": {
-			rawJSON: invalidEd25519TrailingBits,
-		},
-		"X25519": {
-			rawJSON: invalidX25519Padding,
-		},
-		"X25519Private": {
-			rawJSON:        invalidX25519PrivatePadding,
+}`,
 			marshalOptions: JWKMarshalOptions{Private: true},
 		},
 		"Oct": {
-			rawJSON:        invalidOctPadding,
+			rawJSON: `
+{
+  "kty": "oct",
+  "k": "GawgguFyGrWKav7AX4VKUg=="
+}`,
 			marshalOptions: JWKMarshalOptions{Private: true},
 		},
 	}
@@ -410,9 +402,6 @@ func TestCmpBase64Int(t *testing.T) {
 func TestCmpBase64Octet(t *testing.T) {
 	octetsA := []byte{0x07, 0x5B, 0xCD, 0x15}
 	octetsB := []byte{0x07, 0x5B, 0xCD, 0x16}
-	// The canonical encoding of octetsA is "B1vNFQ". The final character of trailingBitsA differs from the canonical
-	// encoding only in its unused trailing bits, so it decodes to octetsA unless strict decoding is used.
-	const trailingBitsA = "B1vNFR"
 	testCases := map[string]struct {
 		first   string
 		second  string
@@ -455,14 +444,16 @@ func TestCmpBase64Octet(t *testing.T) {
 			strict:  false,
 			wantErr: true,
 		},
+		// The canonical encoding of octetsA is "B1vNFQ". The final character of "B1vNFR" differs from the canonical
+		// encoding only in its unused trailing bits, so it decodes to octetsA unless strict decoding is used.
 		"TrailingBitsStrict": {
-			first:   trailingBitsA,
+			first:   "B1vNFR",
 			second:  base64.RawURLEncoding.EncodeToString(octetsA),
 			strict:  true,
 			wantErr: true,
 		},
 		"TrailingBitsNotStrict": {
-			first:   trailingBitsA,
+			first:   "B1vNFR",
 			second:  base64.RawURLEncoding.EncodeToString(octetsA),
 			strict:  false,
 			wantErr: false,
