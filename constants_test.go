@@ -16,9 +16,16 @@ func TestALG(t *testing.T) {
 	if !a.IANARegistered() {
 		t.Errorf("Failed to validate valid ALG.")
 	}
+	if a.Prohibited() {
+		t.Errorf("Non-prohibited ALG reported as prohibited.")
+	}
 	a = invalid
 	if a.IANARegistered() {
 		t.Errorf("Do not validate invalid ALG.")
+	}
+	a = AlgHS1
+	if !a.Prohibited() {
+		t.Errorf("Prohibited ALG not reported as prohibited.")
 	}
 }
 
