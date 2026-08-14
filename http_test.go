@@ -10,8 +10,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 func TestClient(t *testing.T) {
@@ -463,5 +466,90 @@ func TestRequireSupportedKeys(t *testing.T) {
 	clientStore, err = NewStorageFromHTTP(server.URL, options)
 	if !errors.Is(err, ErrUnsupportedKey) {
 		t.Fatalf("Expected ErrUnsupportedKey, got %s", err)
+	}
+}
+
+func TestClientConcurrentUnknownKIDThunderingHerd(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	kid := "key-1"
+	secret := []byte("my-hmac-secret")
+	serverStore := NewMemoryStorage()
+	jwk, err := NewJWKFromKey(secret, JWKOptions{
+		Marshal:  JWKMarshalOptions{Private: true},
+		Metadata: JWKMetadataOptions{KID: kid},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create JWK: %s", err)
+	}
+	if err := serverStore.KeyWrite(ctx, jwk); err != nil {
+		t.Fatalf("Failed to write JWK: %s", err)
+	}
+	rawJWKS, err := serverStore.JSON(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get JSON: %s", err)
+	}
+
+	var requestCount atomic.Int32
+	rawJWKSMux := sync.RWMutex{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount.Add(1)
+		rawJWKSMux.RLock()
+		defer rawJWKSMux.RUnlock()
+		_, _ = w.Write(rawJWKS)
+	}))
+	defer server.Close()
+
+	storage, err := NewStorageFromHTTP(server.URL, HTTPClientStorageOptions{
+		Ctx:                       ctx,
+		NoErrorReturnFirstHTTPReq: true,
+		RefreshInterval:           0,
+	})
+	if err != nil {
+		t.Fatalf("Failed to create storage: %s", err)
+	}
+
+	clientOptions := HTTPClientOptions{
+		HTTPURLs:          map[string]Storage{server.URL: storage},
+		PrioritizeHTTP:    true,
+		RateLimitWaitMax:  10 * time.Second,
+		RefreshUnknownKID: rate.NewLimiter(rate.Every(100*time.Millisecond), 1),
+	}
+	client, err := NewHTTPClient(clientOptions)
+	if err != nil {
+		t.Fatalf("Failed to create client: %s", err)
+	}
+
+	_, err = client.KeyRead(ctx, kid)
+	if err != nil {
+		t.Fatalf("Initial KeyRead failed: %s", err)
+	}
+
+	ok, err := client.KeyDelete(ctx, kid)
+	if err != nil || !ok {
+		t.Fatalf("Failed to delete key from cache")
+	}
+
+	requestCount.Store(0)
+
+	const goroutines = 5
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	barrier := make(chan struct{})
+
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			<-barrier
+			_, _ = client.KeyRead(ctx, kid)
+		}()
+	}
+	close(barrier)
+	wg.Wait()
+
+	refreshes := requestCount.Load()
+	if refreshes != 1 {
+		t.Fatalf("Expected 1 refresh, got %d", refreshes)
 	}
 }

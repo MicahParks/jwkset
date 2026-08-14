@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"golang.org/x/sync/singleflight"
 	"golang.org/x/time/rate"
 )
 
@@ -41,6 +42,7 @@ type httpClient struct {
 	prioritizeHTTP    bool
 	rateLimitWaitMax  time.Duration
 	refreshUnknownKID *rate.Limiter
+	refreshGroup      *singleflight.Group
 }
 
 // NewHTTPClient creates a new JWK Set client from remote HTTP resources.
@@ -67,6 +69,7 @@ func NewHTTPClient(options HTTPClientOptions) (Storage, error) {
 		prioritizeHTTP:    options.PrioritizeHTTP,
 		rateLimitWaitMax:  options.RateLimitWaitMax,
 		refreshUnknownKID: options.RefreshUnknownKID,
+		refreshGroup:      &singleflight.Group{},
 	}
 	return c, nil
 }
@@ -165,26 +168,31 @@ func (c httpClient) KeyRead(ctx context.Context, keyID string) (jwk JWK, err err
 		}
 	}
 	if c.refreshUnknownKID != nil {
-		var cancel context.CancelFunc = func() {}
-		if c.rateLimitWaitMax > 0 {
-			ctx, cancel = context.WithTimeout(ctx, c.rateLimitWaitMax)
-		}
-		defer cancel()
-		err = c.refreshUnknownKID.Wait(ctx)
-		if err != nil {
-			return JWK{}, fmt.Errorf("failed to wait for JWK Set refresh rate limiter due to error: %w", err)
-		}
-		for _, store := range c.httpURLs {
+		for u, store := range c.httpURLs {
 			s, ok := store.(httpStorage)
 			if !ok {
 				continue
 			}
-			err = s.refresh(ctx)
-			if err != nil {
-				if s.options.RefreshErrorHandler != nil {
-					s.options.RefreshErrorHandler(ctx, err)
+			_, err, _ = c.refreshGroup.Do(u, func() (interface{}, error) {
+				var cancel context.CancelFunc = func() {}
+				if c.rateLimitWaitMax > 0 {
+					ctx, cancel = context.WithTimeout(ctx, c.rateLimitWaitMax)
 				}
-				continue
+				defer cancel()
+				err := c.refreshUnknownKID.Wait(ctx)
+				if err != nil {
+					return nil, fmt.Errorf("failed to wait for JWK Set refresh rate limiter due to error: %w", err)
+				}
+				err = s.refresh(ctx)
+				if err != nil {
+					if s.options.RefreshErrorHandler != nil {
+						s.options.RefreshErrorHandler(ctx, err)
+					}
+				}
+				return nil, nil
+			})
+			if err != nil {
+				return JWK{}, err
 			}
 			jwk, err = store.KeyRead(ctx, keyID)
 			switch {
