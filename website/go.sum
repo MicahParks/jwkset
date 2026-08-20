@@ -1,7 +1,7 @@
 github.com/MicahParks/jsontype v0.6.1 h1:yFiDEOgSCDT+Es8k17PYZkvpqbZJ9GxJH2ioeVGvgt0=
 github.com/MicahParks/jsontype v0.6.1/go.mod h1:PVeg4g8eHt4QDlhe56X1sWzRuHiVlCg4m0vgkpEso/Y=
-github.com/MicahParks/jwkset v0.11.0 h1:yc0zG+jCvZpWgFDFmvs8/8jqqVBG9oyIbmBtmjOhoyQ=
-github.com/MicahParks/jwkset v0.11.0/go.mod h1:U2oRhRaLgDCLjtpGL2GseNKGmZtLs/3O7p+OZaL5vo0=
+github.com/MicahParks/jwkset v0.11.3 h1:Phli4RdTDdIdLXZpuO7abkwZyzIk0RDTUPVVBHPRdkQ=
+github.com/MicahParks/jwkset v0.11.3/go.mod h1:U2oRhRaLgDCLjtpGL2GseNKGmZtLs/3O7p+OZaL5vo0=
 github.com/MicahParks/recaptcha v0.0.5 h1:RvKq7E1BZJtz5ubSkBun20jXxIsMWt2oZ0ppTJOzX1A=
 github.com/MicahParks/recaptcha v0.0.5/go.mod h1:aFv3iZDDs6Pbi6tRpUm8gofaTUnDxOQ27x5KsK0CZwE=
 github.com/MicahParks/templater v0.0.3 h1:RzWpZMVWMaO+1Uolla1lCLNlwkmusbQQjAXLSCKZnYo=
