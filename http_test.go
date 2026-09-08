@@ -465,3 +465,31 @@ func TestRequireSupportedKeys(t *testing.T) {
 		t.Fatalf("Expected ErrUnsupportedKey, got %s", err)
 	}
 }
+
+func TestNewStorageFromHTTP_MaxBytes(t *testing.T) {
+	large := `{"keys":[{"kty":"oct","k":"AAAA","kid":"` + strings.Repeat("A", 1<<20) + `"}]}`
+	largeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(large))
+	}))
+	defer largeServer.Close()
+
+	// Without a limit (the default), a large body is accepted.
+	if _, err := NewStorageFromHTTP(largeServer.URL, HTTPClientStorageOptions{}); err != nil {
+		t.Fatalf("Expected no error without a limit.\nError: %s", err)
+	}
+
+	// With MaxBytes set, a body over the limit is rejected before parsing.
+	if _, err := NewStorageFromHTTP(largeServer.URL, HTTPClientStorageOptions{MaxBytes: 1 << 10}); !errors.Is(err, ErrResponseTooLarge) {
+		t.Fatalf("Expected ErrResponseTooLarge, got %s", err)
+	}
+
+	// With MaxBytes set, a body within the limit is accepted.
+	small := `{"keys":[{"kty":"oct","k":"AAAA","kid":"k1"}]}`
+	smallServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(small))
+	}))
+	defer smallServer.Close()
+	if _, err := NewStorageFromHTTP(smallServer.URL, HTTPClientStorageOptions{MaxBytes: 1 << 20}); err != nil {
+		t.Fatalf("Expected no error within the limit.\nError: %s", err)
+	}
+}
