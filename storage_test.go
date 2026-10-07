@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 )
@@ -220,6 +221,121 @@ func TestMemoryKeyWrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to overwrite key. %s", err)
 	}
+	key, err := store.KeyRead(params.ctx, kidWritten)
+	if err != nil {
+		t.Fatalf("Failed to read overwritten key. %s", err)
+	}
+	if !bytes.Equal(key.Key().([]byte), hmacKey2) {
+		t.Fatal("Read the original key after overwriting it.")
+	}
+}
+
+func TestMemoryKeyWriteOverwrite(t *testing.T) {
+	ids := []string{"first", "middle", "last"}
+	for index, id := range ids {
+		t.Run(id, func(t *testing.T) {
+			ctx := context.Background()
+			store := NewMemoryStorage()
+			for _, keyID := range ids {
+				if err := store.KeyWrite(ctx, newStorageTestJWK(t, hmacKey1, keyID)); err != nil {
+					t.Fatal(err)
+				}
+			}
+			before, err := store.KeyReadAll(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for rotation := 0; rotation < 10; rotation++ {
+				secret := []byte{byte(rotation)}
+				if err := store.KeyWrite(ctx, newStorageTestJWK(t, secret, id)); err != nil {
+					t.Fatal(err)
+				}
+				key, err := store.KeyRead(ctx, id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(key.Key().([]byte), secret) {
+					t.Fatal("Read the original key after overwriting it.")
+				}
+				keys, err := store.KeyReadAll(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(keys) != len(ids) {
+					t.Fatalf("Expected %d keys after overwrite, got %d.", len(ids), len(keys))
+				}
+				for i, key := range keys {
+					if key.Marshal().KID != ids[i] {
+						t.Fatal("Overwrite changed the order of stored keys.")
+					}
+					want := hmacKey1
+					if i == index {
+						want = secret
+					}
+					if !bytes.Equal(key.Key().([]byte), want) {
+						t.Fatal("Snapshot contains incorrect key material.")
+					}
+				}
+			}
+			if !bytes.Equal(before[index].Key().([]byte), hmacKey1) {
+				t.Fatal("Overwrite changed an earlier snapshot.")
+			}
+			if ok, err := store.KeyDelete(ctx, id); err != nil || !ok {
+				t.Fatalf("Failed to delete overwritten key: %v, %v.", ok, err)
+			}
+			if _, err := store.KeyRead(ctx, id); !errors.Is(err, ErrKeyNotFound) {
+				t.Fatalf("Overwritten key remains after deletion: %v.", err)
+			}
+		})
+	}
+}
+
+func TestMemoryKeyWriteWithoutID(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStorage()
+	for _, secret := range [][]byte{hmacKey1, hmacKey2} {
+		if err := store.KeyWrite(ctx, newStorageTestJWK(t, secret, "")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	keys, err := store.KeyReadAll(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(keys) != 2 {
+		t.Fatalf("Expected both unnamed keys, got %d.", len(keys))
+	}
+	if !bytes.Equal(keys[0].Key().([]byte), hmacKey1) || !bytes.Equal(keys[1].Key().([]byte), hmacKey2) {
+		t.Fatal("Unnamed keys changed.")
+	}
+}
+
+func TestMemoryKeyWriteConcurrent(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStorage()
+	keys := []JWK{newStorageTestJWK(t, hmacKey1, kidWritten), newStorageTestJWK(t, hmacKey2, kidWritten)}
+	if err := store.KeyWrite(ctx, keys[0]); err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	for _, key := range keys {
+		wg.Add(1)
+		go func(key JWK) {
+			defer wg.Done()
+			for i := 0; i < 100; i++ {
+				if err := store.KeyWrite(ctx, key); err != nil {
+					t.Error(err)
+					return
+				}
+				all, err := store.KeyReadAll(ctx)
+				if err != nil || len(all) != 1 {
+					t.Errorf("Expected one key during concurrent overwrites: %d, %v.", len(all), err)
+					return
+				}
+			}
+		}(key)
+	}
+	wg.Wait()
 }
 
 func setupMemory() (params storageTestParams) {

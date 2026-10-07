@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -326,6 +327,76 @@ func TestClientJSON(t *testing.T) {
 		given: NewMemoryStorage(),
 	}
 	testJSON(context.Background(), t, c)
+}
+
+func TestClientJSONDuplicateIDs(t *testing.T) {
+	for _, id := range []string{"shared-id", ""} {
+		t.Run(id, func(t *testing.T) {
+			ctx := context.Background()
+			given := NewMemoryStorage()
+			remote := NewMemoryStorage()
+			firstSeed := make([]byte, ed25519.SeedSize)
+			secondSeed := bytes.Repeat([]byte{1}, ed25519.SeedSize)
+			first := newStorageTestJWK(t, ed25519.NewKeyFromSeed(firstSeed).Public(), id)
+			second := newStorageTestJWK(t, ed25519.NewKeyFromSeed(secondSeed).Public(), id)
+			if err := given.KeyWrite(ctx, first); err != nil {
+				t.Fatal(err)
+			}
+			if err := remote.KeyWrite(ctx, second); err != nil {
+				t.Fatal(err)
+			}
+			client, err := NewHTTPClient(HTTPClientOptions{
+				Given:    given,
+				HTTPURLs: map[string]Storage{"https://example.com": remote},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			check := func(t *testing.T, actual JWKSMarshal) {
+				t.Helper()
+				if len(actual.Keys) != 2 {
+					t.Fatalf("Expected both source keys, got %d.", len(actual.Keys))
+				}
+				if actual.Keys[0].X != first.Marshal().X || actual.Keys[1].X != second.Marshal().X {
+					t.Fatal("Combined source keys changed.")
+				}
+			}
+			for name, marshal := range map[string]func(context.Context) (JWKSMarshal, error){
+				"Marshal": client.Marshal,
+				"MarshalWithOptions": func(ctx context.Context) (JWKSMarshal, error) {
+					return client.MarshalWithOptions(ctx, JWKMarshalOptions{}, JWKValidateOptions{})
+				},
+			} {
+				t.Run(name, func(t *testing.T) {
+					actual, err := marshal(ctx)
+					if err != nil {
+						t.Fatal(err)
+					}
+					check(t, actual)
+				})
+			}
+			for name, encode := range map[string]func(context.Context) (json.RawMessage, error){
+				"JSON":        client.JSON,
+				"JSONPublic":  client.JSONPublic,
+				"JSONPrivate": client.JSONPrivate,
+				"JSONWithOptions": func(ctx context.Context) (json.RawMessage, error) {
+					return client.JSONWithOptions(ctx, JWKMarshalOptions{}, JWKValidateOptions{})
+				},
+			} {
+				t.Run(name, func(t *testing.T) {
+					raw, err := encode(ctx)
+					if err != nil {
+						t.Fatal(err)
+					}
+					var actual JWKSMarshal
+					if err := json.Unmarshal(raw, &actual); err != nil {
+						t.Fatal(err)
+					}
+					check(t, actual)
+				})
+			}
+		})
+	}
 }
 
 func TestHTTPClientKeyReplaceAll(t *testing.T) {
