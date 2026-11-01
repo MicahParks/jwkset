@@ -75,7 +75,7 @@ func NewHTTPClient(options HTTPClientOptions) (Storage, error) {
 //
 // The default behavior is to:
 // 1. Refresh remote HTTP resources every hour.
-// 2. Prioritize keys from remote HTTP resources over keys from the given storage.
+// 2. Prioritize keys from the given storage, which KeyWrite writes to, over keys from remote HTTP resources.
 // 3. Refresh remote HTTP resources if a key with an unknown key ID is trying to be read, with a rate limit of 5 minutes.
 // 4. Log to slog.Default() if a refresh fails.
 func NewDefaultHTTPClient(urls []string) (Storage, error) {
