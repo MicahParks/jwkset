@@ -12,6 +12,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 func TestClient(t *testing.T) {
@@ -318,6 +320,47 @@ func TestClientError(t *testing.T) {
 	_, err := NewHTTPClient(HTTPClientOptions{})
 	if err == nil {
 		t.Fatalf("Expected an error when creating a new HTTP client without any URLs.")
+	}
+}
+
+func TestClientRefreshUnknownKIDNothingToRefresh(t *testing.T) {
+	testCases := map[string]struct {
+		httpURLs map[string]Storage
+	}{
+		"No HTTP URLs": {
+			httpURLs: nil,
+		},
+		"Only non-HTTP storage": {
+			httpURLs: map[string]Storage{"https://example.com": NewMemoryStorage()},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			given := NewMemoryStorage()
+			err := given.KeyWrite(ctx, newStorageTestJWK(t, hmacKey1, kidWritten))
+			if err != nil {
+				t.Fatalf("Failed to write key to given store.\nError: %s", err)
+			}
+			client, err := NewHTTPClient(HTTPClientOptions{
+				Given:             given,
+				HTTPURLs:          tc.httpURLs,
+				RateLimitWaitMax:  time.Minute,
+				RefreshUnknownKID: rate.NewLimiter(rate.Every(time.Hour), 1),
+			})
+			if err != nil {
+				t.Fatalf("Failed to create HTTP client.\nError: %s", err)
+			}
+
+			for i := 0; i < 2; i++ {
+				_, err = client.KeyRead(ctx, kidMissing)
+				if !errors.Is(err, ErrKeyNotFound) {
+					t.Fatalf("Expected ErrKeyNotFound without waiting on the rate limiter, but got %v.", err)
+				}
+			}
+		})
 	}
 }
 
