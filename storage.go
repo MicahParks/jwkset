@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"slices"
@@ -17,6 +18,8 @@ var (
 	ErrKeyNotFound = errors.New("key not found")
 	// ErrInvalidHTTPStatusCode is returned when the HTTP status code is invalid.
 	ErrInvalidHTTPStatusCode = errors.New("invalid HTTP status code")
+	// ErrResponseTooLarge is returned when the HTTP response body exceeds the configured MaxBytes.
+	ErrResponseTooLarge = errors.New("HTTP response body too large")
 )
 
 // Storage handles storage operations for a JWKSet.
@@ -189,6 +192,12 @@ type HTTPClientStorageOptions struct {
 	// This defaults to time.Minute.
 	HTTPTimeout time.Duration
 
+	// MaxBytes limits the number of bytes read from the HTTP response body. If the body is larger, the refresh fails
+	// with ErrResponseTooLarge before the JSON is parsed.
+	//
+	// This defaults to zero, which means no limit.
+	MaxBytes int64
+
 	// NoErrorReturnFirstHTTPReq will create the Storage without error if the first HTTP request fails.
 	NoErrorReturnFirstHTTPReq bool
 
@@ -267,7 +276,19 @@ func NewStorageFromHTTP(remoteJWKSetURL string, options HTTPClientStorageOptions
 			return fmt.Errorf("%w: %d", ErrInvalidHTTPStatusCode, resp.StatusCode)
 		}
 		var jwks JWKSMarshal
-		err = json.NewDecoder(resp.Body).Decode(&jwks)
+		if options.MaxBytes > 0 {
+			var raw []byte
+			raw, err = io.ReadAll(io.LimitReader(resp.Body, options.MaxBytes+1))
+			if err != nil {
+				return fmt.Errorf("failed to read JWK Set response: %w", err)
+			}
+			if int64(len(raw)) > options.MaxBytes {
+				return fmt.Errorf("%w: limit %d bytes", ErrResponseTooLarge, options.MaxBytes)
+			}
+			err = json.Unmarshal(raw, &jwks)
+		} else {
+			err = json.NewDecoder(resp.Body).Decode(&jwks)
+		}
 		if err != nil {
 			return fmt.Errorf("failed to decode JWK Set response: %w", err)
 		}
