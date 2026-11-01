@@ -164,7 +164,7 @@ func (c httpClient) KeyRead(ctx context.Context, keyID string) (jwk JWK, err err
 			return jwk, nil
 		}
 	}
-	if c.refreshUnknownKID != nil {
+	if c.refreshUnknownKID != nil && c.hasRefreshable() {
 		var cancel context.CancelFunc = func() {}
 		if c.rateLimitWaitMax > 0 {
 			ctx, cancel = context.WithTimeout(ctx, c.rateLimitWaitMax)
@@ -198,6 +198,14 @@ func (c httpClient) KeyRead(ctx context.Context, keyID string) (jwk JWK, err err
 		}
 	}
 	return JWK{}, fmt.Errorf("%w %q", ErrKeyNotFound, keyID)
+}
+func (c httpClient) hasRefreshable() bool {
+	for _, store := range c.httpURLs {
+		if _, ok := store.(httpStorage); ok {
+			return true
+		}
+	}
+	return false
 }
 func (c httpClient) KeyReadAll(ctx context.Context) ([]JWK, error) {
 	jwks, err := c.given.KeyReadAll(ctx)
