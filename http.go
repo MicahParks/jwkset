@@ -175,15 +175,12 @@ func (c httpClient) KeyRead(ctx context.Context, keyID string) (jwk JWK, err err
 			return JWK{}, fmt.Errorf("failed to wait for JWK Set refresh rate limiter due to error: %w", err)
 		}
 		for _, store := range c.httpURLs {
-			s, ok := store.(httpStorage)
+			s, ok := store.(RefreshableStorage)
 			if !ok {
 				continue
 			}
-			err = s.refresh(ctx)
+			err = s.Refresh(ctx)
 			if err != nil {
-				if s.options.RefreshErrorHandler != nil {
-					s.options.RefreshErrorHandler(ctx, err)
-				}
 				continue
 			}
 			jwk, err = store.KeyRead(ctx, keyID)
