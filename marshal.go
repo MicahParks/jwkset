@@ -122,6 +122,9 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 			return JWKMarshal{}, err
 		}
 	case *ecdh.PrivateKey:
+		if key == nil || key.Curve() == nil {
+			return JWKMarshal{}, fmt.Errorf("%w: ECDH private key is nil or has no curve", ErrInvalidKey)
+		}
 		err := ecdhPublicMarshal(&m, key.PublicKey())
 		if err != nil {
 			return JWKMarshal{}, err
@@ -614,6 +617,9 @@ func rsaPrecomputed(key *rsa.PrivateKey) *rsa.PrivateKey {
 // https://www.rfc-editor.org/rfc/rfc8037#section-2
 // https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1
 func ecdhPublicMarshal(m *JWKMarshal, key *ecdh.PublicKey) error {
+	if key == nil || key.Curve() == nil {
+		return fmt.Errorf("%w: ECDH public key is nil or has no curve", ErrInvalidKey)
+	}
 	pub := key.Bytes()
 	switch key.Curve() {
 	case ecdh.X25519():

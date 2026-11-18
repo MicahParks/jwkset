@@ -225,6 +225,26 @@ func TestMarshalECDHNIST(t *testing.T) {
 	}
 }
 
+func TestMarshalECDHInvalidKey(t *testing.T) {
+	tests := []struct {
+		name string
+		key  any
+	}{
+		{name: "nil public key", key: (*ecdh.PublicKey)(nil)},
+		{name: "zero value public key", key: &ecdh.PublicKey{}},
+		{name: "nil private key", key: (*ecdh.PrivateKey)(nil)},
+		{name: "zero value private key", key: &ecdh.PrivateKey{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewJWKFromKey(tt.key, JWKOptions{Marshal: JWKMarshalOptions{Private: true}})
+			if !errors.Is(err, ErrInvalidKey) {
+				t.Fatalf("Should get ErrInvalidKey for a nil or zero value ECDH key. %s", err)
+			}
+		})
+	}
+}
+
 func TestMarshalECDSA(t *testing.T) {
 	keyOps := []KEYOPS{KeyOpsSign, KeyOpsVerify}
 	checkMarshal := func(marshal JWKMarshal, options JWKOptions) {
