@@ -85,9 +85,10 @@ This project supports the following key types:
 
 * [Edwards-curve Digital Signature Algorithm (EdDSA)](https://en.wikipedia.org/wiki/EdDSA) (Ed25519 only)
     * Go Types: `ed25519.PrivateKey` and `ed25519.PublicKey`
-* [Elliptic-curve Diffie–Hellman (ECDH)](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) (X25519
-  only)
+* [Elliptic-curve Diffie–Hellman (ECDH)](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) (X25519,
+  P-256, P-384, and P-521)
     * Go Types: `*ecdh.PrivateKey` and `*ecdh.PublicKey`
+    * P-256, P-384, and P-521 keys are `EC` JWKs, so they unmarshal as `*ecdsa.PrivateKey` and `*ecdsa.PublicKey`
 * [Elliptic Curve Digital Signature Algorithm (ECDSA)](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm)
     * Go Types: `*ecdsa.PrivateKey` and `*ecdsa.PublicKey`
 * [Rivest–Shamir–Adleman (RSA)](https://en.wikipedia.org/wiki/RSA_(cryptosystem))

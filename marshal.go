@@ -117,18 +117,18 @@ func keyMarshal(key any, options JWKOptions) (JWKMarshal, error) {
 	m.ALG = options.Metadata.ALG
 	switch key := key.(type) {
 	case *ecdh.PublicKey:
-		pub := key.Bytes()
-		m.CRV = CrvX25519
-		m.X = base64.RawURLEncoding.EncodeToString(pub)
-		m.KTY = KtyOKP
+		err := ecdhPublicMarshal(&m, key)
+		if err != nil {
+			return JWKMarshal{}, err
+		}
 	case *ecdh.PrivateKey:
-		pub := key.PublicKey().Bytes()
-		m.CRV = CrvX25519
-		m.X = base64.RawURLEncoding.EncodeToString(pub)
-		m.KTY = KtyOKP
+		err := ecdhPublicMarshal(&m, key.PublicKey())
+		if err != nil {
+			return JWKMarshal{}, err
+		}
 		if options.Marshal.Private {
-			priv := key.Bytes()
-			m.D = base64.RawURLEncoding.EncodeToString(priv)
+			// Fixed length for every curve, so it matches the EC "d" encoding for P-256, P-384, and P-521.
+			m.D = base64.RawURLEncoding.EncodeToString(key.Bytes())
 		}
 	case *ecdsa.PrivateKey:
 		err := validateECDSAPrivateKey(key)
@@ -338,12 +338,12 @@ func keyUnmarshal(marshal JWKMarshal, options JWKMarshalOptions, validateOptions
 		case CrvX25519:
 			const x25519PublicKeySize = 32
 			if len(public) != x25519PublicKeySize {
-				return JWK{}, fmt.Errorf("%w: %s with curve %s public key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, CrvEd25519, x25519PublicKeySize)
+				return JWK{}, fmt.Errorf("%w: %s with curve %s public key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, CrvX25519, x25519PublicKeySize)
 			}
 			if options.Private && marshal.D != "" {
 				const x25519PrivateKeySize = 32
 				if len(private) != x25519PrivateKeySize {
-					return JWK{}, fmt.Errorf("%w: %s with curve %s private key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, CrvEd25519, x25519PrivateKeySize)
+					return JWK{}, fmt.Errorf("%w: %s with curve %s private key should be %d bytes", ErrKeyUnmarshalParameter, KtyOKP, CrvX25519, x25519PrivateKeySize)
 				}
 				key, err = ecdh.X25519().NewPrivateKey(private)
 				if err != nil {
@@ -607,6 +607,35 @@ func rsaPrecomputed(key *rsa.PrivateKey) *rsa.PrivateKey {
 	}
 	c.Precompute()
 	return c
+}
+
+// ecdhPublicMarshal sets the public parameters of an ECDH key. X25519 keys are OKP keys. P-256, P-384, and P-521 keys
+// are EC keys, the same as their ECDSA equivalents.
+// https://www.rfc-editor.org/rfc/rfc8037#section-2
+// https://www.rfc-editor.org/rfc/rfc7518#section-6.2.1
+func ecdhPublicMarshal(m *JWKMarshal, key *ecdh.PublicKey) error {
+	pub := key.Bytes()
+	switch key.Curve() {
+	case ecdh.X25519():
+		m.CRV = CrvX25519
+		m.KTY = KtyOKP
+		m.X = base64.RawURLEncoding.EncodeToString(pub)
+		return nil
+	case ecdh.P256():
+		m.CRV = CrvP256
+	case ecdh.P384():
+		m.CRV = CrvP384
+	case ecdh.P521():
+		m.CRV = CrvP521
+	default:
+		return fmt.Errorf("%w: ECDH curve %s", ErrUnsupportedKey, key.Curve())
+	}
+	// NIST curve public keys are uncompressed points: 0x04 || X || Y.
+	l := (len(pub) - 1) / 2
+	m.KTY = KtyEC
+	m.X = base64.RawURLEncoding.EncodeToString(pub[1 : 1+l])
+	m.Y = base64.RawURLEncoding.EncodeToString(pub[1+l:])
+	return nil
 }
 
 func bigIntToBase64RawURL(i *big.Int, l uint) string {
