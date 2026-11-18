@@ -19,7 +19,7 @@ var ErrThumbprintNotSupported = errors.New("thumbprint not supported")
 
 // thumbprint implements [RFC 7638: JSON Web Key (JWK) Thumbprint] for private and public keys.
 //
-// Keys are canonicalized into thumbprint JSON and then hashed. The cache function is user-defined. A default of
+// Keys are canonicalized into thumbprint JSON and then hashed. The hash function is user-defined. A default of
 // SHA-256 is used if nil is provided.
 //
 // [RFC 7638: JSON Web Key (JWK) Thumbprint]: https://www.rfc-editor.org/info/rfc7638/
