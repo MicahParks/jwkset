@@ -288,11 +288,9 @@ func (c httpClient) combineStorage(ctx context.Context) (Storage, error) {
 		return nil, fmt.Errorf("failed to snapshot keys due to error: %w", err)
 	}
 	m := NewMemoryStorage()
-	for _, jwk := range jwks {
-		err = m.KeyWrite(ctx, jwk)
-		if err != nil {
-			return nil, fmt.Errorf("failed to write key to memory storage due to error: %w", err)
-		}
+	err = m.KeyReplaceAll(ctx, jwks)
+	if err != nil {
+		return nil, fmt.Errorf("failed to replace keys in memory storage due to error: %w", err)
 	}
 	return m, nil
 }

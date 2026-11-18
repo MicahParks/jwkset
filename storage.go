@@ -31,8 +31,8 @@ type Storage interface {
 	KeyReadAll(ctx context.Context) ([]JWK, error)
 	// KeyReplaceAll replaces all the keys in storage. All existing keys will be deleted and replaced with the given.
 	KeyReplaceAll(ctx context.Context, given []JWK) error
-	// KeyWrite writes a key to the storage. If the key already exists, it will be overwritten. After writing a key,
-	// any pointers written should be considered owned by the underlying storage.
+	// KeyWrite writes a key to the storage. A matching nonempty key ID is overwritten. Keys without IDs are appended.
+	// After writing a key, any pointers written should be considered owned by the underlying storage.
 	KeyWrite(ctx context.Context, jwk JWK) error
 
 	// JSON creates the JSON representation of the JWKSet.
@@ -98,6 +98,14 @@ func (m *MemoryJWKSet) KeyReplaceAll(_ context.Context, given []JWK) error {
 func (m *MemoryJWKSet) KeyWrite(_ context.Context, jwk JWK) error {
 	m.mux.Lock()
 	defer m.mux.Unlock()
+	if keyID := jwk.Marshal().KID; keyID != "" {
+		for i, key := range m.set {
+			if key.Marshal().KID == keyID {
+				m.set[i] = jwk
+				return nil
+			}
+		}
+	}
 	m.set = append(m.set, jwk)
 	return nil
 }
