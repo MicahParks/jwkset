@@ -1,6 +1,7 @@
 package jwkset
 
 import (
+	"crypto"
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -22,10 +23,9 @@ func LoadCertificate(pemBlock []byte) (*x509.Certificate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse certificates: %w", err)
 	}
-	switch cert.PublicKey.(type) {
-	case *ecdsa.PublicKey, ed25519.PublicKey, *rsa.PublicKey:
-	default:
-		return nil, fmt.Errorf("%w: %T", ErrUnsupportedKey, cert.PublicKey)
+	_, err = x509PublicKey(cert)
+	if err != nil {
+		return nil, err
 	}
 	return cert, nil
 }
@@ -48,13 +48,59 @@ func LoadCertificates(rawPEM []byte) ([]*x509.Certificate, error) {
 		return nil, fmt.Errorf("failed to parse certificates: %w", err)
 	}
 	for _, cert := range certs {
-		switch cert.PublicKey.(type) {
-		case *ecdsa.PublicKey, ed25519.PublicKey, *rsa.PublicKey:
-		default:
-			return nil, fmt.Errorf("%w: %T", ErrUnsupportedKey, cert.PublicKey)
+		_, err = x509PublicKey(cert)
+		if err != nil {
+			return nil, err
 		}
 	}
 	return certs, nil
+}
+
+// x509PublicKey returns the public key of a supported X.509 certificate. Go leaves the certificate's PublicKey nil for
+// X25519 keys, so it is parsed from the certificate's SubjectPublicKeyInfo.
+func x509PublicKey(cert *x509.Certificate) (any, error) {
+	pub := cert.PublicKey
+	if pub == nil {
+		var err error
+		pub, err = x509.ParsePKIXPublicKey(cert.RawSubjectPublicKeyInfo)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrUnsupportedKey, err)
+		}
+	}
+	switch pub.(type) {
+	case *ecdh.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey, *rsa.PublicKey:
+	default:
+		return nil, fmt.Errorf("%w: %T", ErrUnsupportedKey, pub)
+	}
+	return pub, nil
+}
+
+// x509KeyMatch confirms that the given public or private key matches the public key in the X.509 certificate.
+func x509KeyMatch(key any, cert *x509.Certificate) error {
+	certPub, err := x509PublicKey(cert)
+	if err != nil {
+		return fmt.Errorf("%w: %w", errors.Join(ErrJWKValidation, ErrX509Mismatch), err)
+	}
+	if private, ok := key.(interface{ Public() crypto.PublicKey }); ok {
+		key = private.Public()
+	}
+	// Certificates hold P-256, P-384, and P-521 keys as ECDSA keys, even when they are used for ECDH.
+	if _, ok := key.(*ecdh.PublicKey); ok {
+		if ecdsaPub, ok := certPub.(*ecdsa.PublicKey); ok {
+			certPub, err = ecdsaPub.ECDH()
+			if err != nil {
+				return fmt.Errorf("%w: %w", errors.Join(ErrJWKValidation, ErrX509Mismatch), err)
+			}
+		}
+	}
+	pub, ok := key.(interface{ Equal(crypto.PublicKey) bool })
+	if !ok {
+		return fmt.Errorf("%w: Golang key is type %T, which is not supported, so it cannot be compared to given X.509 certificates", errors.Join(ErrJWKValidation, ErrUnsupportedKey, ErrX509Mismatch), key)
+	}
+	if !pub.Equal(certPub) {
+		return fmt.Errorf("%w: Golang key of type %T does not match the X.509 public key of type %T", errors.Join(ErrJWKValidation, ErrX509Mismatch), key, certPub)
+	}
+	return nil
 }
 
 // LoadX509KeyInfer loads an X509 key from a PEM block.

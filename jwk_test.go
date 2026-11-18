@@ -2,9 +2,14 @@ package jwkset
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdh"
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
@@ -203,6 +208,94 @@ func TestJWK_Validate(t *testing.T) {
 		t.Fatalf("Expected to fail validation for options not matching use.")
 	}
 	jwk.options.Metadata.USE = ""
+}
+
+func TestJWK_Validate_X5C(t *testing.T) {
+	selfSigned := func(t *testing.T, key crypto.Signer) *x509.Certificate {
+		template := &x509.Certificate{
+			SerialNumber: big.NewInt(1),
+			Subject:      pkix.Name{CommonName: "example.com"},
+			NotBefore:    time.Now().Add(-time.Hour),
+			NotAfter:     time.Now().Add(time.Hour),
+		}
+		der, err := x509.CreateCertificate(rand.Reader, template, template, key.Public(), key)
+		if err != nil {
+			t.Fatalf("Failed to create certificate. %s", err)
+		}
+		cert, err := x509.ParseCertificate(der)
+		if err != nil {
+			t.Fatalf("Failed to parse certificate. %s", err)
+		}
+		return cert
+	}
+
+	ecdsaPrivate := makeECDSAP256(t)
+	ecdhPrivate, err := ecdsaPrivate.ECDH()
+	if err != nil {
+		t.Fatalf("Failed to convert ECDSA key to ECDH. %s", err)
+	}
+	otherECDSA, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("Failed to generate ECDSA key. %s", err)
+	}
+	otherECDH, err := otherECDSA.ECDH()
+	if err != nil {
+		t.Fatalf("Failed to convert ECDSA key to ECDH. %s", err)
+	}
+	ed25519Private := makeEdDSA(t)
+	rsaPrivate := makeRSA(t)
+	x25519Private := makeECDHX25519Private(t)
+
+	ecdsaCertificate := selfSigned(t, ecdsaPrivate)
+	ed25519Certificate := selfSigned(t, ed25519Private)
+	rsaCertificate := selfSigned(t, rsaPrivate)
+	x25519Certificate, err := LoadCertificate(loadPEM(t, x25519Cert).Bytes)
+	if err != nil {
+		t.Fatalf("Failed to load X25519 certificate. %s", err)
+	}
+
+	tests := []struct {
+		name     string
+		key      any
+		cert     *x509.Certificate
+		mismatch bool
+	}{
+		{name: "ECDSA public key", key: &ecdsaPrivate.PublicKey, cert: ecdsaCertificate},
+		{name: "ECDSA private key", key: ecdsaPrivate, cert: ecdsaCertificate},
+		{name: "Ed25519 private key", key: ed25519Private, cert: ed25519Certificate},
+		{name: "RSA private key", key: rsaPrivate, cert: rsaCertificate},
+		{name: "ECDH P-256 public key", key: ecdhPrivate.PublicKey(), cert: ecdsaCertificate},
+		{name: "ECDH P-256 private key", key: ecdhPrivate, cert: ecdsaCertificate},
+		{name: "X25519 public key", key: x25519Private.PublicKey(), cert: x25519Certificate},
+		{name: "X25519 private key", key: x25519Private, cert: x25519Certificate},
+		{name: "ECDSA private key with RSA certificate", key: ecdsaPrivate, cert: rsaCertificate, mismatch: true},
+		{name: "ECDH P-256 key with another P-256 certificate", key: otherECDH, cert: ecdsaCertificate, mismatch: true},
+		{name: "X25519 key with Ed25519 certificate", key: x25519Private, cert: ed25519Certificate, mismatch: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			options := JWKOptions{
+				Marshal: JWKMarshalOptions{Private: true},
+				X509:    JWKX509Options{X5C: []*x509.Certificate{tt.cert}},
+			}
+			jwk, err := NewJWKFromKey(tt.key, options)
+			if tt.mismatch {
+				if !errors.Is(err, ErrX509Mismatch) {
+					t.Fatalf("Should get ErrX509Mismatch when the key does not match the certificate. %s", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Failed to create JWK with a matching certificate. %s", err)
+			}
+
+			// The marshaled JWK has the certificate in "x5c" and should be read back.
+			_, err = NewJWKFromMarshal(jwk.Marshal(), JWKMarshalOptions{Private: true}, JWKValidateOptions{})
+			if err != nil {
+				t.Fatalf("Failed to read JWK with a matching certificate. %s", err)
+			}
+		})
+	}
 }
 
 func TestJWK_Validate_Padding(t *testing.T) {
