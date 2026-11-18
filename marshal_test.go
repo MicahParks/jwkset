@@ -172,6 +172,79 @@ func TestUnmarshalECDH(t *testing.T) {
 	}
 }
 
+func TestMarshalECDHNIST(t *testing.T) {
+	tests := []struct {
+		name  string
+		ecdsa func(t *testing.T) *ecdsa.PrivateKey
+		crv   CRV
+		d     string
+		x     string
+		y     string
+	}{
+		{name: "P-256", ecdsa: makeECDSAP256, crv: CrvP256, d: ecdsaP256D, x: ecdsaP256X, y: ecdsaP256Y},
+		{name: "P-384", ecdsa: makeECDSAP384, crv: CrvP384, d: ecdsaP384D, x: ecdsaP384X, y: ecdsaP384Y},
+		{name: "P-521", ecdsa: makeECDSAP521, crv: CrvP521, d: ecdsaP521D, x: ecdsaP521X, y: ecdsaP521Y},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ecdsaPrivate := tt.ecdsa(t)
+			private, err := ecdsaPrivate.ECDH()
+			if err != nil {
+				t.Fatalf("Failed to convert ECDSA key to ECDH. %s", err)
+			}
+
+			// An ECDH key on a NIST curve should marshal exactly like the equivalent ECDSA key.
+			jwk, err := NewJWKFromKey(private, JWKOptions{Marshal: JWKMarshalOptions{Private: true}})
+			if err != nil {
+				t.Fatalf("Failed to marshal key with correct options. %s", err)
+			}
+			marshal := jwk.Marshal()
+			if marshal.KTY != KtyEC || marshal.CRV != tt.crv || marshal.X != tt.x || marshal.Y != tt.y || marshal.D != tt.d {
+				t.Fatalf("Marshaled ECDH key does not match the ECDSA equivalent. %+v", marshal)
+			}
+
+			jwk, err = NewJWKFromKey(private.PublicKey(), JWKOptions{})
+			if err != nil {
+				t.Fatalf("Failed to marshal key with correct options. %s", err)
+			}
+			public := jwk.Marshal()
+			if public.KTY != KtyEC || public.CRV != tt.crv || public.X != tt.x || public.Y != tt.y || public.D != "" {
+				t.Fatalf("Marshaled ECDH public key does not match the ECDSA equivalent. %+v", public)
+			}
+
+			// EC JWKs unmarshal as ECDSA keys.
+			jwk, err = NewJWKFromMarshal(marshal, JWKMarshalOptions{Private: true}, JWKValidateOptions{})
+			if err != nil {
+				t.Fatalf("Failed to unmarshal key with correct options. %s", err)
+			}
+			unmarshaled, ok := jwk.Key().(*ecdsa.PrivateKey)
+			if !ok || !unmarshaled.Equal(ecdsaPrivate) {
+				t.Fatalf("Unmarshaled key does not match original key.")
+			}
+		})
+	}
+}
+
+func TestMarshalECDHInvalidKey(t *testing.T) {
+	tests := []struct {
+		name string
+		key  any
+	}{
+		{name: "nil public key", key: (*ecdh.PublicKey)(nil)},
+		{name: "zero value public key", key: &ecdh.PublicKey{}},
+		{name: "nil private key", key: (*ecdh.PrivateKey)(nil)},
+		{name: "zero value private key", key: &ecdh.PrivateKey{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewJWKFromKey(tt.key, JWKOptions{Marshal: JWKMarshalOptions{Private: true}})
+			if !errors.Is(err, ErrInvalidKey) {
+				t.Fatalf("Should get ErrInvalidKey for a nil or zero value ECDH key. %s", err)
+			}
+		})
+	}
+}
+
 func TestMarshalECDSA(t *testing.T) {
 	keyOps := []KEYOPS{KeyOpsSign, KeyOpsVerify}
 	checkMarshal := func(marshal JWKMarshal, options JWKOptions) {
