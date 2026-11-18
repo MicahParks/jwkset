@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"math/big"
 	"net/http"
@@ -444,6 +445,13 @@ func (j JWK) Validate() error {
 	}
 
 	return nil
+}
+
+// Thumbprint returns the JWK thumbprint as a base64url-encoded string.
+//
+// A default of SHA-256 [hash.Hash] is used if nil is provided.
+func (j JWK) Thumbprint(h hash.Hash) (string, error) {
+	return thumbprint(j.key, h)
 }
 
 // DefaultGetX5U is the default implementation of the GetX5U field for JWKValidateOptions.

@@ -45,7 +45,7 @@ func TestJSON(t *testing.T) {
 	testJSON(ctx, t, jwks)
 }
 
-func TestThumbprint(t *testing.T) {
+func TestX509Thumbprint(t *testing.T) {
 	type thumbprintScenario int
 	const (
 		thumbprintScenarioCorrect thumbprintScenario = iota
