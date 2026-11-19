@@ -447,7 +447,7 @@ func (j JWK) Validate() error {
 	return nil
 }
 
-// Thumbprint returns the JWK thumbprint as a base64url-encoded string.
+// Thumbprint returns the JWK thumbprint as a base64url-encoded string (RFC 7638).
 //
 // A default of SHA-256 [hash.Hash] is used if nil is provided.
 func (j JWK) Thumbprint(h hash.Hash) (string, error) {
