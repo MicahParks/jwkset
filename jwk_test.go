@@ -347,7 +347,8 @@ func TestJWK_Thumbprint(t *testing.T) {
 
 	deriveKey := func(t *testing.T, raw string) JWK {
 		t.Helper()
-		jwk, err := NewJWKFromRawJSON(json.RawMessage(raw), JWKMarshalOptions{}, JWKValidateOptions{})
+		// setting Private: true to allow for private keys in the test cases, but the thumbprint is computed from the public key material only
+		jwk, err := NewJWKFromRawJSON(json.RawMessage(raw), JWKMarshalOptions{Private: true}, JWKValidateOptions{})
 		if err != nil {
 			t.Fatalf("failed to create JWK: %v", err)
 		}
@@ -402,9 +403,9 @@ func TestJWK_Thumbprint(t *testing.T) {
 				return deriveKey(
 					t,
 					`{ 
-					"kty":"oct",
-  				"k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow",
-  				"kid":"HMAC key used in JWS spec Appendix A.1 example"
+						"kty":"oct",
+	  				"k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow",
+	  				"kid":"HMAC key used in JWS spec Appendix A.1 example"
 					}`,
 				)
 			},
@@ -417,10 +418,10 @@ func TestJWK_Thumbprint(t *testing.T) {
 				return deriveKey(
 					t,
 					`{
-  			"crv": "Ed25519",
-  			"x": "kkuykt3sLHDHlwJLpA48RyupsMmYk3JJVO_Owtq1tyk",
-  			"kty": "OKP"
-				}`,
+		  			"crv": "Ed25519",
+  					"x": "kkuykt3sLHDHlwJLpA48RyupsMmYk3JJVO_Owtq1tyk",
+  					"kty": "OKP"
+					}`,
 				)
 			},
 			wantThumbprint: "W8SIurfuxo6rbncofGtIXvLhE0Ip9_CAqjGUsT71Qv8",
