@@ -3,6 +3,7 @@ package jwkset
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -11,7 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash"
 	"io"
 	"math/big"
 	"net/http"
@@ -449,9 +449,27 @@ func (j JWK) Validate() error {
 
 // Thumbprint returns the JWK thumbprint as a base64url-encoded string (RFC 7638).
 //
-// A default of SHA-256 [hash.Hash] is used if nil is provided.
-func (j JWK) Thumbprint(h hash.Hash) (string, error) {
-	return thumbprint(j.key, h)
+// If the provided [crypto.Hash] is not available, the default hash function used is [crypto.SHA256].
+//
+// [RFC 7638]: https://www.rfc-editor.org/info/rfc7638
+func (j JWK) Thumbprint(h crypto.Hash) (string, error) {
+	if !h.Available() {
+		h = crypto.SHA256
+	}
+	out := h.New()
+	switch j.marshal.KTY {
+	case KtyEC:
+		_, _ = fmt.Fprintf(out, `{"crv":%q,"kty":"EC","x":%q,"y":%q}`, j.marshal.CRV, j.marshal.X, j.marshal.Y)
+	case KtyOKP:
+		_, _ = fmt.Fprintf(out, `{"crv":"Ed25519","kty":"OKP","x":%q}`, j.marshal.X)
+	case KtyRSA:
+		_, _ = fmt.Fprintf(out, `{"e":%q,"kty":"RSA","n":%q}`, j.marshal.E, j.marshal.N)
+	case KtyOct:
+		_, _ = fmt.Fprintf(out, `{"k":%q,"kty":"oct"}`, j.marshal.K)
+	default:
+		return "", fmt.Errorf("%w: key type supported", ErrUnsupportedKey)
+	}
+	return base64.RawURLEncoding.EncodeToString(out.Sum(nil)), nil
 }
 
 // DefaultGetX5U is the default implementation of the GetX5U field for JWKValidateOptions.

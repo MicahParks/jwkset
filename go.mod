@@ -1,6 +1,6 @@
 module github.com/MicahParks/jwkset
 
-go 1.25
+go 1.21
 
 require golang.org/x/time v0.9.0
 
