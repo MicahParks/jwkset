@@ -3,6 +3,7 @@ package jwkset
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/ed25519"
 	"crypto/x509"
 	"encoding/base64"
@@ -420,6 +421,35 @@ func (j JWK) Validate() error {
 	}
 
 	return nil
+}
+
+// Thumbprint returns the JWK thumbprint as a base64url-encoded string.
+// https://www.rfc-editor.org/info/rfc7638
+func (j JWK) Thumbprint(h crypto.Hash) (string, error) {
+	if !h.Available() {
+		return "", fmt.Errorf("%w: hash function %s is unavailable", ErrOptions, h)
+	}
+	m, err := keyMarshal(j.key, JWKOptions{Marshal: JWKMarshalOptions{Private: true}})
+	if err != nil {
+		return "", fmt.Errorf("%w: key type not supported", ErrUnsupportedKey)
+	}
+	var data map[string]string
+	switch m.KTY {
+	case KtyEC:
+		data = map[string]string{"crv": string(m.CRV), "kty": "EC", "x": m.X, "y": m.Y}
+	case KtyOKP:
+		data = map[string]string{"crv": string(m.CRV), "kty": "OKP", "x": m.X}
+	case KtyRSA:
+		data = map[string]string{"e": m.E, "kty": "RSA", "n": m.N}
+	case KtyOct:
+		data = map[string]string{"k": m.K, "kty": "oct"}
+	}
+
+	out := h.New()
+	// cannonical JSON encoding with lexicographically sorted keys is required for thumbprint calculation
+	encoded, _ := json.Marshal(data) // in go 1.27 use json.MarshalWrite(out, data) to avoid intermediate []byte
+	_, _ = out.Write(encoded)
+	return base64.RawURLEncoding.EncodeToString(out.Sum(nil)), nil
 }
 
 // DefaultGetX5U is the default implementation of the GetX5U field for JWKValidateOptions.
