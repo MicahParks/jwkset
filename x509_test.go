@@ -1,6 +1,7 @@
 package jwkset
 
 import (
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -29,6 +30,10 @@ func TestNewJWKFromX5C(t *testing.T) {
 		"RSA": {
 			raw:     []byte(rsa4096Cert),
 			keyType: &rsa.PublicKey{},
+		},
+		"X25519": {
+			raw:     []byte(x25519Cert),
+			keyType: &ecdh.PublicKey{},
 		},
 		"Chain": {
 			raw:     []byte(ec521Cert + ed25519Cert + rsa4096Cert),
@@ -347,6 +352,17 @@ YckvHj/LGWRyTzb00CWQMvmRZmUsVEThSThY+aTlcRiXu6OATMYii/w/hv+7sVwr
 NcMXVckh2/bpHjlZM03LJoabhDp+6c16U+NvOxoVsaPT7y4avoGZZ/IU30i3QpDf
 qx5NKPcC4HDK28Daw6zBdO+fkodKFcgsL4jUqP+Q6QCWBH88PlmlXx80XoPQu++W
 VhA/xoU82uODjoUbY6FzMW49ESHddZfuFg9fXHm1z31q
+-----END CERTIFICATE-----`
+	// Generated with OpenSSL for the ecdhX25519D key, signed by an Ed25519 key. Go cannot create X25519 certificates.
+	x25519Cert = `
+-----BEGIN CERTIFICATE-----
+MIIBQTCB9KADAgECAhRZmOzvYSiFA6KX9s/w0lAkzgyWSDAFBgMrZXAwFjEUMBIG
+A1UEAwwLZXhhbXBsZS5jb20wIBcNMjYxMTE4MTcyNDEyWhgPMjEyNjEwMjUxNzI0
+MTJaMBYxFDASBgNVBAMMC2V4YW1wbGUuY29tMCowBQYDK2VuAyEAdKnZoQtBYcCQ
+2oWeGvU52zjCnKB7XeU5xiD7NjRnVCqjUjBQMA4GA1UdDwEB/wQEAwIDCDAdBgNV
+HQ4EFgQUZ9IzJoaR4ivIW01OSyNYMRMJeIYwHwYDVR0jBBgwFoAUmOJ1SLCYC4lk
+GWIuUbt9SmAIiOkwBQYDK2VwA0EA0YB+q7q9GekFWgto2x56pthgKTFa3ITDYFFt
+ryB734RaU2LsYpcQIMUa7UPsbP29hULJFiY7rvaKvT4VZWUxCA==
 -----END CERTIFICATE-----`
 )
 
