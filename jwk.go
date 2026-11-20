@@ -452,7 +452,7 @@ func (j JWK) Validate() error {
 // https://www.rfc-editor.org/info/rfc7638
 func (j JWK) Thumbprint(h crypto.Hash) (string, error) {
 	if !h.Available() {
-		h = crypto.SHA256
+		return "", fmt.Errorf("%w: hash function %s is unavailable", ErrOptions, h)
 	}
 	out := h.New()
 	switch j.marshal.KTY {
