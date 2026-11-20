@@ -477,18 +477,15 @@ func (j JWK) Thumbprint(h crypto.Hash) (string, error) {
 		return "", fmt.Errorf("%w: thumbprint for key type %q", ErrUnsupportedKey, m.KTY)
 	}
 
-	// canonical JSON encoding with lexicographically sorted keys and no HTML escaping is required for thumbprint
-	// calculation; once go.mod is at go 1.27 or later, json.MarshalWrite(out, data, json.Deterministic(true)) from
-	// encoding/json/v2 can write straight to out instead of through a buffer
-	buf := &bytes.Buffer{}
-	enc := json.NewEncoder(buf)
-	enc.SetEscapeHTML(false)
-	err = enc.Encode(data)
+	// canonical JSON encoding with lexicographically sorted keys is required for thumbprint calculation; once go.mod is
+	// at go 1.27 or later, json.MarshalWrite(out, data, json.Deterministic(true)) from encoding/json/v2 can write
+	// straight to out
+	encoded, err := json.Marshal(data)
 	if err != nil {
-		return "", fmt.Errorf("failed to encode JSON Web Key thumbprint members: %w", err)
+		return "", fmt.Errorf("failed to marshal JSON Web Key thumbprint members: %w", err)
 	}
 	out := h.New()
-	_, _ = out.Write(bytes.TrimSuffix(buf.Bytes(), []byte("\n")))
+	_, _ = out.Write(encoded)
 	return base64.RawURLEncoding.EncodeToString(out.Sum(nil)), nil
 }
 
