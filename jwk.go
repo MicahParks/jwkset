@@ -465,7 +465,7 @@ func (j JWK) Thumbprint(h crypto.Hash) (string, error) {
 	case KtyOct:
 		_, _ = fmt.Fprintf(out, `{"k":%q,"kty":"oct"}`, j.marshal.K)
 	default:
-		return "", fmt.Errorf("%w: key type supported", ErrUnsupportedKey)
+		return "", fmt.Errorf("%w: key type not supported", ErrUnsupportedKey)
 	}
 	return base64.RawURLEncoding.EncodeToString(out.Sum(nil)), nil
 }
