@@ -7,7 +7,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
-	_ "crypto/sha256" // used in Thumbprint as a fallback, must be inited before use
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
