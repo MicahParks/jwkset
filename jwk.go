@@ -423,31 +423,43 @@ func (j JWK) Validate() error {
 	return nil
 }
 
-// Thumbprint returns the JWK thumbprint as a base64url-encoded string.
+// Thumbprint returns the RFC 7638 JWK thumbprint, hashed with h, as a base64url-encoded string. The hash function must
+// be linked into the binary, otherwise ErrOptions is returned.
 // https://www.rfc-editor.org/info/rfc7638
 func (j JWK) Thumbprint(h crypto.Hash) (string, error) {
 	if !h.Available() {
 		return "", fmt.Errorf("%w: hash function %s is unavailable", ErrOptions, h)
 	}
-	m, err := keyMarshal(j.key, JWKOptions{Marshal: JWKMarshalOptions{Private: true}})
+	_, oct := j.key.([]byte)
+	m, err := keyMarshal(j.key, JWKOptions{Marshal: JWKMarshalOptions{Private: oct}})
 	if err != nil {
-		return "", fmt.Errorf("%w: key type not supported", ErrUnsupportedKey)
+		return "", fmt.Errorf("failed to marshal JSON Web Key for thumbprint: %w", err)
 	}
-	var data map[string]string
+	data := map[string]string{"kty": string(m.KTY)}
 	switch m.KTY {
 	case KtyEC:
-		data = map[string]string{"crv": string(m.CRV), "kty": "EC", "x": m.X, "y": m.Y}
+		data["crv"] = string(m.CRV)
+		data["x"] = m.X
+		data["y"] = m.Y
 	case KtyOKP:
-		data = map[string]string{"crv": string(m.CRV), "kty": "OKP", "x": m.X}
+		data["crv"] = string(m.CRV)
+		data["x"] = m.X
 	case KtyRSA:
-		data = map[string]string{"e": m.E, "kty": "RSA", "n": m.N}
+		data["e"] = m.E
+		data["n"] = m.N
 	case KtyOct:
-		data = map[string]string{"k": m.K, "kty": "oct"}
+		data["k"] = m.K
+	default:
+		return "", fmt.Errorf("%w: thumbprint for key type %q", ErrUnsupportedKey, m.KTY)
 	}
 
+	// Canonical JSON encoding with lexicographically sorted keys is required for thumbprint calculation. Update to
+	// json.MarshalWrite(out, data, json.Deterministic(true)) when using encoding/json/v2 in Go 1.27 or later.
+	encoded, err := json.Marshal(data)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal JSON Web Key thumbprint members: %w", err)
+	}
 	out := h.New()
-	// cannonical JSON encoding with lexicographically sorted keys is required for thumbprint calculation
-	encoded, _ := json.Marshal(data) // in go 1.27 use json.MarshalWrite(out, data) to avoid intermediate []byte
 	_, _ = out.Write(encoded)
 	return base64.RawURLEncoding.EncodeToString(out.Sum(nil)), nil
 }

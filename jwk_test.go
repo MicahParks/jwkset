@@ -50,7 +50,7 @@ func TestJSON(t *testing.T) {
 	testJSON(ctx, t, jwks)
 }
 
-func TestThumbprint(t *testing.T) {
+func TestJWK_X5T(t *testing.T) {
 	type thumbprintScenario int
 	const (
 		thumbprintScenarioCorrect thumbprintScenario = iota
@@ -401,7 +401,7 @@ func TestJWK_Validate_Padding(t *testing.T) {
 	}
 }
 
-func TestJWK_Validate_Padding_Thumbprint(t *testing.T) {
+func TestJWK_Validate_Padding_X5T(t *testing.T) {
 	block, _ := pem.Decode([]byte(ed25519Cert))
 	cert, err := LoadCertificate(block.Bytes)
 	if err != nil {
@@ -437,118 +437,205 @@ func TestJWK_Validate_Padding_Thumbprint(t *testing.T) {
 func TestJWK_Thumbprint(t *testing.T) {
 	t.Parallel()
 
-	deriveKey := func(t *testing.T, raw string) JWK {
-		t.Helper()
-		// setting Private: true to allow for private keys in the test cases, but the thumbprint is computed from the public key material only
-		jwk, err := NewJWKFromRawJSON(json.RawMessage(raw), JWKMarshalOptions{Private: true}, JWKValidateOptions{})
-		if err != nil {
-			t.Fatalf("failed to create JWK: %v", err)
-		}
-		return jwk
-	}
+	// https://www.rfc-editor.org/rfc/rfc7638#section-3.1
+	const rsaJSON = `
+{
+  "kty": "RSA",
+  "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
+  "e": "AQAB",
+  "alg": "RS256",
+  "kid": "2011-04-29"
+}`
+	// https://www.rfc-editor.org/rfc/rfc7517#appendix-A.1
+	const p256JSON = `
+{
+  "kty": "EC",
+  "crv": "P-256",
+  "x": "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+  "y": "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+  "use": "enc",
+  "kid": "1"
+}`
+	// https://www.rfc-editor.org/rfc/rfc8037#appendix-A.2
+	const ed25519JSON = `
+{
+  "kty": "OKP",
+  "crv": "Ed25519",
+  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+}`
+	const (
+		rsaThumbprint     = "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
+		p256Thumbprint    = "cn-I_WNMClehiVp51i_0VpOENW1upEerA8sEam5hn-s"
+		ed25519Thumbprint = "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k"
+		x25519Thumbprint  = "u809Vppx5ixWMOohxWr2aM3m5bD0LQ67g_GPmubQus4"
+	)
 
-	tests := []struct {
-		name           string
+	testCases := map[string]struct {
+		rawJSON        string
 		key            func(t *testing.T) JWK
 		hash           crypto.Hash
 		wantThumbprint string
 		wantErr        error
 	}{
-		// https://www.rfc-editor.org/info/rfc7638/#section-3.1
-		{
-			name: "rfc RSA example",
+		"RSA": {
+			rawJSON:        rsaJSON,
+			hash:           crypto.SHA256,
+			wantThumbprint: rsaThumbprint,
+		},
+		"RSASHA512": {
+			rawJSON:        rsaJSON,
+			hash:           crypto.SHA512,
+			wantThumbprint: "DpvEwocfn3FjeWWQjcJHzWrpKTIymKwgoL1xVgQcud48-qZDSRCr1zfWZQdHAJn_ciqXqPTSARyg-L-NyNGpVA",
+		},
+		"RSALeadingZero": {
+			rawJSON: `
+{
+  "kty": "RSA",
+  "n": "ANL8e2oKHmxnEErrj4iyV2abTfZ53a0Jm1xKbNmogBW1oTO_C4VseHG23wALVU_Os8LtUSu2jxRcboQ0dS-rUqHPwSRAj3m1ikV4wWQohVeJ96JJ44TLLZ-uLWf9lvuSbBmOB3OZ_cgVwK8Jfd5are_0TecOgn9IeEMkOb_uuWBo0EdPxQ1tkL86mN-vEEDInALWkqs7PCiWYJ2G_XO3dM4HQGR87uqjEL0S-YWo659Z_dQmzqWyEg9PKjS8q3ZLfmxU1oQCOLzEBYelnmbtHzOJRXdjXEcK91z5LCDR2kPhv8QZ4iKm8NC7NYxeOPnLBQrq_pBIFPGsGqScyp6gyoM",
+  "e": "AQAB"
+}`,
+			hash:           crypto.SHA256,
+			wantThumbprint: rsaThumbprint,
+		},
+		"P256": {
+			rawJSON:        p256JSON,
+			hash:           crypto.SHA256,
+			wantThumbprint: p256Thumbprint,
+		},
+		"P256Padded": {
+			rawJSON: `
+{
+  "kty": "EC",
+  "crv": "P-256",
+  "x": "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4=",
+  "y": "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM="
+}`,
+			hash:           crypto.SHA256,
+			wantThumbprint: p256Thumbprint,
+		},
+		// https://www.rfc-editor.org/rfc/rfc7517#appendix-A.2
+		"P256Private": {
+			rawJSON: `
+{
+  "kty": "EC",
+  "crv": "P-256",
+  "x": "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+  "y": "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+  "d": "870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE",
+  "use": "enc",
+  "kid": "1"
+}`,
+			hash:           crypto.SHA256,
+			wantThumbprint: p256Thumbprint,
+		},
+		"P256ECDH": {
 			key: func(t *testing.T) JWK {
-				return deriveKey(
-					t,
-					`{
-      			"kty": "RSA",
-      			"n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
-      			"e": "AQAB",
-      			"alg": "RS256",
-      			"kid": "2011-04-29"
-     			}`,
-				)
+				jwk, err := NewJWKFromRawJSON(json.RawMessage(p256JSON), JWKMarshalOptions{}, JWKValidateOptions{})
+				if err != nil {
+					t.Fatalf("Failed to create JWK from raw JSON. %s", err)
+				}
+				pub, err := jwk.Key().(*ecdsa.PublicKey).ECDH()
+				if err != nil {
+					t.Fatalf("Failed to convert ECDSA public key to ECDH. %s", err)
+				}
+				jwk, err = NewJWKFromKey(pub, JWKOptions{})
+				if err != nil {
+					t.Fatalf("Failed to create JWK from key. %s", err)
+				}
+				return jwk
 			},
 			hash:           crypto.SHA256,
-			wantThumbprint: "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
+			wantThumbprint: p256Thumbprint,
 		},
-		// compare with https://kjur.github.io/jsrsasign/sample/tool_jwktp.html
-		{
-			name: "EC256 key",
-			key: func(t *testing.T) JWK {
-				return deriveKey(
-					t,
-					`{
-						"kty":"EC",
-  					"crv":"P-256",
-  					"x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
-  					"y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
-  					"use":"enc",
-  					"kid":"1"
-					}`,
-				)
-			},
-			hash:           crypto.SHA256,
-			wantThumbprint: "cn-I_WNMClehiVp51i_0VpOENW1upEerA8sEam5hn-s",
-		},
-		{
-			name: "symmetric key",
-			key: func(t *testing.T) JWK {
-				return deriveKey(
-					t,
-					`{ 
-						"kty":"oct",
-	  				"k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow",
-	  				"kid":"HMAC key used in JWS spec Appendix A.1 example"
-					}`,
-				)
-			},
+		// https://www.rfc-editor.org/rfc/rfc7515#appendix-A.1
+		"Oct": {
+			rawJSON: `
+{
+  "kty": "oct",
+  "k": "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow",
+  "kid": "HMAC key used in JWS spec Appendix A.1 example"
+}`,
 			hash:           crypto.SHA256,
 			wantThumbprint: "y_x3gCJnL6oKGBBIXScabduwxTVy2Wd2bzRVEUbdUzc",
 		},
-		// compare with https://encrypt-online.com/tools/jwk-thumbprint-calculator
-		{
-			name: "Ed25519",
-			key: func(t *testing.T) JWK {
-				return deriveKey(
-					t,
-					`{
-		  			"crv": "Ed25519",
-  					"x": "kkuykt3sLHDHlwJLpA48RyupsMmYk3JJVO_Owtq1tyk",
-  					"kty": "OKP"
-					}`,
-				)
-			},
+		// https://www.rfc-editor.org/rfc/rfc8037#appendix-A.3
+		"Ed25519": {
+			rawJSON:        ed25519JSON,
 			hash:           crypto.SHA256,
-			wantThumbprint: "W8SIurfuxo6rbncofGtIXvLhE0Ip9_CAqjGUsT71Qv8",
+			wantThumbprint: ed25519Thumbprint,
 		},
-		{
-			name: "Ed25519 unavailable hash",
-			key: func(t *testing.T) JWK {
-				return deriveKey(
-					t,
-					`{
-		  			"crv": "Ed25519",
-  					"x": "kkuykt3sLHDHlwJLpA48RyupsMmYk3JJVO_Owtq1tyk",
-  					"kty": "OKP"
-					}`,
-				)
-			},
+		// https://www.rfc-editor.org/rfc/rfc8037#appendix-A.1
+		"Ed25519Private": {
+			rawJSON: `
+{
+  "kty": "OKP",
+  "crv": "Ed25519",
+  "d": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
+  "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+}`,
+			hash:           crypto.SHA256,
+			wantThumbprint: ed25519Thumbprint,
+		},
+		// https://www.rfc-editor.org/rfc/rfc7748#section-6.1
+		"X25519": {
+			rawJSON: `
+{
+  "kty": "OKP",
+  "crv": "X25519",
+  "x": "hSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo"
+}`,
+			hash:           crypto.SHA256,
+			wantThumbprint: x25519Thumbprint,
+		},
+		"X25519Private": {
+			rawJSON: `
+{
+  "kty": "OKP",
+  "crv": "X25519",
+  "x": "hSDwCYkwp1R0i33ctD73Wg2_Og0mOBr066SpjqqbTmo",
+  "d": "dwdtCnMYpX08FsFyUbJmRd9ML4frwJkqsXf7pR25LCo"
+}`,
+			hash:           crypto.SHA256,
+			wantThumbprint: x25519Thumbprint,
+		},
+		"ZeroHash": {
+			rawJSON: ed25519JSON,
 			hash:    0,
 			wantErr: ErrOptions,
 		},
+		"UnlinkedHash": {
+			rawJSON: ed25519JSON,
+			hash:    crypto.MD4,
+			wantErr: ErrOptions,
+		},
+		"ZeroJWK": {
+			key: func(t *testing.T) JWK {
+				return JWK{}
+			},
+			hash:    crypto.SHA256,
+			wantErr: ErrUnsupportedKey,
+		},
 	}
-
-	for _, tt := range tests {
-		tt := tt // remove after go 1.22+
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tc := range testCases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			got, err := tt.key(t).Thumbprint(tt.hash)
-			if tt.wantThumbprint != got {
-				t.Fatalf("thumbprint() got = %v, want %v", got, tt.wantThumbprint)
+			var jwk JWK
+			if tc.key != nil {
+				jwk = tc.key(t)
+			} else {
+				var err error
+				jwk, err = NewJWKFromRawJSON(json.RawMessage(tc.rawJSON), JWKMarshalOptions{Private: true}, JWKValidateOptions{})
+				if err != nil {
+					t.Fatalf("Failed to create JWK from raw JSON. %s", err)
+				}
 			}
-			if !errors.Is(err, tt.wantErr) {
-				t.Fatalf("thumbprint() error = %v, wantErr %v", err, tt.wantErr)
+			got, err := jwk.Thumbprint(tc.hash)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("Expected error %v, got %v", tc.wantErr, err)
+			}
+			if got != tc.wantThumbprint {
+				t.Fatalf("Expected thumbprint %q, got %q", tc.wantThumbprint, got)
 			}
 		})
 	}
