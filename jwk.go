@@ -477,9 +477,8 @@ func (j JWK) Thumbprint(h crypto.Hash) (string, error) {
 		return "", fmt.Errorf("%w: thumbprint for key type %q", ErrUnsupportedKey, m.KTY)
 	}
 
-	// canonical JSON encoding with lexicographically sorted keys is required for thumbprint calculation; once go.mod is
-	// at go 1.27 or later, json.MarshalWrite(out, data, json.Deterministic(true)) from encoding/json/v2 can write
-	// straight to out
+	// Canonical JSON encoding with lexicographically sorted keys is required for thumbprint calculation. Update to
+	// json.MarshalWrite(out, data, json.Deterministic(true)) when using encoding/json/v2 in Go 1.27 or later.
 	encoded, err := json.Marshal(data)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal JSON Web Key thumbprint members: %w", err)
