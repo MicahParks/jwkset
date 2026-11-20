@@ -448,11 +448,8 @@ func (j JWK) Validate() error {
 	return nil
 }
 
-// Thumbprint returns the JWK thumbprint as a base64url-encoded string (RFC 7638).
-//
-// If the provided [crypto.Hash] is not available, the default hash function used is [crypto.SHA256].
-//
-// [RFC 7638]: https://www.rfc-editor.org/info/rfc7638
+// Thumbprint returns the JWK thumbprint as a base64url-encoded string.
+// https://www.rfc-editor.org/info/rfc7638
 func (j JWK) Thumbprint(h crypto.Hash) (string, error) {
 	if !h.Available() {
 		h = crypto.SHA256
