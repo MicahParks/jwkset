@@ -447,10 +447,8 @@ func (j JWK) Validate() error {
 	return nil
 }
 
-// Thumbprint returns the RFC 7638 JWK thumbprint, hashed with h, as a base64url-encoded string. It is not the X.509
-// certificate thumbprint of the "x5t" and "x5t#S256" parameters. Only the members the key type requires are hashed, so
-// a private key has the same thumbprint as its public key. The hash function must be linked into the binary, otherwise
-// ErrOptions is returned.
+// Thumbprint returns the RFC 7638 JWK thumbprint, hashed with h, as a base64url-encoded string. The hash function must
+// be linked into the binary, otherwise ErrOptions is returned.
 // https://www.rfc-editor.org/info/rfc7638
 func (j JWK) Thumbprint(h crypto.Hash) (string, error) {
 	if !h.Available() {
