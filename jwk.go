@@ -471,7 +471,7 @@ func (j JWK) Thumbprint(h crypto.Hash) (string, error) {
 
 	out := h.New()
 	// cannonical JSON encoding with lexicographically sorted keys is required for thumbprint calculation
-	encoded, _ := json.Marshal(data) // in go 2.27 use json.MarshalWrite(out, data) to avoid intermediate []byte
+	encoded, _ := json.Marshal(data) // in go 1.27 use json.MarshalWrite(out, data) to avoid intermediate []byte
 	_, _ = out.Write(encoded)
 	return base64.RawURLEncoding.EncodeToString(out.Sum(nil)), nil
 }

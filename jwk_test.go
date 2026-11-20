@@ -377,6 +377,7 @@ func TestJWK_Thumbprint(t *testing.T) {
      			}`,
 				)
 			},
+			hash:           crypto.SHA256,
 			wantThumbprint: "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
 		},
 		// compare with https://kjur.github.io/jsrsasign/sample/tool_jwktp.html
@@ -395,6 +396,7 @@ func TestJWK_Thumbprint(t *testing.T) {
 					}`,
 				)
 			},
+			hash:           crypto.SHA256,
 			wantThumbprint: "cn-I_WNMClehiVp51i_0VpOENW1upEerA8sEam5hn-s",
 		},
 		{
@@ -409,6 +411,7 @@ func TestJWK_Thumbprint(t *testing.T) {
 					}`,
 				)
 			},
+			hash:           crypto.SHA256,
 			wantThumbprint: "y_x3gCJnL6oKGBBIXScabduwxTVy2Wd2bzRVEUbdUzc",
 		},
 		// compare with https://encrypt-online.com/tools/jwk-thumbprint-calculator
@@ -424,7 +427,23 @@ func TestJWK_Thumbprint(t *testing.T) {
 					}`,
 				)
 			},
+			hash:           crypto.SHA256,
 			wantThumbprint: "W8SIurfuxo6rbncofGtIXvLhE0Ip9_CAqjGUsT71Qv8",
+		},
+		{
+			name: "Ed25519 unavailable hash",
+			key: func(t *testing.T) JWK {
+				return deriveKey(
+					t,
+					`{
+		  			"crv": "Ed25519",
+  					"x": "kkuykt3sLHDHlwJLpA48RyupsMmYk3JJVO_Owtq1tyk",
+  					"kty": "OKP"
+					}`,
+				)
+			},
+			hash:    0,
+			wantErr: ErrOptions,
 		},
 	}
 
@@ -432,7 +451,7 @@ func TestJWK_Thumbprint(t *testing.T) {
 		tt := tt // remove after go 1.22+
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got, err := tt.key(t).Thumbprint(crypto.SHA256)
+			got, err := tt.key(t).Thumbprint(tt.hash)
 			if tt.wantThumbprint != got {
 				t.Fatalf("thumbprint() got = %v, want %v", got, tt.wantThumbprint)
 			}
