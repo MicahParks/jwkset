@@ -3,7 +3,12 @@ package jwkset
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 )
@@ -249,4 +254,78 @@ func newStorageTestJWK(t *testing.T, key any, keyID string) JWK {
 		t.Fatalf("Failed to create JWK. %s", err)
 	}
 	return jwk
+}
+
+func TestCustomStorage(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	secret := []byte("my-hmac-secret")
+	jwk, err := NewJWKFromKey(secret, JWKOptions{
+		Marshal:  JWKMarshalOptions{Private: true},
+		Metadata: JWKMetadataOptions{KID: "my-key-id"},
+	})
+	if err != nil {
+		t.Fatalf("Failed to create a JWK from the given HMAC secret.\nError: %s", err)
+	}
+	serverStore := NewMemoryStorage()
+	err = serverStore.KeyWrite(ctx, jwk)
+	if err != nil {
+		t.Fatalf("Failed to write the given JWK to the store.\nError: %s", err)
+	}
+	rawJWKS, err := serverStore.JSON(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get the JSON.\nError: %s", err)
+	}
+
+	rawJWKSMux := sync.RWMutex{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rawJWKSMux.RLock()
+		defer rawJWKSMux.RUnlock()
+		_, _ = w.Write(rawJWKS)
+	}))
+	defer server.Close()
+
+	store, err := NewCustomStorage(CustomStorageOptions{
+		RequestJWKSetFunc: getJWKSFromHTTP(server.URL),
+	})
+	if err != nil {
+		t.Fatalf("Failed to create custom storage: %s", err)
+	}
+
+	jwks, err := store.KeyReadAll(ctx)
+	if err != nil {
+		t.Fatalf("Failed to read the JWK.\nError: %s", err)
+	}
+	if len(jwks) != 1 {
+		t.Fatalf("Expected to read 1 JWK, but got %d.", len(jwks))
+	}
+	if !bytes.Equal(jwks[0].Key().([]byte), secret) {
+		t.Fatalf("The key read from the HTTP client did not match the original key.")
+	}
+
+}
+
+func getJWKSFromHTTP(remoteJWKSetURL string) func(ctx context.Context) (JWKSMarshal, error) {
+	return func(ctx context.Context) (JWKSMarshal, error) {
+		req, err := http.NewRequestWithContext(ctx, "GET", remoteJWKSetURL, nil)
+		if err != nil {
+			return JWKSMarshal{}, fmt.Errorf("failed to create HTTP request for JWK Set refresh: %w", err)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return JWKSMarshal{}, fmt.Errorf("failed to perform HTTP request for JWK Set refresh: %w", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return JWKSMarshal{}, fmt.Errorf("%w: %d", ErrInvalidHTTPStatusCode, resp.StatusCode)
+		}
+
+		var jwks JWKSMarshal
+		err = json.NewDecoder(resp.Body).Decode(&jwks)
+		if err != nil {
+			return JWKSMarshal{}, fmt.Errorf("failed to decode JWK Set response: %w", err)
+		}
+		return jwks, nil
+	}
 }
